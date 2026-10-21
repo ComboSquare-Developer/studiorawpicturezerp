@@ -1,0 +1,194 @@
+
+import { useState } from "react";
+
+// ================= COMPONENTS =================
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
+
+// ================= PAGES =================
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Customers from "./pages/Customers";
+import Enquiries from "./pages/Enquiries";
+
+// ================= MAIN APP =================
+export default function App() {
+  // Login State
+  const [loggedIn, setLoggedIn] = useState(() => {
+    return localStorage.getItem("studio_demo_login") === "true";
+  });
+
+  // Active Page
+  const [activePage, setActivePage] = useState("Dashboard");
+
+  // Mobile Sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ================= LOGIN =================
+  const handleLogin = () => {
+    localStorage.setItem("studio_demo_login", "true");
+    setLoggedIn(true);
+    setActivePage("Dashboard");
+    setSidebarOpen(false);
+  };
+
+  // ================= LOGOUT =================
+  const handleLogout = () => {
+    localStorage.removeItem("studio_demo_login");
+    setLoggedIn(false);
+    setActivePage("Dashboard");
+    setSidebarOpen(false);
+  };
+
+  // ================= NAVIGATION =================
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    setSidebarOpen(false);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // ================= PAGE RENDERING =================
+  const renderPage = () => {
+    switch (activePage) {
+      case "Dashboard":
+        return <Dashboard />;
+
+      case "Customers":
+        return <Customers />;
+
+      case "Enquiries":
+        return <Enquiries />;
+
+      case "My Tasks":
+      case "Alerts":
+      case "Bookings":
+      case "Calendar":
+      case "Services & Packages":
+      case "Projects":
+      case "Photo Selection":
+      case "Album & Printing":
+      case "Deliveries":
+      case "Payments":
+      case "Expenses":
+      case "Staff & Attendance":
+      case "Inventory & Equipment":
+      case "Reports":
+      case "Branches":
+      case "Settings":
+        return (
+          <div className="min-h-[400px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <div className="mx-auto flex max-w-xl flex-col items-center justify-center py-16 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="36"
+                  height="36"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#102B53"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M7 5l1.5-2h7L17 5" />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold text-[#102B53] md:text-3xl">
+                {activePage}
+              </h2>
+
+              <p className="mt-4 text-sm leading-7 text-slate-500">
+                The {activePage} module is planned for the
+                upcoming frontend development phase.
+              </p>
+
+              <div className="mt-7 rounded-xl border border-blue-100 bg-blue-50 px-5 py-3">
+                <p className="text-sm font-medium text-blue-800">
+                  Studio Raw Picturez — Frontend Demo
+                </p>
+              </div>
+
+              <button
+                onClick={() => handlePageChange("Dashboard")}
+                className="mt-7 rounded-xl bg-[#102B53] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1B4380]"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8">
+            <h2 className="text-xl font-bold text-[#102B53]">
+              Page Not Found
+            </h2>
+
+            <button
+              onClick={() => handlePageChange("Dashboard")}
+              className="mt-5 rounded-xl bg-[#102B53] px-5 py-3 text-white"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        );
+    }
+  };
+
+  // ================= LOGIN SCREEN =================
+  if (!loggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // ================= MAIN APPLICATION =================
+  return (
+    <div className="min-h-screen bg-[#F5F8FD]">
+      {/* ================= SIDEBAR ================= */}
+      <Sidebar
+        activePage={activePage}
+        setActivePage={handlePageChange}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+
+      {/* ================= MAIN LAYOUT ================= */}
+      <div className="min-h-screen lg:ml-64">
+        {/* ================= HEADER ================= */}
+        <Header
+          activePage={activePage}
+          onMenuClick={() => setSidebarOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        {/* ================= PAGE CONTENT ================= */}
+        <main className="min-h-[calc(100vh-90px)] p-4 md:p-6 xl:p-8">
+          <div className="mx-auto max-w-[1600px]">
+            {renderPage()}
+          </div>
+        </main>
+
+        {/* ================= FOOTER ================= */}
+        <footer className="border-t border-slate-200 bg-white px-5 py-4 md:px-8">
+          <div className="flex flex-col items-center justify-between gap-2 text-center text-xs text-slate-400 sm:flex-row">
+            <p>
+              © {new Date().getFullYear()} Studio Raw Picturez.
+              All rights reserved.
+            </p>
+
+            <p>
+              ERP & CRM Management System | Frontend Demo v1.0
+            </p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+}
