@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Wallet,
   TrendingUp,
@@ -15,6 +16,11 @@ import {
   CalendarDays,
   ChevronDown,
   Check,
+  Receipt,
+  BarChart3,
+  CreditCard,
+  UserRound,
+  AlertCircle,
 } from "lucide-react";
 
 const EXPENSE_KEY = "studioraw_expenses";
@@ -53,7 +59,7 @@ const emptyForm = {
 };
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 function readArray(key) {
   try {
@@ -85,8 +91,24 @@ function money(value) {
   })}`;
 }
 
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+}
+
 function csvCell(value) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const raw = String(value ?? "");
+  const safe = /^\s*[=+\-@\t\r]/.test(raw)
+    ? `'${raw}`
+    : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 function CustomDropdown({
@@ -109,9 +131,7 @@ function CustomDropdown({
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
 
     document.addEventListener("pointerdown", handleOutside);
@@ -134,21 +154,17 @@ function CustomDropdown({
   );
 
   return (
-    <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
+    <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((previous) => !previous)}
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium`}
       >
-        <span className="min-w-0 flex-1 break-words">
+        <span className="min-w-0 flex-1 truncate">
           {selected?.label || placeholder}
         </span>
-
         <ChevronDown
           size={18}
           className={`shrink-0 transition-transform ${
@@ -160,7 +176,7 @@ function CustomDropdown({
       {open && (
         <div
           role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
         >
           {normalizedOptions.map((option) => {
             const isSelected =
@@ -176,19 +192,16 @@ function CustomDropdown({
                   onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm ${
                   isSelected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <span className="min-w-0 flex-1 break-words">
+                <span className="break-words">
                   {option.label}
                 </span>
-
-                {isSelected && (
-                  <Check size={16} className="shrink-0" />
-                )}
+                {isSelected && <Check size={16} />}
               </button>
             );
           })}
@@ -198,31 +211,39 @@ function CustomDropdown({
   );
 }
 
-function FormField({ label, children }) {
+function FormField({ label, children, required = false }) {
   return (
     <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
+      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
         {label}
-      </p>
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {children}
     </div>
   );
 }
 
-function Detail({ label, value }) {
+function Detail({ label, value, icon: Icon }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
+    <div className="min-w-0">
+      <p className="mb-1 text-xs font-medium text-slate-400">
         {label}
       </p>
-
-      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-        {value === undefined ||
-        value === null ||
-        value === ""
-          ? "—"
-          : value}
-      </p>
+      <div className="flex items-start gap-2">
+        {Icon && (
+          <Icon
+            size={15}
+            className="mt-0.5 shrink-0 text-blue-600"
+          />
+        )}
+        <p className="min-w-0 break-words text-sm font-semibold text-[#10264d]">
+          {value === undefined ||
+          value === null ||
+          value === ""
+            ? "—"
+            : value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -247,8 +268,6 @@ export default function Expenses() {
   const [form, setForm] = useState({ ...emptyForm });
   const [error, setError] = useState("");
 
-  const formRef = useRef(null);
-
   useEffect(() => {
     localStorage.setItem(
       EXPENSE_KEY,
@@ -262,20 +281,33 @@ export default function Expenses() {
     };
 
     window.addEventListener("focus", refreshPayments);
+    window.addEventListener("storage", refreshPayments);
 
     return () => {
       window.removeEventListener("focus", refreshPayments);
+      window.removeEventListener("storage", refreshPayments);
     };
   }, []);
 
-  const scrollToForm = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
-  };
+  useEffect(() => {
+    if (!showForm) return;
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowForm(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showForm]);
 
   const openAdd = () => {
     setEditingId(null);
@@ -285,7 +317,6 @@ export default function Expenses() {
     });
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const openEdit = (item) => {
@@ -297,7 +328,6 @@ export default function Expenses() {
     });
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const closeForm = () => {
@@ -311,6 +341,7 @@ export default function Expenses() {
       ...previous,
       [key]: value,
     }));
+    if (error) setError("");
   };
 
   const saveExpense = (event) => {
@@ -394,8 +425,8 @@ export default function Expenses() {
     0
   );
 
-  // Demo income calculation based on existing payment records.
-  // Verify field mapping against Payments.jsx before financial use.
+  // Estimated income from existing payment records.
+  // Verify payment field mapping before financial use.
   const monthlyIncome = payments.reduce((sum, payment) => {
     const date =
       payment.paymentDate ||
@@ -470,9 +501,9 @@ export default function Expenses() {
 
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
 
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const stats = [
@@ -480,60 +511,74 @@ export default function Expenses() {
       label: "Monthly Income",
       value: monthlyIncome,
       icon: TrendingUp,
-      color: "text-green-600",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      accent: "bg-emerald-500",
     },
     {
       label: "Monthly Expenses",
       value: totalExpenses,
       icon: TrendingDown,
-      color: "text-red-600",
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      accent: "bg-rose-500",
     },
     {
       label: "Estimated Profit",
       value: profit,
       icon: IndianRupee,
-      color:
-        profit >= 0 ? "text-blue-700" : "text-red-600",
+      color: profit >= 0 ? "text-blue-700" : "text-rose-600",
+      bg: profit >= 0 ? "bg-blue-50" : "bg-rose-50",
+      accent: profit >= 0 ? "bg-blue-600" : "bg-rose-500",
     },
     {
       label: "Expense Entries",
       value: monthlyExpenses.length,
       icon: Wallet,
-      color: "text-indigo-700",
+      color: "text-violet-700",
+      bg: "bg-violet-50",
+      accent: "bg-violet-500",
       isCount: true,
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
-      {/* Header */}
-      <div className="flex w-full min-w-0 flex-col gap-5">
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-bold text-[#10264d]">
+    <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
+
+      {/* HEADER */}
+      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+            Studio Raw / Finance
+          </p>
+
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Expense & Profit Management
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Track studio expenses, income and estimated profit
+          <p className="mt-2 text-sm text-slate-500">
+            Track studio expenses, income and estimated profit.
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-3">
-          <FormField label="Select Month">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(event) =>
-                setSelectedMonth(event.target.value)
-              }
-              className={inputClass}
-            />
-          </FormField>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="w-full sm:w-48">
+            <FormField label="Select Month">
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(event) =>
+                  setSelectedMonth(event.target.value)
+                }
+                className={inputClass}
+              />
+            </FormField>
+          </div>
 
           <button
             type="button"
             onClick={openAdd}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-950"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 transition hover:bg-blue-900"
           >
             <Plus size={18} />
             Add Expense
@@ -541,50 +586,67 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* SUMMARY CARDS */}
+      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => {
           const Icon = item.icon;
 
           return (
             <div
               key={item.label}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 text-sm font-medium text-slate-500">
-                  {item.label}
-                </p>
+              <div className={`absolute left-0 top-0 h-1 w-full ${item.accent}`} />
 
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon size={22} className={item.color} />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    {item.label}
+                  </p>
+
+                  <h2
+                    className={`mt-3 break-words text-2xl font-extrabold sm:text-3xl ${item.color}`}
+                  >
+                    {item.isCount
+                      ? item.value
+                      : money(item.value)}
+                  </h2>
+                </div>
+
+                <div className={`shrink-0 rounded-2xl p-3 ${item.bg}`}>
+                  <Icon size={23} className={item.color} />
                 </div>
               </div>
 
-              <h2
-                className={`mt-3 break-words text-2xl font-bold sm:text-3xl ${item.color}`}
-              >
-                {item.isCount
-                  ? item.value
-                  : money(item.value)}
-              </h2>
+              <p className="mt-5 text-xs text-slate-400">
+                Selected month overview
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Category Breakdown */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
-        <h2 className="mb-5 break-words text-lg font-bold text-[#10264d]">
-          Category-wise Expenses
-        </h2>
+      {/* CATEGORY BREAKDOWN */}
+      <section className="mb-7 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-6 flex items-center gap-2">
+          <BarChart3 size={20} className="text-blue-600" />
+          <h2 className="text-lg font-bold text-[#10264d]">
+            Category-wise Expenses
+          </h2>
+        </div>
 
         {categoryTotals.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">
-            No expenses recorded for this month.
-          </p>
+          <div className="py-10 text-center">
+            <BarChart3
+              size={36}
+              className="mx-auto mb-3 text-slate-300"
+            />
+            <p className="text-sm text-slate-400">
+              No expenses recorded for this month.
+            </p>
+          </div>
         ) : (
-          <div className="flex w-full min-w-0 flex-col gap-5">
+          <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-2">
             {categoryTotals.map((item) => {
               const percentage =
                 totalExpenses > 0
@@ -592,26 +654,21 @@ export default function Expenses() {
                   : 0;
 
               return (
-                <div
-                  key={item.category}
-                  className="w-full min-w-0"
-                >
-                  <div className="mb-3 flex w-full min-w-0 flex-col gap-1">
-                    <p className="break-words text-sm font-medium text-slate-700">
+                <div key={item.category} className="min-w-0">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="min-w-0 break-words text-sm font-semibold text-slate-700">
                       {item.category}
                     </p>
 
-                    <p className="break-words text-sm font-bold text-[#10264d]">
+                    <p className="shrink-0 text-sm font-bold text-[#10264d]">
                       {money(item.total)}
                     </p>
                   </div>
 
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className="h-full rounded-full bg-[#10264d] transition-all"
-                      style={{
-                        width: `${percentage}%`,
-                      }}
+                      style={{ width: `${percentage}%` }}
                     />
                   </div>
 
@@ -625,309 +682,495 @@ export default function Expenses() {
         )}
       </section>
 
-      {/* Expense Records */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
-        <div className="mb-5 flex w-full min-w-0 flex-col gap-4">
-          <h2 className="break-words text-lg font-bold text-[#10264d]">
-            Expense Records
-          </h2>
-
-          <button
-            type="button"
-            onClick={exportCSV}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
-          >
-            <Download size={18} />
-            Export CSV
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6 flex w-full min-w-0 flex-col gap-4">
-          <FormField label="Search Expenses">
-            <div className="relative w-full min-w-0">
-              <Search
-                size={18}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search expenses..."
-                className={`${inputClass} pl-11`}
-              />
-            </div>
-          </FormField>
-
-          <FormField label="Filter Category">
-            <CustomDropdown
-              value={categoryFilter}
-              options={["All", ...categories].map(
-                (category) => ({
-                  label:
-                    category === "All"
-                      ? "All Categories"
-                      : category,
-                  value: category,
-                })
-              )}
-              onChange={setCategoryFilter}
-            />
-          </FormField>
-        </div>
-
-        {/* Expense Cards */}
-        <div className="flex w-full min-w-0 flex-col gap-4">
-          {filteredExpenses.map((item) => (
-            <article
-              key={item.id}
-              className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-            >
-              <div className="flex w-full min-w-0 items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                  <Wallet size={22} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <h3 className="break-words text-base font-bold text-[#10264d]">
-                    {item.title || "Untitled Expense"}
-                  </h3>
-
-                  <p className="mt-1 break-words text-sm text-slate-500">
-                    {item.category || "Other"}
-                  </p>
-
-                  <p className="mt-2 break-words text-xl font-bold text-red-600">
-                    {money(item.amount)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                <Detail
-                  label="Expense Date"
-                  value={item.date}
-                />
-
-                <Detail
-                  label="Category"
-                  value={item.category}
-                />
-
-                <Detail
-                  label="Amount"
-                  value={money(item.amount)}
-                />
-
-                <Detail
-                  label="Payment Mode"
-                  value={item.paymentMode}
-                />
-
-                <Detail
-                  label="Paid To"
-                  value={item.paidTo}
-                />
-
-                <Detail
-                  label="Notes"
-                  value={item.notes}
-                />
-              </div>
-
-              <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
-                  onClick={() => openEdit(item)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-950"
-                >
-                  <Pencil size={17} />
-                  Edit Expense
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => deleteExpense(item)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-                >
-                  <Trash2 size={17} />
-                  Delete Expense
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {filteredExpenses.length === 0 && (
-            <div className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-              <Wallet
-                size={32}
-                className="mb-3 text-slate-300"
-              />
-
-              <p className="text-sm font-semibold text-slate-600">
-                No expense records found.
-              </p>
-
-              <p className="mt-2 text-sm text-slate-400">
-                Add an expense or change your filters.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Inline Add / Edit Form */}
-      {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-6 flex w-full min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId ? "Edit Expense" : "Add Expense"}
+      {/* EXPENSE RECORDS */}
+      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold text-[#10264d]">
+                <Receipt size={20} className="text-blue-600" />
+                Expense Records
               </h2>
 
-              <p className="mt-2 text-sm text-slate-500">
-                Enter studio expense details
+              <p className="mt-1 text-xs text-slate-400">
+                Showing {filteredExpenses.length} of {monthlyExpenses.length} records
               </p>
             </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative w-full sm:w-64">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search expenses..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+
+              <div className="w-full sm:w-48">
+                <CustomDropdown
+                  value={categoryFilter}
+                  options={["All", ...categories].map((category) => ({
+                    label:
+                      category === "All"
+                        ? "All Categories"
+                        : category,
+                    value: category,
+                  }))}
+                  onChange={setCategoryFilter}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={exportCSV}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
+              >
+                <Download size={17} />
+                Export CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {filteredExpenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+            <div className="mb-4 rounded-2xl bg-slate-50 p-5">
+              <Wallet size={36} className="text-slate-300" />
+            </div>
+
+            <h3 className="font-bold text-[#10264d]">
+              No expense records found
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-400">
+              Add an expense or change your filters.
+            </p>
 
             <button
               type="button"
-              onClick={closeForm}
-              aria-label="Close expense form"
-              className="shrink-0 rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-50"
+              onClick={openAdd}
+              className="mt-5 flex items-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white"
             >
-              <X size={20} />
+              <Plus size={16} />
+              Add Expense
             </button>
           </div>
+        ) : (
+          <>
+            {/* DESKTOP TABLE */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[950px] text-left">
+                <thead className="bg-[#f8faff]">
+                  <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <th className="px-5 py-4">Expense</th>
+                    <th className="px-5 py-4">Category</th>
+                    <th className="px-5 py-4">Date</th>
+                    <th className="px-5 py-4">Payment Mode</th>
+                    <th className="px-5 py-4">Paid To</th>
+                    <th className="px-5 py-4">Amount</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
 
-          <form
-            onSubmit={saveExpense}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Expense Title">
-              <input
-                type="text"
-                required
-                value={form.title}
-                onChange={(event) =>
-                  updateField("title", event.target.value)
-                }
-                placeholder="e.g. Studio electricity bill"
-                className={inputClass}
-              />
-            </FormField>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredExpenses.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="transition hover:bg-blue-50/30"
+                    >
+                      <td className="px-5 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                            <Wallet size={18} />
+                          </div>
 
-            <FormField label="Category">
-              <CustomDropdown
-                value={form.category}
-                options={categories}
-                onChange={(value) =>
-                  updateField("category", value)
-                }
-              />
-            </FormField>
+                          <div>
+                            <p className="text-sm font-bold text-[#10264d]">
+                              {item.title}
+                            </p>
 
-            <FormField label="Amount (₹)">
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
-                value={form.amount}
-                onChange={(event) =>
-                  updateField("amount", event.target.value)
-                }
-                placeholder="Enter amount"
-                className={inputClass}
-              />
-            </FormField>
+                            {item.notes && (
+                              <p className="mt-1 max-w-40 truncate text-xs text-slate-400">
+                                {item.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
 
-            <FormField label="Expense Date">
-              <input
-                type="date"
-                required
-                value={form.date}
-                onChange={(event) =>
-                  updateField("date", event.target.value)
-                }
-                className={inputClass}
-              />
-            </FormField>
+                      <td className="px-5 py-5">
+                        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                          {item.category}
+                        </span>
+                      </td>
 
-            <FormField label="Payment Mode">
-              <CustomDropdown
-                value={form.paymentMode}
-                options={paymentModes}
-                onChange={(value) =>
-                  updateField("paymentMode", value)
-                }
-              />
-            </FormField>
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {formatDate(item.date)}
+                      </td>
 
-            <FormField label="Paid To">
-              <input
-                type="text"
-                value={form.paidTo}
-                onChange={(event) =>
-                  updateField("paidTo", event.target.value)
-                }
-                placeholder="Vendor / Staff / Supplier"
-                className={inputClass}
-              />
-            </FormField>
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {item.paymentMode}
+                      </td>
 
-            <FormField label="Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  updateField("notes", event.target.value)
-                }
-                placeholder="Additional details..."
-                className={`${inputClass} resize-y`}
-              />
-            </FormField>
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {item.paidTo || "—"}
+                      </td>
 
-            {error && (
-              <p
-                role="alert"
-                className="break-words rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
-              >
-                {error}
-              </p>
-            )}
+                      <td className="px-5 py-5 text-sm font-bold text-rose-600">
+                        {money(item.amount)}
+                      </td>
 
-            <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Cancel
-              </button>
+                      <td className="px-5 py-5">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(item)}
+                            title="Edit Expense"
+                            className="rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
+                          >
+                            <Pencil size={16} />
+                          </button>
 
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-950"
-              >
-                <Save size={18} />
-                {editingId
-                  ? "Update Expense"
-                  : "Save Expense"}
-              </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteExpense(item)}
+                            title="Delete Expense"
+                            className="rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </form>
-        </section>
-      )}
 
-      <p className="break-words text-xs leading-6 text-slate-400">
+            {/* MOBILE / TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+              {filteredExpenses.map((item) => (
+                <article
+                  key={item.id}
+                  className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
+                >
+                  <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-4">
+                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                      <Wallet size={20} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words font-bold text-[#10264d]">
+                        {item.title}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        {item.category}
+                      </p>
+
+                      <p className="mt-2 text-xl font-bold text-rose-600">
+                        {money(item.amount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <Detail
+                      label="Expense Date"
+                      value={formatDate(item.date)}
+                      icon={CalendarDays}
+                    />
+
+                    <Detail
+                      label="Category"
+                      value={item.category}
+                    />
+
+                    <Detail
+                      label="Payment Mode"
+                      value={item.paymentMode}
+                      icon={CreditCard}
+                    />
+
+                    <Detail
+                      label="Paid To"
+                      value={item.paidTo}
+                      icon={UserRound}
+                    />
+
+                    {item.notes && (
+                      <Detail
+                        label="Notes"
+                        value={item.notes}
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-5 flex gap-2 border-t border-slate-200 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white"
+                    >
+                      <Pencil size={16} />
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteExpense(item)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* CENTER MODAL FORM */}
+      {showForm &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+
+            {/* BACKDROP */}
+            <div
+              className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+              onClick={closeForm}
+            />
+
+            {/* MODAL */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={
+                editingId ? "Edit Expense" : "Add Expense"
+              }
+              className="relative z-10 mx-auto flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
+            >
+              {/* MODAL HEADER */}
+              <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
+                      Studio Raw / Finance
+                    </p>
+
+                    <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
+                      {editingId
+                        ? "Edit Expense"
+                        : "Add Expense"}
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Enter studio expense details.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    aria-label="Close expense form"
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <form
+                onSubmit={saveExpense}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                {/* SCROLLABLE FORM */}
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                      <Wallet
+                        size={18}
+                        className="text-blue-600"
+                      />
+                      Expense Information
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <FormField
+                          label="Expense Title"
+                          required
+                        >
+                          <input
+                            type="text"
+                            required
+                            value={form.title}
+                            onChange={(event) =>
+                              updateField(
+                                "title",
+                                event.target.value
+                              )
+                            }
+                            placeholder="e.g. Studio electricity bill"
+                            className={inputClass}
+                          />
+                        </FormField>
+                      </div>
+
+                      <FormField label="Category">
+                        <CustomDropdown
+                          value={form.category}
+                          options={categories}
+                          onChange={(value) =>
+                            updateField("category", value)
+                          }
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Amount (₹)"
+                        required
+                      >
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          required
+                          value={form.amount}
+                          onChange={(event) =>
+                            updateField(
+                              "amount",
+                              event.target.value
+                            )
+                          }
+                          placeholder="Enter amount"
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Expense Date"
+                        required
+                      >
+                        <input
+                          type="date"
+                          required
+                          value={form.date}
+                          onChange={(event) =>
+                            updateField(
+                              "date",
+                              event.target.value
+                            )
+                          }
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Payment Mode">
+                        <CustomDropdown
+                          value={form.paymentMode}
+                          options={paymentModes}
+                          onChange={(value) =>
+                            updateField(
+                              "paymentMode",
+                              value
+                            )
+                          }
+                        />
+                      </FormField>
+
+                      <div className="sm:col-span-2">
+                        <FormField label="Paid To">
+                          <input
+                            type="text"
+                            value={form.paidTo}
+                            onChange={(event) =>
+                              updateField(
+                                "paidTo",
+                                event.target.value
+                              )
+                            }
+                            placeholder="Vendor / Staff / Supplier"
+                            className={inputClass}
+                          />
+                        </FormField>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <FormField label="Notes">
+                          <textarea
+                            rows={4}
+                            value={form.notes}
+                            onChange={(event) =>
+                              updateField(
+                                "notes",
+                                event.target.value
+                              )
+                            }
+                            placeholder="Additional details..."
+                            className={`${inputClass} resize-y`}
+                          />
+                        </FormField>
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div
+                      role="alert"
+                      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                    >
+                      <AlertCircle
+                        size={18}
+                        className="mt-0.5 shrink-0"
+                      />
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                {/* FIXED FOOTER */}
+                <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={closeForm}
+                      className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+                    >
+                      <Save size={17} />
+                      {editingId
+                        ? "Update Expense"
+                        : "Save Expense"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* FOOTER NOTE */}
+      <p className="mt-6 text-xs leading-6 text-slate-400">
         Demo note: Income is estimated from saved payment records.
         Verify the Payments.jsx field mapping before using the
         profit figure for financial decisions. All records are

@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Search,
@@ -108,7 +109,7 @@ const priorityColors = {
 };
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const dateKey = () => {
   const date = new Date();
@@ -134,11 +135,23 @@ const formatDate = (value) => {
       });
 };
 
-function CustomDropdown({
-  value,
-  options,
-  onChange,
-}) {
+function readRecords() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function createId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `FOLLOW-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
+function CustomDropdown({ value, options, onChange }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -163,50 +176,29 @@ function CustomDropdown({
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
 
-    document.addEventListener(
-      "pointerdown",
-      handleOutside
-    );
-
-    document.addEventListener(
-      "keydown",
-      handleEscape
-    );
+    document.addEventListener("pointerdown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handleOutside
-      );
-
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
+      document.removeEventListener("pointerdown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
   return (
-    <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
+    <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
-        onClick={() =>
-          setOpen((previous) => !previous)
-        }
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        onClick={() => setOpen((previous) => !previous)}
+        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium`}
       >
         <span className="min-w-0 flex-1 break-words">
-          {selected?.label || value || "Select"}
+          {selected?.label ?? "Select"}
         </span>
 
         <ChevronDown
@@ -220,7 +212,7 @@ function CustomDropdown({
       {open && (
         <div
           role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
         >
           {normalizedOptions.map((option) => {
             const isSelected =
@@ -236,21 +228,18 @@ function CustomDropdown({
                   onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
+                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
                   isSelected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <span className="min-w-0 flex-1 break-words">
+                <span className="min-w-0 break-words">
                   {option.label}
                 </span>
 
                 {isSelected && (
-                  <Check
-                    size={16}
-                    className="shrink-0"
-                  />
+                  <Check size={16} className="shrink-0" />
                 )}
               </button>
             );
@@ -261,38 +250,34 @@ function CustomDropdown({
   );
 }
 
-function FormField({ label, children }) {
+function FormField({ label, children, required = false }) {
   return (
     <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
+      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
         {label}
-      </p>
-
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {children}
     </div>
   );
 }
 
-function Detail({
-  label,
-  value,
-  icon: Icon,
-}) {
+function Detail({ label, value, icon: Icon }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
+    <div className="min-w-0">
+      <p className="mb-1 text-xs font-medium text-slate-400">
         {label}
       </p>
 
       <div className="flex min-w-0 items-start gap-2">
         {Icon && (
           <Icon
-            size={16}
+            size={15}
             className="mt-0.5 shrink-0 text-blue-600"
           />
         )}
 
-        <p className="min-w-0 break-words text-sm font-semibold text-[#10264d]">
+        <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
           {value || "—"}
         </p>
       </div>
@@ -300,22 +285,58 @@ function Detail({
   );
 }
 
-export default function FollowUp() {
-  const [records, setRecords] = useState(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(KEY)
-      );
-
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [form, setForm] = useState(
-    createEmptyForm
+function StatusBadge({ status }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+        statusColors[status] || statusColors.Pending
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {status || "Pending"}
+    </span>
   );
+}
+
+function PriorityBadge({ priority }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold ${
+        priorityColors[priority] || priorityColors.Normal
+      }`}
+    >
+      {priority || "Normal"} Priority
+    </span>
+  );
+}
+
+function RatingStars({ rating }) {
+  if (!(Number(rating) > 0)) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }, (_, index) => (
+        <Star
+          key={index}
+          size={16}
+          className={
+            index < Number(rating)
+              ? "fill-amber-400 text-amber-400"
+              : "text-slate-300"
+          }
+        />
+      ))}
+
+      <span className="ml-1 text-xs font-semibold text-slate-600">
+        {rating}/5
+      </span>
+    </div>
+  );
+}
+
+export default function FollowUp() {
+  const [records, setRecords] = useState(readRecords);
+  const [form, setForm] = useState(createEmptyForm);
 
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -324,29 +345,37 @@ export default function FollowUp() {
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
 
-  const formRef = useRef(null);
+  useEffect(() => {
+    localStorage.setItem(KEY, JSON.stringify(records));
+  }, [records]);
 
   useEffect(() => {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify(records)
-    );
-  }, [records]);
+    if (!showForm) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowForm(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showForm]);
 
   const update = (key, value) => {
     setForm((previous) => ({
       ...previous,
       [key]: value,
     }));
-  };
 
-  const scrollToForm = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
+    if (error) setError("");
   };
 
   const openCreate = () => {
@@ -358,7 +387,6 @@ export default function FollowUp() {
     setEditingId(null);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const openEdit = (item) => {
@@ -370,7 +398,6 @@ export default function FollowUp() {
     setEditingId(item.id);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const closeForm = () => {
@@ -393,8 +420,7 @@ export default function FollowUp() {
       return;
     }
 
-    const phone = String(form.phone || "")
-      .replace(/\D/g, "");
+    const phone = String(form.phone || "").replace(/\D/g, "");
 
     if (
       phone &&
@@ -409,10 +435,7 @@ export default function FollowUp() {
       ...form,
       customer: form.customer.trim(),
       phone,
-      id:
-        editingId ||
-        globalThis.crypto?.randomUUID?.() ||
-        `FOLLOW-${Date.now()}`,
+      id: editingId || createId(),
     };
 
     if (editingId) {
@@ -422,21 +445,14 @@ export default function FollowUp() {
         )
       );
     } else {
-      setRecords((previous) => [
-        data,
-        ...previous,
-      ]);
+      setRecords((previous) => [data, ...previous]);
     }
 
     closeForm();
   };
 
   const deleteRecord = (id) => {
-    if (
-      !window.confirm(
-        "Delete this follow-up record?"
-      )
-    ) {
+    if (!window.confirm("Delete this follow-up record?")) {
       return;
     }
 
@@ -460,23 +476,17 @@ export default function FollowUp() {
   };
 
   const openWhatsApp = (item) => {
-    const phone = String(item.phone || "")
-      .replace(/\D/g, "");
+    const phone = String(item.phone || "").replace(/\D/g, "");
 
     if (
       phone.length !== 10 &&
       !(phone.length === 12 && phone.startsWith("91"))
     ) {
-      window.alert(
-        "Please add a valid phone number."
-      );
+      window.alert("Please add a valid phone number.");
       return;
     }
 
-    const number =
-      phone.length === 10
-        ? `91${phone}`
-        : phone;
+    const number = phone.length === 10 ? `91${phone}` : phone;
 
     const message = encodeURIComponent(
       `Hello ${item.customer}, greetings from Studio Raw Picturez! We are following up regarding your ${item.event} photography service. Please let us know if you need any assistance. Thank you!`
@@ -490,9 +500,7 @@ export default function FollowUp() {
   };
 
   const filtered = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
     return records.filter((item) => {
       const matches = [
@@ -503,15 +511,11 @@ export default function FollowUp() {
         item.type,
         item.assignedTo,
       ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(query)
+        String(value || "").toLowerCase().includes(query)
       );
 
-      return (
-        matches &&
-        (filter === "All" ||
-          item.status === filter)
+      return matches && (
+        filter === "All" || item.status === filter
       );
     });
   }, [records, search, filter]);
@@ -524,6 +528,8 @@ export default function FollowUp() {
       value: records.length,
       icon: HeartHandshake,
       color: "text-blue-700",
+      bg: "bg-blue-50",
+      accent: "bg-blue-600",
     },
     {
       title: "Pending",
@@ -532,6 +538,8 @@ export default function FollowUp() {
       ).length,
       icon: Clock3,
       color: "text-amber-600",
+      bg: "bg-amber-50",
+      accent: "bg-amber-500",
     },
     {
       title: "Due Today",
@@ -542,7 +550,9 @@ export default function FollowUp() {
           item.status !== "Cancelled"
       ).length,
       icon: AlertCircle,
-      color: "text-red-600",
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      accent: "bg-rose-500",
     },
     {
       title: "Completed",
@@ -550,21 +560,27 @@ export default function FollowUp() {
         (item) => item.status === "Completed"
       ).length,
       icon: CheckCircle2,
-      color: "text-green-700",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      accent: "bg-emerald-500",
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
+    <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
 
-      {/* Header */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="min-w-0">
-          <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
+      {/* HEADER */}
+      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+            Studio Raw / Customer Relations
+          </p>
+
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Follow-up & CRM
           </h1>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm text-slate-500">
             Manage customer communication, reminders and feedback.
           </p>
         </div>
@@ -572,540 +588,752 @@ export default function FollowUp() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 transition hover:bg-blue-900"
         >
           <Plus size={18} />
           New Follow-up
         </button>
       </div>
 
-      {/* Statistics */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* STATISTICS */}
+      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.title}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.title}
-                </p>
+              <div
+                className={`absolute left-0 top-0 h-1 w-full ${stat.accent}`}
+              />
 
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon
-                    size={22}
-                    className={stat.color}
-                  />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    {stat.title}
+                  </p>
+
+                  <h2 className={`mt-3 text-3xl font-extrabold ${stat.color}`}>
+                    {stat.value}
+                  </h2>
+                </div>
+
+                <div className={`shrink-0 rounded-2xl p-3 ${stat.bg}`}>
+                  <Icon size={23} className={stat.color} />
                 </div>
               </div>
 
-              <h2
-                className={`mt-3 text-3xl font-bold ${stat.color}`}
-              >
-                {stat.value}
-              </h2>
+              <p className="mt-5 text-xs text-slate-400">
+                Customer follow-up overview
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Follow-up Records */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-5 text-lg font-bold text-[#10264d]">
-          Customer Follow-ups
-        </h2>
+      {/* RECORDS SECTION */}
+      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#10264d]">
+                Customer Follow-ups
+              </h2>
 
-        {/* Search */}
-        <div className="relative mb-4 w-full min-w-0">
-          <Search
-            size={17}
-            className="absolute left-3 top-3.5 text-slate-400"
-          />
+              <p className="mt-1 text-xs text-slate-400">
+                Showing {filtered.length} of {records.length} records
+              </p>
+            </div>
 
-          <input
-            type="search"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-            placeholder="Search follow-ups..."
-            className={`${inputClass} pl-10`}
-          />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative w-full sm:w-64">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search follow-ups..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+
+              <div className="w-full sm:w-48">
+                <CustomDropdown
+                  value={filter}
+                  options={["All", ...statusOptions].map((status) => ({
+                    label: status === "All" ? "All Status" : status,
+                    value: status,
+                  }))}
+                  onChange={setFilter}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Filter */}
-        <div className="mb-5 w-full min-w-0">
-          <p className="mb-2 text-xs font-medium text-slate-500">
-            Filter by Status
-          </p>
-
-          <CustomDropdown
-            value={filter}
-            options={["All", ...statusOptions]}
-            onChange={setFilter}
-          />
-        </div>
-
-        {/* Cards */}
         {filtered.length === 0 ? (
-          <div className="py-12 text-center">
+          <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
             <HeartHandshake
               size={42}
-              className="mx-auto mb-3 text-slate-300"
+              className="mb-4 text-slate-300"
             />
 
-            <p className="text-sm text-slate-400">
+            <h3 className="font-bold text-[#10264d]">
               No follow-up records found
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-400">
+              Add a follow-up or adjust your search filters.
             </p>
+
+            <button
+              type="button"
+              onClick={openCreate}
+              className="mt-5 flex items-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white"
+            >
+              <Plus size={16} />
+              New Follow-up
+            </button>
           </div>
         ) : (
-          <div className="flex w-full min-w-0 flex-col gap-4">
-            {filtered.map((item) => {
-              const overdue =
-                item.followupDate &&
-                item.followupDate < today &&
-                item.status !== "Completed" &&
-                item.status !== "Cancelled";
+          <>
+            {/* DESKTOP TABLE */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[1100px] text-left">
+                <thead className="bg-[#f8faff]">
+                  <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <th className="px-5 py-4">Customer</th>
+                    <th className="px-5 py-4">Follow-up Type</th>
+                    <th className="px-5 py-4">Date</th>
+                    <th className="px-5 py-4">Priority</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">Assigned To</th>
+                    <th className="px-5 py-4">Rating</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
 
-              const dueToday =
-                item.followupDate === today &&
-                item.status !== "Completed" &&
-                item.status !== "Cancelled";
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((item) => {
+                    const overdue =
+                      item.followupDate &&
+                      item.followupDate < today &&
+                      item.status !== "Completed" &&
+                      item.status !== "Cancelled";
 
-              return (
-                <article
-                  key={item.id}
-                  className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                >
-                  {/* Customer */}
-                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
-                        {item.customer}
-                      </h3>
+                    const dueToday =
+                      item.followupDate === today &&
+                      item.status !== "Completed" &&
+                      item.status !== "Cancelled";
 
-                      <p className="mt-1 break-words text-sm text-slate-500">
-                        {item.event}
-                      </p>
+                    return (
+                      <tr
+                        key={item.id}
+                        className="transition hover:bg-blue-50/30"
+                      >
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                              <UserRound size={19} />
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-bold text-[#10264d]">
+                                {item.customer}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-400">
+                                {item.event}
+                              </p>
+
+                              {item.phone && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {item.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="text-sm font-medium text-slate-700">
+                            {item.type}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.method}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="text-sm text-slate-600">
+                            {formatDate(item.followupDate)}
+                          </p>
+
+                          {overdue && (
+                            <span className="mt-1 inline-block text-xs font-semibold text-red-600">
+                              Overdue
+                            </span>
+                          )}
+
+                          {dueToday && (
+                            <span className="mt-1 inline-block text-xs font-semibold text-amber-600">
+                              Due Today
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <PriorityBadge priority={item.priority} />
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <StatusBadge status={item.status} />
+                        </td>
+
+                        <td className="px-5 py-5 text-sm text-slate-600">
+                          {item.assignedTo || "Unassigned"}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <RatingStars rating={item.rating} />
+                          {!Number(item.rating) && (
+                            <span className="text-xs text-slate-400">
+                              Not rated
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              title="Manage Follow-up"
+                              onClick={() => openEdit(item)}
+                              className="rounded-lg bg-blue-50 p-2.5 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Pencil size={16} />
+                            </button>
+
+                            {item.status !== "Completed" && (
+                              <button
+                                type="button"
+                                title="Mark Completed"
+                                onClick={() => markComplete(item.id)}
+                                className="rounded-lg bg-green-50 p-2.5 text-green-700 hover:bg-green-100"
+                              >
+                                <CheckCircle2 size={16} />
+                              </button>
+                            )}
+
+                            {item.phone && (
+                              <button
+                                type="button"
+                                title="Open WhatsApp"
+                                onClick={() => openWhatsApp(item)}
+                                className="rounded-lg bg-emerald-50 p-2.5 text-emerald-700 hover:bg-emerald-100"
+                              >
+                                <MessageCircle size={16} />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              title="Delete Follow-up"
+                              onClick={() => deleteRecord(item.id)}
+                              className="rounded-lg bg-red-50 p-2.5 text-red-600 hover:bg-red-100"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE / TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+              {filtered.map((item) => {
+                const overdue =
+                  item.followupDate &&
+                  item.followupDate < today &&
+                  item.status !== "Completed" &&
+                  item.status !== "Cancelled";
+
+                const dueToday =
+                  item.followupDate === today &&
+                  item.status !== "Completed" &&
+                  item.status !== "Cancelled";
+
+                return (
+                  <article
+                    key={item.id}
+                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md"
+                  >
+                    <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-4">
+                      <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                        <UserRound size={20} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words font-bold text-[#10264d]">
+                          {item.customer}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          {item.event}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col items-start gap-2">
-                      <span
-                        className={`max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                          statusColors[item.status] ||
-                          statusColors.Pending
-                        }`}
-                      >
-                        {item.status || "Pending"}
-                      </span>
-
-                      <span
-                        className={`max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                          priorityColors[item.priority] ||
-                          priorityColors.Normal
-                        }`}
-                      >
-                        {item.priority || "Normal"} Priority
-                      </span>
+                    <div className="mb-5 flex flex-wrap gap-2">
+                      <StatusBadge status={item.status} />
+                      <PriorityBadge priority={item.priority} />
 
                       {overdue && (
-                        <span className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700">
+                        <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700">
                           Overdue
                         </span>
                       )}
 
                       {dueToday && (
-                        <span className="rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700">
+                        <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
                           Due Today
                         </span>
                       )}
                     </div>
-                  </div>
 
-                  {/* Details */}
-                  <Detail
-                    label="Follow-up Type"
-                    value={item.type}
-                    icon={HeartHandshake}
-                  />
+                    <div className="space-y-4">
+                      <Detail
+                        label="Follow-up Type"
+                        value={item.type}
+                        icon={HeartHandshake}
+                      />
 
-                  <Detail
-                    label="Phone Number"
-                    value={item.phone || "No phone"}
-                    icon={Phone}
-                  />
+                      <Detail
+                        label="Phone Number"
+                        value={item.phone || "No phone"}
+                        icon={Phone}
+                      />
 
-                  {item.email && (
-                    <Detail
-                      label="Email Address"
-                      value={item.email}
-                      icon={Mail}
-                    />
-                  )}
+                      {item.email && (
+                        <Detail
+                          label="Email Address"
+                          value={item.email}
+                          icon={Mail}
+                        />
+                      )}
 
-                  <Detail
-                    label="Follow-up Date"
-                    value={formatDate(item.followupDate)}
-                    icon={CalendarDays}
-                  />
+                      <Detail
+                        label="Follow-up Date"
+                        value={formatDate(item.followupDate)}
+                        icon={CalendarDays}
+                      />
 
-                  <Detail
-                    label="Assigned Staff"
-                    value={
-                      item.assignedTo ||
-                      "Not assigned"
-                    }
-                    icon={UserRound}
-                  />
+                      <Detail
+                        label="Assigned Staff"
+                        value={item.assignedTo || "Not assigned"}
+                        icon={UserRound}
+                      />
 
-                  <Detail
-                    label="Contact Method"
-                    value={item.method}
-                    icon={MessageCircle}
-                  />
+                      <Detail
+                        label="Contact Method"
+                        value={item.method}
+                        icon={MessageCircle}
+                      />
 
-                  {item.feedback && (
-                    <div className="w-full min-w-0 rounded-xl bg-white p-4">
-                      <p className="text-xs font-semibold text-slate-500">
-                        Customer Feedback
-                      </p>
+                      {item.feedback && (
+                        <div className="rounded-xl bg-white p-4">
+                          <p className="text-xs font-semibold text-slate-500">
+                            Customer Feedback
+                          </p>
 
-                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                        {item.feedback}
-                      </p>
+                          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                            {item.feedback}
+                          </p>
+                        </div>
+                      )}
+
+                      {Number(item.rating) > 0 && (
+                        <div className="rounded-xl bg-white p-4">
+                          <p className="mb-3 text-xs font-semibold text-slate-500">
+                            Customer Rating
+                          </p>
+
+                          <RatingStars rating={item.rating} />
+                        </div>
+                      )}
+
+                      {item.notes && (
+                        <Detail
+                          label="Follow-up Notes"
+                          value={item.notes}
+                        />
+                      )}
                     </div>
-                  )}
 
-                  {Number(item.rating) > 0 && (
-                    <div className="w-full min-w-0 rounded-xl bg-white p-4">
-                      <p className="mb-3 text-xs font-semibold text-slate-500">
-                        Customer Rating
-                      </p>
-
-                      <div className="flex flex-wrap items-center gap-1">
-                        {Array.from(
-                          { length: 5 },
-                          (_, index) => (
-                            <Star
-                              key={index}
-                              size={19}
-                              className={
-                                index < Number(item.rating)
-                                  ? "fill-amber-400 text-amber-400"
-                                  : "text-slate-300"
-                              }
-                            />
-                          )
-                        )}
-
-                        <span className="ml-2 text-sm font-semibold text-[#10264d]">
-                          {item.rating}/5
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {item.notes && (
-                    <Detail
-                      label="Follow-up Notes"
-                      value={item.notes}
-                    />
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex w-full flex-col gap-3 border-t border-slate-200 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
-                    >
-                      <Pencil size={17} />
-                      Manage Follow-up
-                    </button>
-
-                    {item.status !== "Completed" && (
+                    <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
                       <button
                         type="button"
-                        onClick={() =>
-                          markComplete(item.id)
-                        }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-50"
+                        onClick={() => openEdit(item)}
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white"
                       >
-                        <CheckCircle2 size={17} />
-                        Mark Completed
+                        <Pencil size={16} />
+                        Manage Follow-up
                       </button>
-                    )}
 
-                    {item.phone && (
+                      {item.status !== "Completed" && (
+                        <button
+                          type="button"
+                          onClick={() => markComplete(item.id)}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                        >
+                          <CheckCircle2 size={16} />
+                          Mark Completed
+                        </button>
+                      )}
+
+                      {item.phone && (
+                        <button
+                          type="button"
+                          onClick={() => openWhatsApp(item)}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700"
+                        >
+                          <MessageCircle size={16} />
+                          Open WhatsApp
+                        </button>
+                      )}
+
                       <button
                         type="button"
-                        onClick={() =>
-                          openWhatsApp(item)
-                        }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-50"
+                        onClick={() => deleteRecord(item.id)}
+                        className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
                       >
-                        <MessageCircle size={17} />
-                        Open WhatsApp
+                        <Trash2 size={16} />
+                        Delete Follow-up
                       </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deleteRecord(item.id)
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      <Trash2 size={17} />
-                      Delete Follow-up
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
-      {/* Add / Edit Form */}
-      {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-6 flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId
-                  ? "Manage Follow-up"
-                  : "New Follow-up"}
-              </h2>
+      {/* CENTER MODAL */}
+      {showForm &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
 
-              <p className="mt-1 text-sm text-slate-500">
-                Enter customer relationship details.
-              </p>
-            </div>
-
-            <button
-              type="button"
+            {/* BACKDROP */}
+            <div
+              className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
               onClick={closeForm}
-              aria-label="Close form"
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100"
+            />
+
+            {/* MODAL CONTAINER */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={
+                editingId ? "Manage Follow-up" : "New Follow-up"
+              }
+              className="relative z-10 mx-auto flex max-h-[92dvh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
             >
-              <X size={22} />
-            </button>
-          </div>
+              {/* MODAL HEADER */}
+              <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
+                      Studio Raw / Customer Relations
+                    </p>
 
-          <form
-            onSubmit={saveRecord}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Customer Name">
-              <input
-                type="text"
-                required
-                value={form.customer}
-                onChange={(event) =>
-                  update(
-                    "customer",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter customer name"
-                className={inputClass}
-              />
-            </FormField>
+                    <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
+                      {editingId
+                        ? "Manage Follow-up"
+                        : "New Follow-up"}
+                    </h2>
 
-            <FormField label="Phone Number">
-              <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={12}
-                value={form.phone}
-                onChange={(event) =>
-                  update(
-                    "phone",
-                    event.target.value.replace(/\D/g, "")
-                  )
-                }
-                placeholder="Enter phone number"
-                className={inputClass}
-              />
-            </FormField>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Enter customer relationship details.
+                    </p>
+                  </div>
 
-            <FormField label="Email Address">
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  update(
-                    "email",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter email address"
-                className={inputClass}
-              />
-            </FormField>
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    aria-label="Close form"
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
 
-            <FormField label="Event Type">
-              <CustomDropdown
-                value={form.event}
-                options={eventOptions}
-                onChange={(value) =>
-                  update("event", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Follow-up Type">
-              <CustomDropdown
-                value={form.type}
-                options={typeOptions}
-                onChange={(value) =>
-                  update("type", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Contact Method">
-              <CustomDropdown
-                value={form.method}
-                options={methodOptions}
-                onChange={(value) =>
-                  update("method", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Follow-up Date">
-              <input
-                type="date"
-                required
-                value={form.followupDate}
-                onChange={(event) =>
-                  update(
-                    "followupDate",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Assigned Staff">
-              <input
-                type="text"
-                value={form.assignedTo}
-                onChange={(event) =>
-                  update(
-                    "assignedTo",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter staff name"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Priority">
-              <CustomDropdown
-                value={form.priority}
-                options={priorityOptions}
-                onChange={(value) =>
-                  update("priority", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Follow-up Status">
-              <CustomDropdown
-                value={form.status}
-                options={statusOptions}
-                onChange={(value) =>
-                  update("status", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Customer Rating">
-              <CustomDropdown
-                value={form.rating}
-                options={ratingOptions}
-                onChange={(value) =>
-                  update("rating", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Customer Feedback">
-              <textarea
-                rows={4}
-                value={form.feedback}
-                onChange={(event) =>
-                  update(
-                    "feedback",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter customer feedback..."
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Follow-up Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  update(
-                    "notes",
-                    event.target.value
-                  )
-                }
-                placeholder="Additional notes..."
-                className={inputClass}
-              />
-            </FormField>
-
-            {error && (
-              <p
-                role="alert"
-                className="flex items-start gap-2 break-words text-sm font-medium text-red-600"
+              <form
+                onSubmit={saveRecord}
+                className="flex min-h-0 flex-1 flex-col"
               >
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
-                {error}
-              </p>
-            )}
+                {/* SCROLLABLE CONTENT */}
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
 
-            <div className="flex w-full flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
+                  {/* CUSTOMER INFORMATION */}
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                      <UserRound
+                        size={18}
+                        className="text-blue-600"
+                      />
+                      Customer Information
+                    </h3>
 
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                <Save size={17} />
-                {editingId
-                  ? "Update Follow-up"
-                  : "Save Follow-up"}
-              </button>
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <FormField
+                        label="Customer Name"
+                        required
+                      >
+                        <input
+                          type="text"
+                          required
+                          value={form.customer}
+                          onChange={(event) =>
+                            update("customer", event.target.value)
+                          }
+                          placeholder="Enter customer name"
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Phone Number">
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={12}
+                          value={form.phone}
+                          onChange={(event) =>
+                            update(
+                              "phone",
+                              event.target.value.replace(/\D/g, "")
+                            )
+                          }
+                          placeholder="Enter phone number"
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Email Address">
+                        <input
+                          type="email"
+                          value={form.email}
+                          onChange={(event) =>
+                            update("email", event.target.value)
+                          }
+                          placeholder="Enter email address"
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Event Type">
+                        <CustomDropdown
+                          value={form.event}
+                          options={eventOptions}
+                          onChange={(value) =>
+                            update("event", value)
+                          }
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+
+                  {/* FOLLOW-UP INFORMATION */}
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                      <HeartHandshake
+                        size={18}
+                        className="text-blue-600"
+                      />
+                      Follow-up Details
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <FormField label="Follow-up Type">
+                        <CustomDropdown
+                          value={form.type}
+                          options={typeOptions}
+                          onChange={(value) =>
+                            update("type", value)
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="Contact Method">
+                        <CustomDropdown
+                          value={form.method}
+                          options={methodOptions}
+                          onChange={(value) =>
+                            update("method", value)
+                          }
+                        />
+                      </FormField>
+
+                      <FormField
+                        label="Follow-up Date"
+                        required
+                      >
+                        <input
+                          type="date"
+                          required
+                          value={form.followupDate}
+                          onChange={(event) =>
+                            update(
+                              "followupDate",
+                              event.target.value
+                            )
+                          }
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Assigned Staff">
+                        <input
+                          type="text"
+                          value={form.assignedTo}
+                          onChange={(event) =>
+                            update(
+                              "assignedTo",
+                              event.target.value
+                            )
+                          }
+                          placeholder="Enter staff name"
+                          className={inputClass}
+                        />
+                      </FormField>
+
+                      <FormField label="Priority">
+                        <CustomDropdown
+                          value={form.priority}
+                          options={priorityOptions}
+                          onChange={(value) =>
+                            update("priority", value)
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="Follow-up Status">
+                        <CustomDropdown
+                          value={form.status}
+                          options={statusOptions}
+                          onChange={(value) =>
+                            update("status", value)
+                          }
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+
+                  {/* FEEDBACK */}
+                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                      <Star
+                        size={18}
+                        className="text-blue-600"
+                      />
+                      Feedback & Notes
+                    </h3>
+
+                    <div className="space-y-5">
+                      <FormField label="Customer Rating">
+                        <CustomDropdown
+                          value={form.rating}
+                          options={ratingOptions}
+                          onChange={(value) =>
+                            update("rating", value)
+                          }
+                        />
+                      </FormField>
+
+                      <FormField label="Customer Feedback">
+                        <textarea
+                          rows={3}
+                          value={form.feedback}
+                          onChange={(event) =>
+                            update(
+                              "feedback",
+                              event.target.value
+                            )
+                          }
+                          placeholder="Enter customer feedback..."
+                          className={`${inputClass} resize-y`}
+                        />
+                      </FormField>
+
+                      <FormField label="Follow-up Notes">
+                        <textarea
+                          rows={3}
+                          value={form.notes}
+                          onChange={(event) =>
+                            update("notes", event.target.value)
+                          }
+                          placeholder="Additional notes..."
+                          className={`${inputClass} resize-y`}
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div
+                      role="alert"
+                      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                    >
+                      <AlertCircle
+                        size={18}
+                        className="mt-0.5 shrink-0"
+                      />
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                {/* FIXED FOOTER */}
+                <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={closeForm}
+                      className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white hover:bg-blue-900"
+                    >
+                      <Save size={17} />
+                      {editingId
+                        ? "Update Follow-up"
+                        : "Save Follow-up"}
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
-          </form>
-        </section>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

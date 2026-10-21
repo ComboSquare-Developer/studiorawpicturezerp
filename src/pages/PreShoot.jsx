@@ -1,5 +1,6 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Search,
@@ -15,6 +16,9 @@ import {
   AlertCircle,
   Pencil,
   ChevronDown,
+  Save,
+  Users,
+  ClipboardList,
   Check,
 } from "lucide-react";
 
@@ -65,7 +69,7 @@ const filterOptions = [
 ];
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#dbe4f0] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const getCompletedTasks = (item) => {
   const selected = Array.isArray(item?.checklist)
@@ -77,20 +81,16 @@ const getCompletedTasks = (item) => {
   ).length;
 };
 
-const getProgress = (item) => {
-  const completed = getCompletedTasks(item);
-
-  return Math.round(
-    (completed / checklistItems.length) * 100
+const getProgress = (item) =>
+  Math.round(
+    (getCompletedTasks(item) / checklistItems.length) * 100
   );
-};
 
 const getStatus = (item) => {
   const progress = getProgress(item);
 
   if (progress === 100) return "Ready";
   if (progress > 0) return "In Progress";
-
   return "Pending";
 };
 
@@ -100,131 +100,71 @@ const statusStyle = {
   Pending: "bg-amber-100 text-amber-700",
 };
 
-function CustomDropdown({
-  value,
-  options,
-  onChange,
-  placeholder = "Select option",
-}) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener(
-      "pointerdown",
-      handleOutside
-    );
-
-    document.addEventListener(
-      "keydown",
-      handleEscape
-    );
-
-    return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handleOutside
-      );
-
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
-    };
-  }, []);
-
+function CustomDropdown({ value, options, onChange }) {
   return (
-    <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
-      <button
-        type="button"
-        onClick={() =>
-          setOpen((previous) => !previous)
-        }
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+    <div className="relative w-full min-w-0">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${inputClass} appearance-none pr-11`}
       >
-        <span className="min-w-0 flex-1 break-words">
-          {value || placeholder}
-        </span>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
 
-        <ChevronDown
-          size={18}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+      <ChevronDown
+        size={17}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+      />
+    </div>
+  );
+}
 
-      {open && (
-        <div
-          role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-        >
-          {options.map((option) => {
-            const selected = value === option;
+function FormField({ label, required = false, children }) {
+  return (
+    <div className="min-w-0">
+      <label className="mb-2 block text-[13px] font-semibold text-[#29416a]">
+        {label}
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
 
-            return (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={`flex w-full min-w-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                  selected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option}
-                </span>
+function SectionHeading({ icon: Icon, title, description }) {
+  return (
+    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+        <Icon size={20} />
+      </div>
 
-                {selected && (
-                  <Check
-                    size={16}
-                    className="shrink-0"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="min-w-0">
+        <h3 className="text-sm font-bold text-[#10264d]">
+          {title}
+        </h3>
+
+        {description && (
+          <p className="mt-1 text-xs text-slate-400">
+            {description}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
 function Detail({ label, value, icon: Icon }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
+    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
       <p className="text-xs font-medium text-slate-400">
         {label}
       </p>
 
-      <div className="flex min-w-0 items-start gap-2">
+      <div className="mt-1.5 flex min-w-0 items-start gap-2">
         {Icon && (
           <Icon
             size={16}
@@ -232,7 +172,7 @@ function Detail({ label, value, icon: Icon }) {
           />
         )}
 
-        <p className="min-w-0 break-words text-sm font-semibold text-[#10264d]">
+        <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
           {value || "—"}
         </p>
       </div>
@@ -240,15 +180,150 @@ function Detail({ label, value, icon: Icon }) {
   );
 }
 
-function FormField({ label, children }) {
+function StatusBadge({ status }) {
   return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
-        {label}
-      </p>
+    <span
+      className={`inline-flex w-fit items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${
+        statusStyle[status] || statusStyle.Pending
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
 
-      {children}
+function ProgressBar({ progress, completed }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-slate-500">
+          Preparation Progress
+        </p>
+
+        <p className="text-sm font-bold text-[#10264d]">
+          {progress}%
+        </p>
+      </div>
+
+      <div
+        role="progressbar"
+        aria-label="Preparation progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
+      >
+        <div
+          className={`h-full rounded-full transition-all ${
+            progress === 100 ? "bg-green-500" : "bg-blue-700"
+          }`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <p className="mt-3 text-xs text-slate-400">
+        {completed} of {checklistItems.length} tasks completed
+      </p>
     </div>
+  );
+}
+
+function ModalShell({
+  title,
+  description,
+  onClose,
+  onSubmit,
+  submitLabel,
+  children,
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152d]/65 p-2 backdrop-blur-[4px] sm:p-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
+      >
+        {/* Fixed Header */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
+              <ClipboardCheck size={23} />
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="break-words text-lg font-bold text-[#10264d] sm:text-[23px]">
+                {title}
+              </h2>
+
+              <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
+                {description}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close preparation form"
+            className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        <form
+          onSubmit={onSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {/* Scrollable Body */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
+            {children}
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#d9e3f2] bg-[#f7f9fd] px-7 py-3 text-sm font-semibold text-[#18345f] transition hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384]"
+            >
+              <Save size={18} />
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -258,7 +333,6 @@ export default function PreShoot() {
       const saved = JSON.parse(
         localStorage.getItem(STORAGE_KEY)
       );
-
       return Array.isArray(saved) ? saved : [];
     } catch {
       return [];
@@ -266,18 +340,12 @@ export default function PreShoot() {
   });
 
   const [showForm, setShowForm] = useState(false);
-
-  const [form, setForm] = useState(
-    createEmptyForm
-  );
-
+  const [form, setForm] = useState(createEmptyForm);
   const [editingId, setEditingId] = useState(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
-
-  const formRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(
@@ -291,15 +359,7 @@ export default function PreShoot() {
       ...previous,
       [key]: value,
     }));
-  };
-
-  const scrollToForm = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
+    setError("");
   };
 
   const openCreate = () => {
@@ -307,7 +367,6 @@ export default function PreShoot() {
     setEditingId(null);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const openEdit = (item) => {
@@ -322,7 +381,6 @@ export default function PreShoot() {
     setEditingId(item.id);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const closeForm = () => {
@@ -341,9 +399,7 @@ export default function PreShoot() {
     }
 
     if (!form.shootDate || !form.shootTime) {
-      setError(
-        "Please select shoot date and time."
-      );
+      setError("Please select shoot date and time.");
       return;
     }
 
@@ -353,70 +409,51 @@ export default function PreShoot() {
       id:
         editingId ||
         globalThis.crypto?.randomUUID?.() ||
-        `PRE-${Date.now()}`,
+        `PRE-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     };
 
     if (editingId) {
       setShoots((previous) =>
         previous.map((item) =>
-          item.id === editingId
-            ? data
-            : item
+          item.id === editingId ? data : item
         )
       );
     } else {
-      setShoots((previous) => [
-        data,
-        ...previous,
-      ]);
+      setShoots((previous) => [data, ...previous]);
     }
 
     closeForm();
   };
 
   const deleteShoot = (id) => {
-    if (
-      !window.confirm(
-        "Delete this shoot preparation?"
-      )
-    ) {
+    if (!window.confirm("Delete this shoot preparation?")) {
       return;
     }
 
     setShoots((previous) =>
-      previous.filter(
-        (item) => item.id !== id
-      )
+      previous.filter((item) => item.id !== id)
     );
 
-    if (editingId === id) {
-      closeForm();
-    }
+    if (editingId === id) closeForm();
   };
 
   const toggleChecklist = (task) => {
     setForm((previous) => {
-      const current = Array.isArray(
-        previous.checklist
-      )
+      const current = Array.isArray(previous.checklist)
         ? previous.checklist
         : [];
 
       return {
         ...previous,
         checklist: current.includes(task)
-          ? current.filter(
-              (item) => item !== task
-            )
+          ? current.filter((item) => item !== task)
           : [...current, task],
       };
     });
   };
 
   const filtered = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
     return shoots.filter((item) => {
       const matches = [
@@ -427,15 +464,12 @@ export default function PreShoot() {
         item.team,
         item.equipment,
       ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(query)
+        String(value || "").toLowerCase().includes(query)
       );
 
       return (
         matches &&
-        (filter === "All" ||
-          getStatus(item) === filter)
+        (filter === "All" || getStatus(item) === filter)
       );
     });
   }, [shoots, search, filter]);
@@ -446,43 +480,43 @@ export default function PreShoot() {
       value: shoots.length,
       icon: ClipboardCheck,
       color: "text-blue-700",
+      bg: "bg-blue-50",
     },
     {
       label: "Ready for Shoot",
       value: shoots.filter(
-        (item) =>
-          getStatus(item) === "Ready"
+        (item) => getStatus(item) === "Ready"
       ).length,
       icon: CheckCircle2,
       color: "text-green-700",
+      bg: "bg-green-50",
     },
     {
       label: "In Progress",
       value: shoots.filter(
-        (item) =>
-          getStatus(item) === "In Progress"
+        (item) => getStatus(item) === "In Progress"
       ).length,
       icon: Clock3,
       color: "text-amber-600",
+      bg: "bg-amber-50",
     },
     {
       label: "Pending",
       value: shoots.filter(
-        (item) =>
-          getStatus(item) === "Pending"
+        (item) => getStatus(item) === "Pending"
       ).length,
       icon: AlertCircle,
       color: "text-red-600",
+      bg: "bg-red-50",
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
-
+    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
       {/* Page Header */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
+          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
             Pre-Shoot Preparation
           </h1>
 
@@ -494,86 +528,88 @@ export default function PreShoot() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
         >
           <Plus size={18} />
           New Preparation
         </button>
       </div>
 
-      {/* Statistics - Vertical */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* Statistics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.label}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex min-w-0 items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.label}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    {stat.label}
+                  </p>
 
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon
-                    size={22}
-                    className={stat.color}
-                  />
+                  <h2
+                    className={`mt-3 text-3xl font-bold ${stat.color}`}
+                  >
+                    {stat.value}
+                  </h2>
+                </div>
+
+                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
+                  <Icon size={22} className={stat.color} />
                 </div>
               </div>
-
-              <h2
-                className={`mt-3 text-3xl font-bold ${stat.color}`}
-              >
-                {stat.value}
-              </h2>
             </div>
           );
         })}
       </div>
 
       {/* Preparation List */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-5 text-lg font-bold text-[#10264d]">
-          Shoot Preparation List
-        </h2>
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#10264d]">
+                Shoot Preparation List
+              </h2>
 
-        {/* Search */}
-        <div className="relative mb-4 w-full min-w-0">
-          <Search
-            size={17}
-            className="absolute left-3 top-3.5 text-slate-400"
-          />
+              <p className="mt-1 text-sm text-slate-500">
+                Track and manage pre-shoot preparations.
+              </p>
+            </div>
 
-          <input
-            type="search"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-            placeholder="Search preparations..."
-            className={`${inputClass} pl-10`}
-          />
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <div className="relative w-full lg:w-72">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search preparations..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+
+              <div className="w-full sm:w-44">
+                <CustomDropdown
+                  value={filter}
+                  options={filterOptions}
+                  onChange={setFilter}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Status Filter */}
-        <div className="mb-5 w-full min-w-0">
-          <p className="mb-2 text-xs font-medium text-slate-500">
-            Filter by Preparation Status
-          </p>
-
-          <CustomDropdown
-            value={filter}
-            options={filterOptions}
-            onChange={setFilter}
-          />
-        </div>
-
-        {/* Preparation Cards */}
         {filtered.length === 0 ? (
-          <div className="py-12 text-center">
+          <div className="px-4 py-16 text-center">
             <ClipboardCheck
               size={42}
               className="mx-auto mb-3 text-slate-300"
@@ -584,424 +620,478 @@ export default function PreShoot() {
             </p>
           </div>
         ) : (
-          <div className="flex w-full min-w-0 flex-col gap-4">
-            {filtered.map((item) => {
-              const progress =
-                getProgress(item);
+          <>
+            {/* Desktop Table */}
+            <div className="hidden w-full overflow-x-auto lg:block">
+              <table className="w-full min-w-[1000px] border-collapse text-left">
+                <thead className="bg-slate-50">
+                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {[
+                      "Customer / Event",
+                      "Shoot Date",
+                      "Location",
+                      "Photographer",
+                      "Progress",
+                      "Status",
+                      "Actions",
+                    ].map((heading) => (
+                      <th key={heading} className="px-5 py-4">
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-              const status =
-                getStatus(item);
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((item) => {
+                    const progress = getProgress(item);
+                    const status = getStatus(item);
 
-              const completed =
-                getCompletedTasks(item);
+                    return (
+                      <tr
+                        key={item.id}
+                        className="transition hover:bg-blue-50/40"
+                      >
+                        <td className="px-5 py-5">
+                          <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">
+                            {item.customer}
+                          </p>
 
-              return (
-                <article
-                  key={item.id}
-                  className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                >
-                  {/* Card Header */}
-                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
-                        {item.customer}
-                      </h3>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {item.event}
+                          </p>
+                        </td>
 
-                      <p className="mt-1 break-words text-sm text-slate-500">
-                        {item.event}
-                      </p>
+                        <td className="px-5 py-5">
+                          <p className="whitespace-nowrap text-sm text-[#10264d]">
+                            {item.shootDate || "—"}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            {item.shootTime || "—"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="max-w-40 break-words text-sm text-slate-700">
+                            {item.location || "Not assigned"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="max-w-40 break-words text-sm text-slate-700">
+                            {item.photographer || "Not assigned"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="w-32">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-xs text-slate-500">
+                                {getCompletedTasks(item)}/
+                                {checklistItems.length}
+                              </span>
+
+                              <span className="text-xs font-bold text-[#10264d]">
+                                {progress}%
+                              </span>
+                            </div>
+
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className={`h-full rounded-full ${
+                                  progress === 100
+                                    ? "bg-green-500"
+                                    : "bg-blue-700"
+                                }`}
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <StatusBadge status={status} />
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(item)}
+                              title="Manage Preparation"
+                              className="rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
+                            >
+                              <Pencil size={17} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => deleteShoot(item.id)}
+                              title="Delete Preparation"
+                              className="rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile / Tablet Cards */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+              {filtered.map((item) => {
+                const progress = getProgress(item);
+                const status = getStatus(item);
+                const completed = getCompletedTasks(item);
+
+                return (
+                  <article
+                    key={item.id}
+                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-base font-bold text-[#10264d]">
+                          {item.customer}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {item.event}
+                        </p>
+                      </div>
+
+                      <StatusBadge status={status} />
                     </div>
 
-                    <span
-                      className={`w-fit max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusStyle[status]
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </div>
+                    <div className="mt-4 space-y-3">
+                      <Detail
+                        label="Shoot Date"
+                        value={item.shootDate}
+                        icon={CalendarDays}
+                      />
 
-                  {/* Details */}
-                  <Detail
-                    label="Shoot Date"
-                    value={item.shootDate}
-                    icon={CalendarDays}
-                  />
+                      <Detail
+                        label="Shoot Time"
+                        value={item.shootTime}
+                        icon={Clock3}
+                      />
 
-                  <Detail
-                    label="Shoot Time"
-                    value={item.shootTime}
-                    icon={Clock3}
-                  />
+                      <Detail
+                        label="Location"
+                        value={item.location || "Not assigned"}
+                        icon={MapPin}
+                      />
 
-                  <Detail
-                    label="Location"
-                    value={
-                      item.location ||
-                      "Location not assigned"
-                    }
-                    icon={MapPin}
-                  />
+                      <Detail
+                        label="Photographer"
+                        value={item.photographer || "Not assigned"}
+                        icon={UserRound}
+                      />
 
-                  <Detail
-                    label="Photographer"
-                    value={
-                      item.photographer ||
-                      "Photographer not assigned"
-                    }
-                    icon={UserRound}
-                  />
+                      <Detail
+                        label="Team Members"
+                        value={item.team || "Not assigned"}
+                        icon={Users}
+                      />
 
-                  <Detail
-                    label="Team Members"
-                    value={
-                      item.team ||
-                      "Team not assigned"
-                    }
-                    icon={UserRound}
-                  />
+                      <Detail
+                        label="Required Equipment"
+                        value={item.equipment || "Not specified"}
+                        icon={Camera}
+                      />
 
-                  <Detail
-                    label="Required Equipment"
-                    value={
-                      item.equipment ||
-                      "Equipment not specified"
-                    }
-                    icon={Camera}
-                  />
+                      {item.notes && (
+                        <Detail
+                          label="Additional Notes"
+                          value={item.notes}
+                        />
+                      )}
 
-                  {item.notes && (
-                    <Detail
-                      label="Additional Notes"
-                      value={item.notes}
-                    />
-                  )}
-
-                  {/* Progress */}
-                  <div className="w-full min-w-0 rounded-xl bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Preparation Progress
-                      </p>
-
-                      <p className="shrink-0 text-sm font-bold text-[#10264d]">
-                        {progress}%
-                      </p>
-                    </div>
-
-                    <div
-                      role="progressbar"
-                      aria-valuenow={progress}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label="Preparation progress"
-                      className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
-                    >
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          progress === 100
-                            ? "bg-green-500"
-                            : "bg-blue-700"
-                        }`}
-                        style={{
-                          width: `${progress}%`,
-                        }}
+                      <ProgressBar
+                        progress={progress}
+                        completed={completed}
                       />
                     </div>
 
-                    <p className="mt-3 text-xs text-slate-400">
-                      {completed} of{" "}
-                      {checklistItems.length} tasks completed
-                    </p>
-                  </div>
+                    <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-4 py-3 text-sm font-semibold text-white"
+                      >
+                        <Pencil size={17} />
+                        Manage Preparation
+                      </button>
 
-                  {/* Actions */}
-                  <div className="flex w-full flex-col gap-3 border-t border-slate-200 pt-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openEdit(item)
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
-                    >
-                      <Pencil size={17} />
-                      Manage Preparation
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deleteShoot(item.id)
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      <Trash2 size={17} />
-                      Delete Preparation
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteShoot(item.id)}
+                        className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                      >
+                        <Trash2 size={17} />
+                        Delete Preparation
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
-      {/* New / Edit Preparation Form */}
+      {/* Center Popup Modal */}
       {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        <ModalShell
+          title={
+            editingId
+              ? "Manage Shoot Preparation"
+              : "New Shoot Preparation"
+          }
+          description="Complete preparation details and checklist"
+          onClose={closeForm}
+          onSubmit={saveShoot}
+          submitLabel={
+            editingId
+              ? "Update Preparation"
+              : "Save Preparation"
+          }
         >
-          <div className="mb-6 flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId
-                  ? "Manage Shoot Preparation"
-                  : "New Shoot Preparation"}
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Complete the preparation details and checklist.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={closeForm}
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100"
-              aria-label="Close preparation form"
-            >
-              <X size={22} />
-            </button>
-          </div>
-
-          <form
-            onSubmit={saveShoot}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Customer Name">
-              <input
-                type="text"
-                required
-                value={form.customer}
-                onChange={(event) =>
-                  update(
-                    "customer",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter customer name"
-                className={inputClass}
+          <div className="space-y-8">
+            {/* Shoot Information */}
+            <section>
+              <SectionHeading
+                icon={CalendarDays}
+                title="Shoot Information"
+                description="Customer, event and schedule"
               />
-            </FormField>
 
-            <FormField label="Event Type">
-              <CustomDropdown
-                value={form.event}
-                options={eventOptions}
-                onChange={(value) =>
-                  update("event", value)
-                }
-              />
-            </FormField>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Customer Name" required>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={form.customer}
+                    onChange={(event) =>
+                      update("customer", event.target.value)
+                    }
+                    placeholder="Enter customer name"
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Shoot Date">
-              <input
-                type="date"
-                required
-                value={form.shootDate}
-                onChange={(event) =>
-                  update(
-                    "shootDate",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Event Type">
+                  <CustomDropdown
+                    value={form.event}
+                    options={eventOptions}
+                    onChange={(value) => update("event", value)}
+                  />
+                </FormField>
 
-            <FormField label="Shoot Time">
-              <input
-                type="time"
-                required
-                value={form.shootTime}
-                onChange={(event) =>
-                  update(
-                    "shootTime",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Shoot Date" required>
+                  <input
+                    type="date"
+                    required
+                    value={form.shootDate}
+                    onChange={(event) =>
+                      update("shootDate", event.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Shoot Location">
-              <input
-                type="text"
-                value={form.location}
-                onChange={(event) =>
-                  update(
-                    "location",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter shoot location"
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Shoot Time" required>
+                  <input
+                    type="time"
+                    required
+                    value={form.shootTime}
+                    onChange={(event) =>
+                      update("shootTime", event.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Photographer">
-              <input
-                type="text"
-                value={form.photographer}
-                onChange={(event) =>
-                  update(
-                    "photographer",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter photographer name"
-                className={inputClass}
-              />
-            </FormField>
+                <div className="md:col-span-2">
+                  <FormField label="Shoot Location">
+                    <input
+                      type="text"
+                      value={form.location}
+                      onChange={(event) =>
+                        update("location", event.target.value)
+                      }
+                      placeholder="Enter shoot location"
+                      className={inputClass}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </section>
 
-            <FormField label="Team Members">
-              <input
-                type="text"
-                value={form.team}
-                onChange={(event) =>
-                  update(
-                    "team",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter team members"
-                className={inputClass}
+            {/* Team and Equipment */}
+            <section>
+              <SectionHeading
+                icon={Users}
+                title="Team & Equipment"
+                description="Assign team members and required equipment"
               />
-            </FormField>
 
-            <FormField label="Required Equipment">
-              <input
-                type="text"
-                value={form.equipment}
-                onChange={(event) =>
-                  update(
-                    "equipment",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter required equipment"
-                className={inputClass}
-              />
-            </FormField>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Photographer">
+                  <input
+                    type="text"
+                    value={form.photographer}
+                    onChange={(event) =>
+                      update("photographer", event.target.value)
+                    }
+                    placeholder="Enter photographer name"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Team Members">
+                  <input
+                    type="text"
+                    value={form.team}
+                    onChange={(event) =>
+                      update("team", event.target.value)
+                    }
+                    placeholder="Enter team members"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <div className="md:col-span-2">
+                  <FormField label="Required Equipment">
+                    <input
+                      type="text"
+                      value={form.equipment}
+                      onChange={(event) =>
+                        update("equipment", event.target.value)
+                      }
+                      placeholder="Enter required equipment"
+                      className={inputClass}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            </section>
 
             {/* Preparation Checklist */}
-            <div className="w-full min-w-0 rounded-2xl border border-slate-200 p-3 sm:p-5">
-              <div className="mb-5 flex min-w-0 items-center justify-between gap-3">
-                <h3 className="min-w-0 break-words text-base font-bold text-[#10264d]">
-                  Preparation Checklist
-                </h3>
-
-                <span className="shrink-0 text-sm font-semibold text-blue-700">
-                  {getProgress(form)}%
-                </span>
-              </div>
-
-              <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    getProgress(form) === 100
-                      ? "bg-green-500"
-                      : "bg-blue-700"
-                  }`}
-                  style={{
-                    width: `${getProgress(form)}%`,
-                  }}
-                />
-              </div>
-
-              <div className="flex w-full min-w-0 flex-col gap-3">
-                {checklistItems.map((task) => {
-                  const checked =
-                    form.checklist.includes(task);
-
-                  return (
-                    <label
-                      key={task}
-                      className={`flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
-                        checked
-                          ? "border-blue-200 bg-blue-50"
-                          : "border-slate-100 bg-white hover:bg-slate-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          toggleChecklist(task)
-                        }
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-blue-800"
-                      />
-
-                      <span className="min-w-0 flex-1 break-words text-sm leading-5 text-slate-700">
-                        {task}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <p className="mt-4 text-xs text-slate-500">
-                {getCompletedTasks(form)} of{" "}
-                {checklistItems.length} tasks completed
-              </p>
-            </div>
-
-            <FormField label="Additional Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  update(
-                    "notes",
-                    event.target.value
-                  )
-                }
-                placeholder="Special instructions..."
-                className={inputClass}
+            <section>
+              <SectionHeading
+                icon={ClipboardCheck}
+                title="Preparation Checklist"
+                description="Track every task before the shoot"
               />
-            </FormField>
+
+              <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8faff] p-4 sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-[#10264d]">
+                    Checklist Progress
+                  </p>
+
+                  <span className="text-sm font-bold text-blue-700">
+                    {getProgress(form)}%
+                  </span>
+                </div>
+
+                <ProgressBar
+                  progress={getProgress(form)}
+                  completed={getCompletedTasks(form)}
+                />
+
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {checklistItems.map((task) => {
+                    const checked = Array.isArray(form.checklist)
+                      ? form.checklist.includes(task)
+                      : false;
+
+                    return (
+                      <label
+                        key={task}
+                        className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                          checked
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleChecklist(task)}
+                          className="sr-only"
+                        />
+
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                            checked
+                              ? "border-blue-700 bg-blue-700 text-white"
+                              : "border-slate-300 bg-white"
+                          }`}
+                        >
+                          {checked && <Check size={14} />}
+                        </span>
+
+                        <span className="min-w-0 break-words text-sm leading-5 text-[#29416a]">
+                          {task}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3">
+                  <p className="text-xs font-medium text-slate-500">
+                    Preparation Status
+                  </p>
+
+                  <StatusBadge status={getStatus(form)} />
+                </div>
+              </div>
+            </section>
+
+            {/* Additional Notes */}
+            <section>
+              <SectionHeading
+                icon={ClipboardList}
+                title="Additional Information"
+                description="Special instructions and shoot notes"
+              />
+
+              <FormField label="Additional Notes">
+                <textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(event) =>
+                    update("notes", event.target.value)
+                  }
+                  placeholder="Special instructions..."
+                  className={`${inputClass} resize-y`}
+                />
+              </FormField>
+            </section>
 
             {error && (
-              <p
+              <div
                 role="alert"
-                className="break-words text-sm font-medium text-red-600"
+                className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
               >
-                {error}
-              </p>
+                <AlertCircle
+                  size={18}
+                  className="mt-0.5 shrink-0"
+                />
+                <span className="break-words">{error}</span>
+              </div>
             )}
-
-            {/* Form Actions */}
-            <div className="flex w-full flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                {editingId
-                  ? "Update Preparation"
-                  : "Save Preparation"}
-              </button>
-            </div>
-          </form>
-        </section>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

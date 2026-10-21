@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   Plus,
@@ -58,22 +59,29 @@ const emptyForm = {
 };
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const labelClass =
   "mb-2 block text-sm font-medium text-slate-700";
 
 const primaryButton =
-  "flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-950";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-950";
 
 const secondaryButton =
-  "flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
 
 const statusColors = {
   Pending: "bg-amber-100 text-amber-700",
   Scheduled: "bg-blue-100 text-blue-700",
   Completed: "bg-green-100 text-green-700",
   Cancelled: "bg-red-100 text-red-700",
+};
+
+const priorityColors = {
+  Low: "bg-slate-100 text-slate-600",
+  Normal: "bg-blue-100 text-blue-700",
+  High: "bg-orange-100 text-orange-700",
+  Urgent: "bg-red-100 text-red-700",
 };
 
 function readArray() {
@@ -83,6 +91,13 @@ function readArray() {
   } catch {
     return [];
   }
+}
+
+function createId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `NOT-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 }
 
 function localDate() {
@@ -97,6 +112,38 @@ function localDate() {
 
 function localTime() {
   return new Date().toTimeString().slice(0, 5);
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(`${value}T00:00:00`);
+
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+}
+
+function formatTime(value) {
+  if (!value) return "—";
+
+  const [hours, minutes] = String(value).split(":").map(Number);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return value;
+  }
+
+  return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
 }
 
 function CustomDropdown({
@@ -144,20 +191,17 @@ function CustomDropdown({
   );
 
   const selected = items.find(
-    (item) => item.value === value
+    (item) => String(item.value) === String(value)
   );
 
   return (
-    <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
+    <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((previous) => !previous)}
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-[#10264d] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-[#10264d] outline-none transition hover:border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
       >
         <span className="min-w-0 flex-1 break-words">
           {selected?.label || placeholder}
@@ -174,14 +218,15 @@ function CustomDropdown({
       {open && (
         <div
           role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          className="mt-2 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-md"
         >
           {items.map((item) => {
-            const isSelected = item.value === value;
+            const isSelected =
+              String(item.value) === String(value);
 
             return (
               <button
-                key={item.value}
+                key={String(item.value)}
                 type="button"
                 role="option"
                 aria-selected={isSelected}
@@ -189,7 +234,7 @@ function CustomDropdown({
                   onChange(item.value);
                   setOpen(false);
                 }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
+                className={`flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
                   isSelected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
@@ -222,13 +267,13 @@ function FormField({ label, children }) {
 
 function DetailField({ label, value }) {
   return (
-    <div className="w-full min-w-0 rounded-xl bg-white p-4">
+    <div className="min-w-0 rounded-xl border border-slate-100 bg-white p-3.5">
       <p className="text-xs font-medium text-slate-500">
         {label}
       </p>
 
-      <p className="mt-2 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-        {value || "-"}
+      <p className="mt-1.5 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
+        {value || "—"}
       </p>
     </div>
   );
@@ -236,14 +281,15 @@ function DetailField({ label, value }) {
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState(readArray);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
-
-  const formRef = useRef(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     localStorage.setItem(
@@ -253,16 +299,31 @@ export default function Notifications() {
   }, [notifications]);
 
   useEffect(() => {
-    if (showForm) {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  }, [showForm, editingId]);
+    if (!showForm) return;
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowForm(false);
+        setEditingId(null);
+        setError("");
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showForm]);
 
   const openAdd = () => {
     setEditingId(null);
+    setError("");
 
     setForm({
       ...emptyForm,
@@ -271,19 +332,11 @@ export default function Notifications() {
     });
 
     setShowForm(true);
-
-    if (showForm) {
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 50);
-    }
   };
 
   const openEdit = (notification) => {
     setEditingId(notification.id);
+    setError("");
 
     setForm({
       ...emptyForm,
@@ -291,20 +344,13 @@ export default function Notifications() {
     });
 
     setShowForm(true);
-
-    if (showForm) {
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 50);
-    }
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
+    setForm({ ...emptyForm });
+    setError("");
   };
 
   const updateField = (key, value) => {
@@ -312,6 +358,8 @@ export default function Notifications() {
       ...previous,
       [key]: value,
     }));
+
+    if (error) setError("");
   };
 
   const saveNotification = (event) => {
@@ -324,22 +372,24 @@ export default function Notifications() {
       !form.date ||
       !form.time
     ) {
-      alert("Please complete the required fields.");
+      setError("Please complete all required fields.");
       return;
     }
 
+    const now = new Date().toISOString();
+
     const record = {
       ...form,
-      id: editingId || crypto.randomUUID(),
+      id: editingId || createId(),
       title: form.title.trim(),
       recipient: form.recipient.trim(),
       message: form.message.trim(),
       createdAt: editingId
         ? notifications.find(
             (item) => item.id === editingId
-          )?.createdAt || new Date().toISOString()
-        : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+          )?.createdAt || now
+        : now,
+      updatedAt: now,
     };
 
     if (editingId) {
@@ -447,6 +497,8 @@ export default function Notifications() {
   const overdue = notifications.filter(
     (item) =>
       ["Pending", "Scheduled"].includes(item.status) &&
+      item.date &&
+      item.time &&
       `${item.date}T${item.time}` <
         `${localDate()}T${localTime()}`
   ).length;
@@ -457,44 +509,47 @@ export default function Notifications() {
       value: total,
       icon: Bell,
       color: "text-blue-700",
+      background: "bg-blue-50",
     },
     {
       label: "Pending",
       value: pending,
       icon: Clock3,
       color: "text-amber-600",
+      background: "bg-amber-50",
     },
     {
       label: "Scheduled",
       value: scheduled,
       icon: CalendarDays,
       color: "text-indigo-700",
+      background: "bg-indigo-50",
     },
     {
       label: "Completed",
       value: completed,
       icon: CheckCheck,
       color: "text-green-700",
+      background: "bg-green-50",
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
+    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
       {/* Header */}
-      <div className="flex w-full min-w-0 flex-col gap-5">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 items-start gap-3">
           <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-[#10264d]">
             <BellRing size={24} />
           </div>
 
-          <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl font-bold text-[#10264d]">
+          <div className="min-w-0">
+            <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
               Notifications & Reminders
             </h1>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Manage booking, payment, shoot and customer
-              reminders
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Manage booking, payment, shoot and customer reminders.
             </p>
           </div>
         </div>
@@ -502,33 +557,32 @@ export default function Notifications() {
         <button
           type="button"
           onClick={openAdd}
-          className={primaryButton}
+          className={`${primaryButton} w-full sm:w-auto`}
         >
           <Plus size={18} />
           Create Reminder
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* Statistics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.label}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 text-sm font-medium text-slate-500">
+                <p className="text-sm font-medium text-slate-500">
                   {stat.label}
                 </p>
 
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon
-                    size={22}
-                    className={stat.color}
-                  />
+                <div
+                  className={`shrink-0 rounded-xl p-3 ${stat.background}`}
+                >
+                  <Icon size={22} className={stat.color} />
                 </div>
               </div>
 
@@ -544,48 +598,48 @@ export default function Notifications() {
 
       {/* Overdue Alert */}
       {overdue > 0 && (
-        <div className="flex w-full min-w-0 items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <AlertCircle
             size={20}
             className="mt-0.5 shrink-0 text-amber-700"
           />
 
           <div className="min-w-0">
-            <p className="break-words font-semibold text-amber-900">
+            <p className="font-semibold text-amber-900">
               {overdue} overdue reminder(s)
             </p>
 
-            <p className="mt-2 break-words text-sm leading-6 text-amber-800">
-              Review pending and scheduled reminders
-              that have passed their planned date and time.
+            <p className="mt-1 text-sm leading-6 text-amber-800">
+              Review pending and scheduled reminders that have
+              passed their planned date and time.
             </p>
           </div>
         </div>
       )}
 
       {/* Reminder List */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
-        <div className="mb-5 flex w-full min-w-0 flex-col gap-3">
+      <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-[#10264d]">
             All Reminders
           </h2>
 
-          <div className="w-full rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+          <span className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
             {filteredNotifications.length} Records
-          </div>
+          </span>
         </div>
 
         {/* Filters */}
-        <div className="mb-6 flex w-full min-w-0 flex-col gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <FormField label="Search Reminders">
-            <div className="relative w-full min-w-0">
+            <div className="relative">
               <Search
                 size={18}
                 className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
 
               <input
-                type="text"
+                type="search"
                 value={search}
                 onChange={(event) =>
                   setSearch(event.target.value)
@@ -600,10 +654,7 @@ export default function Notifications() {
             <CustomDropdown
               value={statusFilter}
               options={[
-                {
-                  value: "All",
-                  label: "All Status",
-                },
+                { value: "All", label: "All Status" },
                 ...statuses,
               ]}
               onChange={setStatusFilter}
@@ -614,10 +665,7 @@ export default function Notifications() {
             <CustomDropdown
               value={typeFilter}
               options={[
-                {
-                  value: "All",
-                  label: "All Types",
-                },
+                { value: "All", label: "All Types" },
                 ...notificationTypes,
               ]}
               onChange={setTypeFilter}
@@ -625,333 +673,407 @@ export default function Notifications() {
           </FormField>
         </div>
 
-        {/* Vertical Reminder Cards */}
-        <div className="flex w-full min-w-0 flex-col gap-4">
-          {filteredNotifications.map((item) => (
-            <article
-              key={item.id}
-              className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-            >
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-[#10264d]">
-                  <Bell size={21} />
+        {/* Reminder Cards */}
+        {filteredNotifications.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
+            <Bell
+              size={40}
+              className="mx-auto mb-3 text-slate-300"
+            />
+
+            <p className="text-sm text-slate-400">
+              No reminders found. Create your first reminder.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {filteredNotifications.map((item) => (
+              <article
+                key={item.id}
+                className="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-[#10264d]">
+                    <Bell size={21} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="break-words text-lg font-bold text-[#10264d]">
+                      {item.title}
+                    </h3>
+
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-500">
+                      {item.message}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <h3 className="break-words text-lg font-bold text-[#10264d]">
-                    {item.title}
-                  </h3>
-
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-500">
-                    {item.message}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                <DetailField
-                  label="Recipient"
-                  value={item.recipient}
-                />
-
-                <DetailField
-                  label="Notification Type"
-                  value={item.type}
-                />
-
-                <DetailField
-                  label="Channel"
-                  value={item.channel}
-                />
-
-                <DetailField
-                  label="Reminder Date"
-                  value={item.date}
-                />
-
-                <DetailField
-                  label="Reminder Time"
-                  value={item.time}
-                />
-
-                <DetailField
-                  label="Priority"
-                  value={item.priority || "Normal"}
-                />
-              </div>
-
-              <div className="w-full min-w-0">
-                <p className={labelClass}>
-                  Reminder Status
-                </p>
-
-                <div className="mb-3">
+                <div className="flex flex-wrap gap-2">
                   <span
-                    className={`inline-flex rounded-lg px-3 py-2 text-xs font-semibold ${
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                       statusColors[item.status] ||
                       "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {item.status}
+                    {item.status || "Pending"}
+                  </span>
+
+                  <span
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                      priorityColors[item.priority] ||
+                      priorityColors.Normal
+                    }`}
+                  >
+                    {item.priority || "Normal"} Priority
                   </span>
                 </div>
 
-                <CustomDropdown
-                  value={item.status}
-                  options={statuses}
-                  onChange={(value) =>
-                    changeStatus(item.id, value)
-                  }
-                />
-              </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <DetailField
+                    label="Recipient"
+                    value={item.recipient}
+                  />
 
-              {/* Actions */}
-              <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
-                  onClick={() => openEdit(item)}
-                  className={primaryButton}
-                >
-                  <Pencil size={17} />
-                  Edit Reminder
-                </button>
+                  <DetailField
+                    label="Notification Type"
+                    value={item.type}
+                  />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    changeStatus(item.id, "Completed")
-                  }
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-100"
-                >
-                  <CheckCheck size={17} />
-                  Mark Completed
-                </button>
+                  <DetailField
+                    label="Channel"
+                    value={item.channel}
+                  />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    deleteNotification(item)
-                  }
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-                >
-                  <Trash2 size={17} />
-                  Delete Reminder
-                </button>
-              </div>
-            </article>
-          ))}
+                  <DetailField
+                    label="Reminder Date"
+                    value={formatDate(item.date)}
+                  />
 
-          {filteredNotifications.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-              <Bell
-                size={40}
-                className="mx-auto mb-3 text-slate-300"
-              />
+                  <DetailField
+                    label="Reminder Time"
+                    value={formatTime(item.time)}
+                  />
 
-              <p className="text-sm text-slate-400">
-                No reminders found. Create your first reminder.
-              </p>
-            </div>
-          )}
-        </div>
+                  <DetailField
+                    label="Priority"
+                    value={item.priority || "Normal"}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <p className={labelClass}>
+                    Reminder Status
+                  </p>
+
+                  <CustomDropdown
+                    value={item.status || "Pending"}
+                    options={statuses}
+                    onChange={(value) =>
+                      changeStatus(item.id, value)
+                    }
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="mt-auto grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(item)}
+                    className={`${primaryButton} w-full`}
+                  >
+                    <Pencil size={17} />
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      changeStatus(item.id, "Completed")
+                    }
+                    disabled={item.status === "Completed"}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <CheckCheck size={17} />
+                    Complete
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      deleteNotification(item)
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                  >
+                    <Trash2 size={17} />
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Inline Create/Edit Form */}
-      {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-6 flex w-full min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0 flex-1">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId
-                  ? "Edit Reminder"
-                  : "Create New Reminder"}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Configure notification details
-              </p>
-            </div>
-
-            <button
-              type="button"
+      {/* CENTERED CREATE / EDIT MODAL */}
+      {showForm &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-[#07152b]/70 backdrop-blur-sm"
               onClick={closeForm}
-              aria-label="Close reminder form"
-              className="shrink-0 rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+            />
+
+            {/* Modal */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={
+                editingId
+                  ? "Edit Reminder"
+                  : "Create New Reminder"
+              }
+              className="relative z-10 flex max-h-[94dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
             >
-              <X size={20} />
-            </button>
-          </div>
+              {/* Modal Header */}
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="rounded-xl bg-blue-50 p-3 text-[#10264d]">
+                    <BellRing size={22} />
+                  </div>
 
-          <form
-            onSubmit={saveNotification}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Reminder Title">
-              <input
-                required
-                value={form.title}
-                onChange={(event) =>
-                  updateField("title", event.target.value)
-                }
-                className={inputClass}
-                placeholder="e.g. Wedding shoot reminder"
-              />
-            </FormField>
+                  <div className="min-w-0">
+                    <h2 className="break-words text-xl font-bold text-[#10264d]">
+                      {editingId
+                        ? "Edit Reminder"
+                        : "Create New Reminder"}
+                    </h2>
 
-            <FormField label="Notification Type">
-              <CustomDropdown
-                value={form.type}
-                options={notificationTypes}
-                onChange={(value) =>
-                  updateField("type", value)
-                }
-              />
-            </FormField>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Configure notification details
+                    </p>
+                  </div>
+                </div>
 
-            <FormField label="Recipient Name">
-              <input
-                required
-                value={form.recipient}
-                onChange={(event) =>
-                  updateField("recipient", event.target.value)
-                }
-                className={inputClass}
-                placeholder="Customer / Staff name"
-              />
-            </FormField>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  aria-label="Close reminder form"
+                  className="shrink-0 rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-            <FormField label="Phone Number">
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(event) =>
-                  updateField("phone", event.target.value)
-                }
-                className={inputClass}
-                placeholder="Enter phone number"
-              />
-            </FormField>
-
-            <FormField label="Email">
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  updateField("email", event.target.value)
-                }
-                className={inputClass}
-                placeholder="Enter email address"
-              />
-            </FormField>
-
-            <FormField label="Message">
-              <textarea
-                required
-                rows={4}
-                value={form.message}
-                onChange={(event) =>
-                  updateField("message", event.target.value)
-                }
-                className={`${inputClass} resize-y`}
-                placeholder="Enter reminder message..."
-              />
-            </FormField>
-
-            <FormField label="Notification Channel">
-              <CustomDropdown
-                value={form.channel}
-                options={channels}
-                onChange={(value) =>
-                  updateField("channel", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Priority">
-              <CustomDropdown
-                value={form.priority}
-                options={priorities}
-                onChange={(value) =>
-                  updateField("priority", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Reminder Date">
-              <input
-                type="date"
-                required
-                value={form.date}
-                onChange={(event) =>
-                  updateField("date", event.target.value)
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Reminder Time">
-              <input
-                type="time"
-                required
-                value={form.time}
-                onChange={(event) =>
-                  updateField("time", event.target.value)
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Status">
-              <CustomDropdown
-                value={form.status}
-                options={statuses}
-                onChange={(value) =>
-                  updateField("status", value)
-                }
-              />
-            </FormField>
-
-            {/* Demo Notice */}
-            <div className="flex w-full min-w-0 items-start gap-3 rounded-xl bg-blue-50 p-4">
-              <Send
-                size={18}
-                className="mt-0.5 shrink-0 text-blue-700"
-              />
-
-              <p className="min-w-0 break-words text-xs leading-6 text-blue-900">
-                Demo mode: reminders are saved locally.
-                Selecting WhatsApp, SMS or Email does not
-                automatically send messages. External delivery
-                requires an integration and backend scheduler.
-              </p>
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className={secondaryButton}
+              {/* Modal Form */}
+              <form
+                onSubmit={saveNotification}
+                className="flex min-h-0 flex-1 flex-col"
               >
-                Cancel
-              </button>
+                {/* Scrollable Form Body */}
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-7">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <FormField label="Reminder Title *">
+                      <input
+                        required
+                        value={form.title}
+                        onChange={(event) =>
+                          updateField(
+                            "title",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                        placeholder="e.g. Wedding shoot reminder"
+                      />
+                    </FormField>
 
-              <button
-                type="submit"
-                className={primaryButton}
-              >
-                <Save size={18} />
-                {editingId
-                  ? "Update Reminder"
-                  : "Save Reminder"}
-              </button>
+                    <FormField label="Notification Type">
+                      <CustomDropdown
+                        value={form.type}
+                        options={notificationTypes}
+                        onChange={(value) =>
+                          updateField("type", value)
+                        }
+                      />
+                    </FormField>
+
+                    <FormField label="Recipient Name *">
+                      <input
+                        required
+                        value={form.recipient}
+                        onChange={(event) =>
+                          updateField(
+                            "recipient",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                        placeholder="Customer / Staff name"
+                      />
+                    </FormField>
+
+                    <FormField label="Phone Number">
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(event) =>
+                          updateField(
+                            "phone",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                        placeholder="Enter phone number"
+                      />
+                    </FormField>
+
+                    <FormField label="Email">
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(event) =>
+                          updateField(
+                            "email",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                        placeholder="Enter email address"
+                      />
+                    </FormField>
+
+                    <FormField label="Notification Channel">
+                      <CustomDropdown
+                        value={form.channel}
+                        options={channels}
+                        onChange={(value) =>
+                          updateField("channel", value)
+                        }
+                      />
+                    </FormField>
+
+                    <FormField label="Priority">
+                      <CustomDropdown
+                        value={form.priority}
+                        options={priorities}
+                        onChange={(value) =>
+                          updateField("priority", value)
+                        }
+                      />
+                    </FormField>
+
+                    <FormField label="Status">
+                      <CustomDropdown
+                        value={form.status}
+                        options={statuses}
+                        onChange={(value) =>
+                          updateField("status", value)
+                        }
+                      />
+                    </FormField>
+
+                    <FormField label="Reminder Date *">
+                      <input
+                        type="date"
+                        required
+                        value={form.date}
+                        onChange={(event) =>
+                          updateField(
+                            "date",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                      />
+                    </FormField>
+
+                    <FormField label="Reminder Time *">
+                      <input
+                        type="time"
+                        required
+                        value={form.time}
+                        onChange={(event) =>
+                          updateField(
+                            "time",
+                            event.target.value
+                          )
+                        }
+                        className={inputClass}
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField label="Message *">
+                    <textarea
+                      required
+                      rows={4}
+                      value={form.message}
+                      onChange={(event) =>
+                        updateField(
+                          "message",
+                          event.target.value
+                        )
+                      }
+                      className={`${inputClass} resize-y`}
+                      placeholder="Enter reminder message..."
+                    />
+                  </FormField>
+
+                  {/* Demo Notice */}
+                  <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <Send
+                      size={18}
+                      className="mt-0.5 shrink-0 text-blue-700"
+                    />
+
+                    <p className="min-w-0 text-xs leading-6 text-blue-900">
+                      Demo mode: reminders are saved locally.
+                      Selecting WhatsApp, SMS or Email does not
+                      automatically send messages. External delivery
+                      requires an integration and backend scheduler.
+                    </p>
+                  </div>
+
+                  {error && (
+                    <p
+                      role="alert"
+                      className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600"
+                    >
+                      <AlertCircle
+                        size={17}
+                        className="mt-0.5 shrink-0"
+                      />
+                      {error}
+                    </p>
+                  )}
+                </div>
+
+                {/* Fixed Modal Footer */}
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    className={`${secondaryButton} w-full sm:w-auto`}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className={`${primaryButton} w-full sm:w-auto`}
+                  >
+                    <Save size={18} />
+                    {editingId
+                      ? "Update Reminder"
+                      : "Save Reminder"}
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </section>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

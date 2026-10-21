@@ -1,21 +1,10 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Plus,
-  Search,
-  X,
-  BookOpen,
-  Printer,
-  CheckCircle2,
-  Pencil,
-  Trash2,
-  CalendarDays,
-  UserRound,
-  Save,
-  Package,
-  ChevronDown,
-  Check,
-  AlertCircle,
+  Plus, Search, X, BookOpen, Printer, CheckCircle2,
+  Pencil, Trash2, CalendarDays, UserRound, Save,
+  Package, ChevronDown, AlertCircle, Layers3,
+  ClipboardCheck, FileText,
 } from "lucide-react";
 
 const KEY = "studioraw_album_printing";
@@ -38,51 +27,29 @@ const createEmptyForm = () => ({
 });
 
 const events = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Pre-Wedding",
-  "Baby Shoot",
-  "Portrait",
-  "Corporate",
-  "Other",
+  "Wedding", "Engagement", "Birthday", "Pre-Wedding",
+  "Baby Shoot", "Portrait", "Corporate", "Other",
 ];
 
 const albumTypes = [
-  "Premium Photo Album",
-  "Classic Album",
-  "Candid Album",
-  "Wedding Album",
-  "Mini Album",
-  "Photo Book",
+  "Premium Photo Album", "Classic Album", "Candid Album",
+  "Wedding Album", "Mini Album", "Photo Book",
 ];
 
 const albumSizes = [
-  "12x36",
-  "12x30",
-  "12x24",
-  "10x30",
-  "10x24",
-  "8x12",
+  "12x36", "12x30", "12x24", "10x30", "10x24", "8x12",
 ];
 
 const designStatuses = [
-  "Not Started",
-  "In Progress",
-  "Completed",
+  "Not Started", "In Progress", "Completed",
 ];
 
 const approvalStatuses = [
-  "Pending",
-  "Approved",
-  "Rejected",
+  "Pending", "Approved", "Rejected",
 ];
 
 const printingStatuses = [
-  "Not Started",
-  "Sent to Print",
-  "Printing",
-  "Printed",
+  "Not Started", "Sent to Print", "Printing", "Printed",
 ];
 
 const statusColor = {
@@ -98,7 +65,7 @@ const statusColor = {
 };
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-[#8ca0bd] focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const getProgress = (item) => {
   if (item.printingStatus === "Printed") return 100;
@@ -110,126 +77,198 @@ const getProgress = (item) => {
   return 0;
 };
 
-function CustomDropdown({ value, options, onChange }) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
+function StatusBadge({ value }) {
   return (
-    <div ref={dropdownRef} className="w-full min-w-0 max-w-full">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((previous) => !previous)}
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
-      >
-        <span className="min-w-0 flex-1 break-words">
-          {value}
-        </span>
+    <span
+      className={`inline-flex w-fit rounded-lg px-3 py-1.5 text-xs font-semibold ${
+        statusColor[value] || statusColor["Not Started"]
+      }`}
+    >
+      {value || "Not Started"}
+    </span>
+  );
+}
 
-        <ChevronDown
-          size={18}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-        >
-          {options.map((option) => {
-            const selected = value === option;
-
-            return (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                  selected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option}
-                </span>
-
-                {selected && (
-                  <Check size={16} className="shrink-0" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+function FormField({ label, required = false, children }) {
+  return (
+    <div className="min-w-0">
+      <label className="mb-2 block text-[13px] font-semibold text-[#29416a]">
+        {label}
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      {children}
     </div>
   );
 }
 
-function Detail({ label, value, icon: Icon }) {
+function SectionHeading({ icon: Icon, title }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
+    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+        <Icon size={19} />
+      </div>
+      <h3 className="text-sm font-bold text-[#10264d]">
+        {title}
+      </h3>
+    </div>
+  );
+}
 
-      <div className="flex min-w-0 items-start gap-2">
-        {Icon && (
-          <Icon
-            size={16}
-            className="mt-0.5 shrink-0 text-blue-600"
-          />
-        )}
+function CustomDropdown({ value, options, onChange }) {
+  return (
+    <div className="relative min-w-0">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${inputClass} appearance-none pr-10`}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        size={17}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+      />
+    </div>
+  );
+}
 
-        <p className="min-w-0 break-words text-sm font-semibold text-[#10264d]">
-          {value || "—"}
-        </p>
+function ProgressBar({ item }) {
+  const progress = getProgress(item);
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-slate-500">
+          Album Progress
+        </span>
+        <span className="text-xs font-bold text-[#10264d]">
+          {progress}%
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Album progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        className="h-2.5 overflow-hidden rounded-full bg-slate-100"
+      >
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${
+            progress === 100 ? "bg-green-500" : "bg-blue-700"
+          }`}
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );
 }
 
-function FormField({ label, children }) {
+function Detail({ label, value }) {
   return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
-        {label}
+    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-0">
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
+        {value || "—"}
       </p>
-      {children}
+    </div>
+  );
+}
+
+function ModalShell({
+  title,
+  description,
+  onClose,
+  onSubmit,
+  submitLabel,
+  children,
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152d]/65 p-2 backdrop-blur-[4px] sm:p-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="flex max-h-[96dvh] w-full max-w-[960px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
+      >
+        {/* MODAL HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
+              <BookOpen size={23} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-[#10264d] sm:text-[23px]">
+                {title}
+              </h2>
+              <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
+                {description}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-2 text-[#627895] hover:bg-slate-100"
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        <form
+          onSubmit={onSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {/* SCROLLABLE BODY */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
+            {children}
+          </div>
+
+          {/* FIXED FOOTER */}
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#d9e3f2] bg-[#f7f9fd] px-7 py-3.5 text-sm font-semibold text-[#18345f] hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a4384]"
+            >
+              <Save size={18} />
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -251,8 +290,6 @@ export default function AlbumPrinting() {
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
 
-  const formRef = useRef(null);
-
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(albums));
   }, [albums]);
@@ -262,15 +299,7 @@ export default function AlbumPrinting() {
       ...previous,
       [key]: value,
     }));
-  };
-
-  const scrollToForm = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
+    setError("");
   };
 
   const openCreate = () => {
@@ -278,7 +307,6 @@ export default function AlbumPrinting() {
     setEditingId(null);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const openEdit = (album) => {
@@ -286,11 +314,9 @@ export default function AlbumPrinting() {
       ...createEmptyForm(),
       ...album,
     });
-
     setEditingId(album.id);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const closeForm = () => {
@@ -306,6 +332,11 @@ export default function AlbumPrinting() {
     const pages = Number(form.pages);
     const quantity = Number(form.quantity);
 
+    if (!form.customer.trim()) {
+      setError("Please enter customer name.");
+      return;
+    }
+
     if (
       String(form.pages).trim() === "" ||
       String(form.quantity).trim() === "" ||
@@ -315,11 +346,6 @@ export default function AlbumPrinting() {
       quantity <= 0
     ) {
       setError("Enter valid album pages and quantity.");
-      return;
-    }
-
-    if (!form.customer.trim()) {
-      setError("Please enter customer name.");
       return;
     }
 
@@ -348,17 +374,13 @@ export default function AlbumPrinting() {
   };
 
   const deleteAlbum = (id) => {
-    if (!window.confirm("Delete this album project?")) {
-      return;
-    }
+    if (!window.confirm("Delete this album project?")) return;
 
     setAlbums((previous) =>
       previous.filter((item) => item.id !== id)
     );
 
-    if (editingId === id) {
-      closeForm();
-    }
+    if (editingId === id) closeForm();
   };
 
   const filtered = useMemo(() => {
@@ -388,6 +410,7 @@ export default function AlbumPrinting() {
       value: albums.length,
       icon: BookOpen,
       color: "text-blue-700",
+      bg: "bg-blue-50",
     },
     {
       title: "Design Completed",
@@ -396,6 +419,7 @@ export default function AlbumPrinting() {
       ).length,
       icon: CheckCircle2,
       color: "text-green-700",
+      bg: "bg-green-50",
     },
     {
       title: "Printing In Progress",
@@ -406,6 +430,7 @@ export default function AlbumPrinting() {
       ).length,
       icon: Printer,
       color: "text-indigo-700",
+      bg: "bg-indigo-50",
     },
     {
       title: "Albums Printed",
@@ -417,19 +442,19 @@ export default function AlbumPrinting() {
         ),
       icon: Package,
       color: "text-amber-600",
+      bg: "bg-amber-50",
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
+    <div className="min-h-screen w-full min-w-0 space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
 
-      {/* Page Header */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* PAGE HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
+          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
             Album Design & Printing
           </h1>
-
           <p className="mt-1 text-sm leading-6 text-slate-500">
             Manage album designs, approvals, printing and delivery schedules.
           </p>
@@ -438,512 +463,496 @@ export default function AlbumPrinting() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
         >
           <Plus size={18} />
           New Album Project
         </button>
       </div>
 
-      {/* Statistics - Vertical */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* STATISTICS */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.title}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="group min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex min-w-0 items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.title}
-                </p>
-
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-500">
+                    {stat.title}
+                  </p>
+                  <h2 className={`mt-3 text-2xl font-bold ${stat.color}`}>
+                    {stat.value}
+                  </h2>
+                </div>
+                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
                   <Icon size={22} className={stat.color} />
                 </div>
               </div>
-
-              <h2 className={`mt-3 break-words text-3xl font-bold ${stat.color}`}>
-                {stat.value}
-              </h2>
             </div>
           );
         })}
       </div>
 
-      {/* Album Projects */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-5 text-lg font-bold text-[#10264d]">
-          Album Projects
-        </h2>
+      {/* ALBUM PROJECTS */}
+      <section className="min-w-0 rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#10264d]">
+                Album Projects
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Track design, approval and printing progress.
+              </p>
+            </div>
 
-        {/* Search */}
-        <div className="relative mb-4 w-full min-w-0">
-          <Search
-            size={17}
-            className="absolute left-3 top-3.5 text-slate-400"
-          />
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <div className="relative w-full sm:min-w-[220px] lg:w-64">
+                <Search
+                  size={17}
+                  className="absolute left-3 top-3.5 text-slate-400"
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search albums..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
 
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search albums..."
-            className={`${inputClass} pl-10`}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="mb-5 w-full min-w-0">
-          <p className="mb-2 text-xs font-medium text-slate-500">
-            Filter by Printing Status
-          </p>
-
-          <CustomDropdown
-            value={filter}
-            options={["All", ...printingStatuses]}
-            onChange={setFilter}
-          />
+              <div className="w-full sm:w-44">
+                <CustomDropdown
+                  value={filter}
+                  options={["All", ...printingStatuses]}
+                  onChange={setFilter}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-12 text-center">
-            <BookOpen
-              size={42}
-              className="mx-auto mb-3 text-slate-300"
-            />
-
+          <div className="py-16 text-center">
+            <BookOpen size={42} className="mx-auto mb-3 text-slate-300" />
             <p className="text-sm text-slate-400">
               No album projects found
             </p>
           </div>
         ) : (
-          <div className="flex w-full min-w-0 flex-col gap-4">
-            {filtered.map((item) => {
-              const progress = getProgress(item);
+          <>
+            {/* DESKTOP TABLE */}
+            <div className="hidden w-full overflow-x-auto lg:block">
+              <table className="w-full min-w-[1150px] border-collapse text-left">
+                <thead className="bg-slate-50">
+                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {[
+                      "Customer / Event",
+                      "Album Details",
+                      "Designer / Vendor",
+                      "Deadlines",
+                      "Design",
+                      "Approval",
+                      "Printing",
+                      "Progress",
+                      "Actions",
+                    ].map((heading) => (
+                      <th key={heading} className="px-4 py-4">
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-              return (
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="align-top transition hover:bg-blue-50/40"
+                    >
+                      <td className="px-4 py-5">
+                        <p className="text-sm font-bold text-[#10264d]">
+                          {item.customer}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.event}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <p className="max-w-36 break-words text-sm font-medium text-[#10264d]">
+                          {item.albumType}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.albumSize}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.pages} Pages · {item.quantity} Qty
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <p className="text-xs font-semibold text-[#10264d]">
+                          {item.designer || "Not assigned"}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {item.printerName || "No vendor"}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <p className="text-xs text-slate-600">
+                          Design: {item.designDeadline || "—"}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-600">
+                          Delivery: {item.deliveryDate || "—"}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <StatusBadge value={item.designStatus} />
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <StatusBadge value={item.approvalStatus} />
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <StatusBadge value={item.printingStatus} />
+                      </td>
+
+                      <td className="min-w-[125px] px-4 py-5">
+                        <ProgressBar item={item} />
+                      </td>
+
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            title="Manage Album"
+                            aria-label={`Manage ${item.customer} album`}
+                            onClick={() => openEdit(item)}
+                            className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+                          >
+                            <Pencil size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete Album"
+                            aria-label={`Delete ${item.customer} album`}
+                            onClick={() => deleteAlbum(item.id)}
+                            className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE AND TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+              {filtered.map((item) => (
                 <article
                   key={item.id}
-                  className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
+                  className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
                 >
-                  {/* Card Header */}
-                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
                     <div className="min-w-0">
                       <h3 className="break-words text-base font-bold text-[#10264d]">
                         {item.customer}
                       </h3>
-
-                      <p className="mt-1 break-words text-sm text-slate-500">
+                      <p className="mt-1 text-xs text-slate-500">
                         {item.event}
                       </p>
                     </div>
-
-                    <span
-                      className={`w-fit max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusColor[item.printingStatus] ||
-                        "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {item.printingStatus || "Not Started"}
-                    </span>
+                    <StatusBadge value={item.printingStatus} />
                   </div>
 
-                  {/* Album Details */}
-                  <Detail
-                    label="Album Type"
-                    value={item.albumType}
-                    icon={BookOpen}
-                  />
-
-                  <Detail
-                    label="Album Size"
-                    value={item.albumSize}
-                  />
-
-                  <Detail
-                    label="Assigned Designer"
-                    value={item.designer || "Not assigned"}
-                    icon={UserRound}
-                  />
-
-                  <Detail
-                    label="Printing Vendor"
-                    value={item.printerName || "Not assigned"}
-                    icon={Printer}
-                  />
-
-                  <Detail
-                    label="Design Deadline"
-                    value={item.designDeadline || "Not scheduled"}
-                    icon={CalendarDays}
-                  />
-
-                  <Detail
-                    label="Expected Delivery"
-                    value={item.deliveryDate || "Not scheduled"}
-                    icon={CalendarDays}
-                  />
-
-                  {/* Pages and Quantity */}
-                  <div className="flex w-full min-w-0 flex-col gap-3">
-                    <div className="w-full min-w-0 rounded-xl bg-blue-50 p-4">
-                      <p className="text-xs font-medium text-slate-500">
-                        Total Pages
-                      </p>
-
-                      <p className="mt-2 break-all text-2xl font-bold text-blue-800">
-                        {Number(item.pages || 0).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-
-                    <div className="w-full min-w-0 rounded-xl bg-indigo-50 p-4">
-                      <p className="text-xs font-medium text-slate-500">
-                        Album Quantity
-                      </p>
-
-                      <p className="mt-2 break-all text-2xl font-bold text-indigo-800">
-                        {Number(item.quantity || 0).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Design Status */}
-                  <div className="flex w-full min-w-0 flex-col gap-2 border-b border-slate-100 pb-3">
-                    <p className="text-xs font-medium text-slate-400">
-                      Design Status
-                    </p>
-
-                    <span
-                      className={`w-fit rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusColor[item.designStatus] ||
-                        "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {item.designStatus || "Not Started"}
-                    </span>
-                  </div>
-
-                  {/* Client Approval */}
-                  <div className="flex w-full min-w-0 flex-col gap-2 border-b border-slate-100 pb-3">
-                    <p className="text-xs font-medium text-slate-400">
-                      Client Approval
-                    </p>
-
-                    <span
-                      className={`w-fit rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusColor[item.approvalStatus] ||
-                        "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {item.approvalStatus || "Pending"}
-                    </span>
-                  </div>
-
-                  {/* Printing Status */}
-                  <div className="flex w-full min-w-0 flex-col gap-2 border-b border-slate-100 pb-3">
-                    <p className="text-xs font-medium text-slate-400">
-                      Printing Status
-                    </p>
-
-                    <span
-                      className={`w-fit rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusColor[item.printingStatus] ||
-                        "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {item.printingStatus || "Not Started"}
-                    </span>
-                  </div>
-
-                  {/* Album Progress */}
-                  <div className="w-full min-w-0 rounded-xl bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Album Progress
-                      </p>
-
-                      <p className="shrink-0 text-sm font-bold text-[#10264d]">
-                        {progress}%
-                      </p>
-                    </div>
-
-                    <div
-                      role="progressbar"
-                      aria-label="Album progress"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={progress}
-                      className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
-                    >
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          progress === 100
-                            ? "bg-green-500"
-                            : "bg-blue-700"
-                        }`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {item.notes && (
+                  <div className="mt-4 space-y-3">
+                    <Detail label="Album Type" value={item.albumType} />
+                    <Detail label="Album Size" value={item.albumSize} />
+                    <Detail label="Total Pages" value={item.pages} />
+                    <Detail label="Album Quantity" value={item.quantity} />
                     <Detail
-                      label="Album Notes"
-                      value={item.notes}
+                      label="Assigned Designer"
+                      value={item.designer || "Not assigned"}
                     />
-                  )}
+                    <Detail
+                      label="Printing Vendor"
+                      value={item.printerName || "Not assigned"}
+                    />
+                    <Detail
+                      label="Design Deadline"
+                      value={item.designDeadline || "Not scheduled"}
+                    />
+                    <Detail
+                      label="Expected Delivery"
+                      value={item.deliveryDate || "Not scheduled"}
+                    />
 
-                  {/* Actions */}
-                  <div className="flex w-full flex-col gap-3 border-t border-slate-200 pt-4">
+                    <div>
+                      <p className="mb-2 text-xs text-slate-400">
+                        Design Status
+                      </p>
+                      <StatusBadge value={item.designStatus} />
+                    </div>
+
+                    <div>
+                      <p className="mb-2 text-xs text-slate-400">
+                        Client Approval
+                      </p>
+                      <StatusBadge value={item.approvalStatus} />
+                    </div>
+
+                    <div className="rounded-xl bg-white p-4">
+                      <ProgressBar item={item} />
+                    </div>
+
+                    {item.notes && (
+                      <Detail label="Album Notes" value={item.notes} />
+                    )}
+                  </div>
+
+                  <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-4 py-3 text-sm font-semibold text-white hover:bg-[#1a4384]"
                     >
                       <Pencil size={17} />
                       Manage Album
                     </button>
-
                     <button
                       type="button"
                       onClick={() => deleteAlbum(item.id)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
                     >
                       <Trash2 size={17} />
                       Delete Album
                     </button>
                   </div>
                 </article>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
-      {/* New / Edit Album Form */}
+      {/* CREATE / EDIT MODAL */}
       {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        <ModalShell
+          title={editingId ? "Manage Album Project" : "New Album Project"}
+          description="Enter album design and printing details"
+          onClose={closeForm}
+          onSubmit={saveAlbum}
+          submitLabel={editingId ? "Update Album" : "Save Album"}
         >
-          <div className="mb-6 flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId
-                  ? "Manage Album Project"
-                  : "New Album Project"}
-              </h2>
+          <div className="space-y-8">
 
-              <p className="mt-1 text-sm text-slate-500">
-                Enter album design and printing details.
-              </p>
-            </div>
+            {/* BASIC INFORMATION */}
+            <section>
+              <SectionHeading icon={UserRound} title="Basic Information" />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Customer Name" required>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={form.customer}
+                    onChange={(event) =>
+                      update("customer", event.target.value)
+                    }
+                    placeholder="Enter customer name"
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <button
-              type="button"
-              onClick={closeForm}
-              aria-label="Close album form"
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100"
-            >
-              <X size={22} />
-            </button>
-          </div>
+                <FormField label="Event Type">
+                  <CustomDropdown
+                    value={form.event}
+                    options={events}
+                    onChange={(value) => update("event", value)}
+                  />
+                </FormField>
+              </div>
+            </section>
 
-          <form
-            onSubmit={saveAlbum}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Customer Name">
-              <input
-                type="text"
-                required
-                value={form.customer}
-                onChange={(event) =>
-                  update("customer", event.target.value)
-                }
-                placeholder="Enter customer name"
-                className={inputClass}
-              />
-            </FormField>
+            {/* ALBUM DETAILS */}
+            <section>
+              <SectionHeading icon={Layers3} title="Album Details" />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Album Type">
+                  <CustomDropdown
+                    value={form.albumType}
+                    options={albumTypes}
+                    onChange={(value) => update("albumType", value)}
+                  />
+                </FormField>
 
-            <FormField label="Event Type">
-              <CustomDropdown
-                value={form.event}
-                options={events}
-                onChange={(value) => update("event", value)}
-              />
-            </FormField>
+                <FormField label="Album Size">
+                  <CustomDropdown
+                    value={form.albumSize}
+                    options={albumSizes}
+                    onChange={(value) => update("albumSize", value)}
+                  />
+                </FormField>
 
-            <FormField label="Album Type">
-              <CustomDropdown
-                value={form.albumType}
-                options={albumTypes}
-                onChange={(value) => update("albumType", value)}
-              />
-            </FormField>
+                <FormField label="Total Pages" required>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={form.pages}
+                    onChange={(event) =>
+                      update("pages", event.target.value)
+                    }
+                    placeholder="Enter total pages"
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Album Size">
-              <CustomDropdown
-                value={form.albumSize}
-                options={albumSizes}
-                onChange={(value) => update("albumSize", value)}
-              />
-            </FormField>
+                <FormField label="Album Quantity" required>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={form.quantity}
+                    onChange={(event) =>
+                      update("quantity", event.target.value)
+                    }
+                    placeholder="Enter album quantity"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
 
-            <FormField label="Total Pages">
-              <input
-                type="number"
-                min="1"
-                step="1"
-                required
-                value={form.pages}
-                onChange={(event) =>
-                  update("pages", event.target.value)
-                }
-                placeholder="Enter total pages"
-                className={inputClass}
-              />
-            </FormField>
+            {/* ASSIGNMENT */}
+            <section>
+              <SectionHeading icon={Printer} title="Design & Printing Assignment" />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Assigned Designer">
+                  <input
+                    type="text"
+                    value={form.designer}
+                    onChange={(event) =>
+                      update("designer", event.target.value)
+                    }
+                    placeholder="Enter designer name"
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Album Quantity">
-              <input
-                type="number"
-                min="1"
-                step="1"
-                required
-                value={form.quantity}
-                onChange={(event) =>
-                  update("quantity", event.target.value)
-                }
-                placeholder="Enter album quantity"
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Printing Vendor">
+                  <input
+                    type="text"
+                    value={form.printerName}
+                    onChange={(event) =>
+                      update("printerName", event.target.value)
+                    }
+                    placeholder="Enter printing vendor"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
 
-            <FormField label="Assigned Designer">
-              <input
-                type="text"
-                value={form.designer}
-                onChange={(event) =>
-                  update("designer", event.target.value)
-                }
-                placeholder="Enter designer name"
-                className={inputClass}
-              />
-            </FormField>
+            {/* SCHEDULE */}
+            <section>
+              <SectionHeading icon={CalendarDays} title="Project Schedule" />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Design Deadline">
+                  <input
+                    type="date"
+                    value={form.designDeadline}
+                    onChange={(event) =>
+                      update("designDeadline", event.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
 
-            <FormField label="Printing Vendor">
-              <input
-                type="text"
-                value={form.printerName}
-                onChange={(event) =>
-                  update("printerName", event.target.value)
-                }
-                placeholder="Enter printing vendor"
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Expected Delivery Date">
+                  <input
+                    type="date"
+                    value={form.deliveryDate}
+                    onChange={(event) =>
+                      update("deliveryDate", event.target.value)
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
 
-            <FormField label="Design Deadline">
-              <input
-                type="date"
-                value={form.designDeadline}
-                onChange={(event) =>
-                  update("designDeadline", event.target.value)
-                }
-                className={inputClass}
-              />
-            </FormField>
+            {/* STATUS */}
+            <section>
+              <SectionHeading icon={ClipboardCheck} title="Project Status" />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField label="Design Status">
+                  <CustomDropdown
+                    value={form.designStatus}
+                    options={designStatuses}
+                    onChange={(value) => update("designStatus", value)}
+                  />
+                </FormField>
 
-            <FormField label="Expected Delivery Date">
-              <input
-                type="date"
-                value={form.deliveryDate}
-                onChange={(event) =>
-                  update("deliveryDate", event.target.value)
-                }
-                className={inputClass}
-              />
-            </FormField>
+                <FormField label="Client Approval">
+                  <CustomDropdown
+                    value={form.approvalStatus}
+                    options={approvalStatuses}
+                    onChange={(value) => update("approvalStatus", value)}
+                  />
+                </FormField>
 
-            <FormField label="Design Status">
-              <CustomDropdown
-                value={form.designStatus}
-                options={designStatuses}
-                onChange={(value) =>
-                  update("designStatus", value)
-                }
-              />
-            </FormField>
+                <FormField label="Printing Status">
+                  <CustomDropdown
+                    value={form.printingStatus}
+                    options={printingStatuses}
+                    onChange={(value) => update("printingStatus", value)}
+                  />
+                </FormField>
+              </div>
+            </section>
 
-            <FormField label="Client Approval">
-              <CustomDropdown
-                value={form.approvalStatus}
-                options={approvalStatuses}
-                onChange={(value) =>
-                  update("approvalStatus", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Printing Status">
-              <CustomDropdown
-                value={form.printingStatus}
-                options={printingStatuses}
-                onChange={(value) =>
-                  update("printingStatus", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Album Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  update("notes", event.target.value)
-                }
-                placeholder="Album cover, paper type, client requests..."
-                className={inputClass}
-              />
-            </FormField>
+            {/* NOTES */}
+            <section>
+              <SectionHeading icon={FileText} title="Additional Information" />
+              <FormField label="Album Notes">
+                <textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(event) =>
+                    update("notes", event.target.value)
+                  }
+                  placeholder="Album cover, paper type, client requests..."
+                  className={inputClass}
+                />
+              </FormField>
+            </section>
 
             {error && (
               <p
                 role="alert"
-                className="flex items-start gap-2 break-words text-sm font-medium text-red-600"
+                className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
               >
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
+                <AlertCircle size={17} className="mt-0.5 shrink-0" />
                 {error}
               </p>
             )}
-
-            {/* Form Actions */}
-            <div className="flex w-full flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                <Save size={17} />
-                {editingId ? "Update Album" : "Save Album"}
-              </button>
-            </div>
-          </form>
-        </section>
+          </div>
+        </ModalShell>
       )}
     </div>
   );

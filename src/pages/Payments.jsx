@@ -1,5 +1,6 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Search,
@@ -11,7 +12,10 @@ import {
   Trash2,
   Printer,
   ChevronDown,
-  Check,
+  CreditCard,
+  UserRound,
+  FileText,
+  Save,
 } from "lucide-react";
 
 const KEY = "studioraw_payments";
@@ -21,9 +25,7 @@ const todayKey = () => {
 
   return `${date.getFullYear()}-${String(
     date.getMonth() + 1
-  ).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const createEmptyForm = () => ({
@@ -63,7 +65,7 @@ const filterOptions = [
 ];
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3.5 text-sm text-[#10264d] outline-none transition placeholder:text-[#8ca0bd] focus:border-[#3478e5] focus:ring-2 focus:ring-blue-100";
 
 const toAmount = (value) => {
   const number = Number(
@@ -75,27 +77,22 @@ const toAmount = (value) => {
 
 const currency = (value) =>
   `₹${toAmount(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
 
 const getBalance = (payment) =>
   Math.max(
     0,
-    toAmount(payment.total) -
-      toAmount(payment.advance)
+    toAmount(payment.total) - toAmount(payment.advance)
   );
 
 const getStatus = (payment) => {
   const total = toAmount(payment.total);
   const paid = toAmount(payment.advance);
 
-  if (total > 0 && paid >= total) {
-    return "Paid";
-  }
-
-  if (paid > 0) {
-    return "Partial";
-  }
+  if (total > 0 && paid >= total) return "Paid";
+  if (paid > 0) return "Partial";
 
   return "Pending";
 };
@@ -106,35 +103,107 @@ const statusStyle = {
   Pending: "bg-orange-100 text-orange-700",
 };
 
+function createId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `PAY-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 9)}`
+  );
+}
+
+function readPayments() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function FormField({
+  label,
+  required = false,
+  children,
+}) {
+  return (
+    <div className="min-w-0">
+      <label className="mb-2 block text-[13px] font-semibold text-[#29416a]">
+        {label}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
+      </label>
+
+      {children}
+    </div>
+  );
+}
+
+function SectionHeading({ icon: Icon, title }) {
+  return (
+    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+        <Icon size={19} />
+      </div>
+
+      <h3 className="text-sm font-bold text-[#10264d]">
+        {title}
+      </h3>
+    </div>
+  );
+}
+
 function CustomDropdown({
   value,
   options,
   onChange,
-  placeholder = "Select option",
 }) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  return (
+    <div className="relative w-full min-w-0">
+      <select
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className={`${inputClass} appearance-none pr-10`}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
 
+      <ChevronDown
+        size={17}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#647b9c]"
+      />
+    </div>
+  );
+}
+
+function ModalShell({
+  title,
+  description,
+  icon: Icon,
+  onClose,
+  onSubmit,
+  submitLabel,
+  children,
+  maxWidth = "max-w-[960px]",
+}) {
   useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
+    const oldOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        onClose();
       }
     };
-
-    document.addEventListener(
-      "pointerdown",
-      handleOutside
-    );
 
     document.addEventListener(
       "keydown",
@@ -142,150 +211,106 @@ function CustomDropdown({
     );
 
     return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handleOutside
-      );
+      document.body.style.overflow = oldOverflow;
 
       document.removeEventListener(
         "keydown",
         handleEscape
       );
     };
-  }, []);
+  }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
-      <button
-        type="button"
-        onClick={() =>
-          setOpen((previous) => !previous)
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152d]/65 p-2 backdrop-blur-[4px] sm:p-5"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
         }
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`flex max-h-[96dvh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]`}
       >
-        <span className="min-w-0 flex-1 break-words">
-          {value || placeholder}
-        </span>
+        {/* FIXED MODAL HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
+              <Icon size={23} />
+            </div>
 
-        <ChevronDown
-          size={18}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-[#10264d] sm:text-[23px]">
+                {title}
+              </h2>
 
-      {open && (
-        <div
-          role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-        >
-          {options.map((option) => {
-            const selected = value === option;
+              <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
+                {description}
+              </p>
+            </div>
+          </div>
 
-            return (
-              <button
-                key={option}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={`flex w-full min-w-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                  selected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option}
-                </span>
-
-                {selected && (
-                  <Check
-                    size={16}
-                    className="shrink-0"
-                  />
-                )}
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-2 text-[#627895] transition hover:bg-slate-100"
+          >
+            <X size={22} />
+          </button>
         </div>
-      )}
-    </div>
-  );
-}
 
-function Detail({ label, value, color = "" }) {
-  return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
+        <form
+          onSubmit={onSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {/* SCROLLABLE BODY */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
+            {children}
+          </div>
 
-      <p
-        className={`break-words text-sm font-semibold ${
-          color || "text-[#10264d]"
-        }`}
-      >
-        {value ?? "—"}
-      </p>
-    </div>
-  );
-}
+          {/* FIXED MODAL FOOTER */}
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#d9e3f2] bg-[#f7f9fd] px-7 py-3.5 text-sm font-semibold text-[#18345f] transition hover:bg-slate-100"
+            >
+              Cancel
+            </button>
 
-function FormField({ label, children }) {
-  return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
-        {label}
-      </p>
-
-      {children}
-    </div>
+            <button
+              type="submit"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384]"
+            >
+              <Save size={18} />
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 }
 
 export default function Payments() {
-  const [payments, setPayments] = useState(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(KEY)
-      );
+  const [payments, setPayments] = useState(readPayments);
 
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [form, setForm] = useState(
-    createEmptyForm
-  );
-
+  const [form, setForm] = useState(createEmptyForm);
   const [showForm, setShowForm] = useState(false);
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
 
-  const [paymentTarget, setPaymentTarget] =
-    useState(null);
-
-  const [paymentAmount, setPaymentAmount] =
-    useState("");
-
-  const [paymentError, setPaymentError] =
-    useState("");
-
-  const formRef = useRef(null);
-  const paymentRef = useRef(null);
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     localStorage.setItem(
@@ -294,27 +319,19 @@ export default function Payments() {
     );
   }, [payments]);
 
-  const scrollTo = (ref) => {
-    setTimeout(() => {
-      ref.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
-  };
-
   const update = (key, value) => {
     setForm((previous) => ({
       ...previous,
       [key]: value,
     }));
+
+    setError("");
   };
 
   const openForm = () => {
     setForm(createEmptyForm());
     setError("");
     setShowForm(true);
-    scrollTo(formRef);
   };
 
   const closeForm = () => {
@@ -329,10 +346,7 @@ export default function Payments() {
     const customer = form.customer.trim();
     const phone = form.phone.trim();
 
-    if (
-      !customer ||
-      !/^\d{10}$/.test(phone)
-    ) {
+    if (!customer || !/^\d{10}$/.test(phone)) {
       setError(
         "Enter customer name and valid 10-digit phone number."
       );
@@ -345,9 +359,7 @@ export default function Payments() {
     }
 
     const total = Number(form.total);
-    const advance = Number(
-      form.advance || 0
-    );
+    const advance = Number(form.advance || 0);
 
     if (
       !form.total ||
@@ -370,9 +382,7 @@ export default function Payments() {
 
     const payment = {
       ...form,
-      id:
-        globalThis.crypto?.randomUUID?.() ||
-        `PAY-${Date.now()}`,
+      id: createId(),
       invoice: `INV-${Date.now()}`,
       customer,
       phone,
@@ -387,6 +397,12 @@ export default function Payments() {
     ]);
 
     closeForm();
+  };
+
+  const closeAddPayment = () => {
+    setPaymentTarget(null);
+    setPaymentAmount("");
+    setPaymentError("");
   };
 
   const deletePayment = (id) => {
@@ -413,13 +429,6 @@ export default function Payments() {
     setPaymentTarget(id);
     setPaymentAmount("");
     setPaymentError("");
-    scrollTo(paymentRef);
-  };
-
-  const closeAddPayment = () => {
-    setPaymentTarget(null);
-    setPaymentAmount("");
-    setPaymentError("");
   };
 
   const saveAdditionalPayment = (event) => {
@@ -430,9 +439,7 @@ export default function Payments() {
     );
 
     if (!payment) {
-      setPaymentError(
-        "Invoice not found."
-      );
+      setPaymentError("Invoice not found.");
       return;
     }
 
@@ -446,7 +453,9 @@ export default function Payments() {
       amount > balance
     ) {
       setPaymentError(
-        `Enter an amount greater than zero and not exceeding ${currency(balance)}.`
+        `Enter an amount greater than zero and not exceeding ${currency(
+          balance
+        )}.`
       );
       return;
     }
@@ -457,8 +466,7 @@ export default function Payments() {
           ? {
               ...item,
               advance:
-                toAmount(item.advance) +
-                amount,
+                toAmount(item.advance) + amount,
             }
           : item
       )
@@ -468,9 +476,7 @@ export default function Payments() {
   };
 
   const filtered = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
     return payments.filter((payment) => {
       const matchesSearch = [
@@ -517,24 +523,28 @@ export default function Payments() {
       value: currency(totalRevenue),
       icon: Receipt,
       color: "text-blue-700",
+      bg: "bg-blue-50",
     },
     {
       title: "Amount Received",
       value: currency(received),
       icon: IndianRupee,
       color: "text-green-700",
+      bg: "bg-green-50",
     },
     {
       title: "Pending Balance",
       value: currency(pending),
       icon: Clock3,
       color: "text-orange-600",
+      bg: "bg-orange-50",
     },
     {
       title: "Total Invoices",
       value: payments.length,
       icon: Wallet,
       color: "text-indigo-700",
+      bg: "bg-indigo-50",
     },
   ];
 
@@ -552,10 +562,7 @@ export default function Payments() {
     );
 
   const printInvoice = (payment) => {
-    const printWindow = window.open(
-      "",
-      "_blank"
-    );
+    const printWindow = window.open("", "_blank");
 
     if (!printWindow) {
       window.alert(
@@ -564,129 +571,189 @@ export default function Payments() {
       return;
     }
 
-    const safe = (value) =>
-      escapeHtml(value);
+    const safe = (value) => escapeHtml(value);
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${safe(payment.invoice)}</title>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${safe(payment.invoice)}</title>
+        <style>
+          * {
+            box-sizing: border-box;
+          }
 
-          <style>
-            * {
-              box-sizing: border-box;
-            }
+          body {
+            margin: 0;
+            padding: 32px;
+            font-family: Arial, sans-serif;
+            color: #10264d;
+            background: white;
+          }
 
+          .container {
+            max-width: 800px;
+            margin: auto;
+          }
+
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            padding-bottom: 22px;
+            border-bottom: 3px solid #10264d;
+          }
+
+          h1 {
+            font-size: 25px;
+            margin: 0 0 8px;
+          }
+
+          h2 {
+            font-size: 20px;
+            margin-top: 28px;
+          }
+
+          .muted {
+            color: #64748b;
+            font-size: 13px;
+          }
+
+          .section {
+            margin: 25px 0;
+          }
+
+          .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 0;
+            border-bottom: 1px solid #e2e8f0;
+          }
+
+          .row span,
+          .row strong {
+            overflow-wrap: anywhere;
+          }
+
+          .total {
+            font-size: 19px;
+            font-weight: bold;
+          }
+
+          .footer {
+            margin-top: 45px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+            text-align: center;
+          }
+
+          @media print {
             body {
-              margin: 0;
-              padding: 30px;
-              font-family: Arial, sans-serif;
-              color: #10264d;
-              background: white;
+              padding: 12px;
             }
+          }
+        </style>
+      </head>
 
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-            }
+      <body>
+        <div class="container">
+          <div class="header">
+            <div>
+              <h1>STUDIO RAW PICTUREZ</h1>
+              <p class="muted">
+                Photography & Event Services
+              </p>
+            </div>
 
-            h1 {
-              font-size: 25px;
-              border-bottom: 2px solid #10264d;
-              padding-bottom: 16px;
-            }
+            <div>
+              <strong>PAYMENT INVOICE</strong>
+              <p>${safe(payment.invoice)}</p>
+              <p class="muted">${safe(payment.date)}</p>
+            </div>
+          </div>
 
-            h2 {
-              font-size: 19px;
-            }
+          <div class="section">
+            <h2>Customer Information</h2>
 
-            .row {
-              display: flex;
-              justify-content: space-between;
-              gap: 20px;
-              padding: 13px 0;
-              border-bottom: 1px solid #e2e8f0;
-            }
+            <p>
+              <strong>Customer:</strong>
+              ${safe(payment.customer)}
+            </p>
 
-            .row span,
-            .row strong {
-              overflow-wrap: anywhere;
-            }
+            <p>
+              <strong>Phone:</strong>
+              ${safe(payment.phone)}
+            </p>
 
-            .total {
-              font-size: 20px;
-              font-weight: bold;
-            }
+            <p>
+              <strong>Event:</strong>
+              ${safe(payment.event)}
+            </p>
 
-            .muted {
-              color: #64748b;
-              font-size: 13px;
-            }
+            <p>
+              <strong>Package:</strong>
+              ${safe(payment.packageName)}
+            </p>
 
-            .footer {
-              margin-top: 35px;
-              padding-top: 15px;
-              border-top: 1px solid #e2e8f0;
-              text-align: center;
-            }
+            <p>
+              <strong>Payment Method:</strong>
+              ${safe(payment.method)}
+            </p>
+          </div>
 
-            @media print {
-              body {
-                padding: 12px;
-              }
-            }
-          </style>
-        </head>
-
-        <body>
-          <div class="container">
-            <h1>STUDIO RAW PICTUREZ</h1>
-
-            <h2>Payment Invoice</h2>
-
-            <p><strong>Invoice:</strong> ${safe(payment.invoice)}</p>
-            <p><strong>Date:</strong> ${safe(payment.date)}</p>
-
-            <hr />
-
-            <p><strong>Customer:</strong> ${safe(payment.customer)}</p>
-            <p><strong>Phone:</strong> ${safe(payment.phone)}</p>
-            <p><strong>Event:</strong> ${safe(payment.event)}</p>
-            <p><strong>Package:</strong> ${safe(payment.packageName)}</p>
-            <p><strong>Payment Method:</strong> ${safe(payment.method)}</p>
+          <div class="section">
+            <h2>Payment Summary</h2>
 
             <div class="row">
               <span>Total Amount</span>
-              <strong>${safe(currency(payment.total))}</strong>
+              <strong>
+                ${safe(currency(payment.total))}
+              </strong>
             </div>
 
             <div class="row">
               <span>Amount Received</span>
-              <strong>${safe(currency(payment.advance))}</strong>
+              <strong>
+                ${safe(currency(payment.advance))}
+              </strong>
             </div>
 
             <div class="row total">
               <span>Pending Balance</span>
-              <strong>${safe(currency(getBalance(payment)))}</strong>
+              <strong>
+                ${safe(currency(getBalance(payment)))}
+              </strong>
             </div>
 
-            <p><strong>Status:</strong> ${safe(getStatus(payment))}</p>
+            <p>
+              <strong>Status:</strong>
+              ${safe(getStatus(payment))}
+            </p>
 
             ${
               payment.notes
-                ? `<p><strong>Notes:</strong> ${safe(payment.notes)}</p>`
+                ? `<p><strong>Notes:</strong> ${safe(
+                    payment.notes
+                  )}</p>`
                 : ""
             }
-
-            <div class="footer">
-              <p>Thank you for choosing Studio Raw Picturez!</p>
-              <p class="muted">Generated from StudioRaw ERP & CRM</p>
-            </div>
           </div>
-        </body>
+
+          <div class="footer">
+            <p>
+              Thank you for choosing Studio Raw Picturez!
+            </p>
+
+            <p class="muted">
+              Generated from StudioRaw ERP & CRM
+            </p>
+          </div>
+        </div>
+      </body>
       </html>
     `);
 
@@ -700,16 +767,15 @@ export default function Payments() {
   );
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
-
-      {/* Page Header */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="min-w-0">
-          <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
+    <div className="min-h-screen w-full min-w-0 space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
+      {/* PAGE HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
             Payment & Billing
           </h1>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-1 text-sm text-slate-500">
             Manage invoices, payments and outstanding balances.
           </p>
         </div>
@@ -717,274 +783,622 @@ export default function Payments() {
         <button
           type="button"
           onClick={openForm}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
         >
           <Plus size={18} />
           Create Invoice
         </button>
       </div>
 
-      {/* Statistics - Vertical */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* STATISTICS */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.title}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="group min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex min-w-0 items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.title}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-500">
+                    {stat.title}
+                  </p>
 
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
+                  <h2
+                    className={`mt-3 break-all text-2xl font-bold tracking-tight ${stat.color}`}
+                  >
+                    {stat.value}
+                  </h2>
+                </div>
+
+                <div
+                  className={`shrink-0 rounded-xl p-3 ${stat.bg}`}
+                >
                   <Icon
-                    size={21}
+                    size={22}
                     className={stat.color}
                   />
                 </div>
               </div>
-
-              <h2
-                className={`mt-3 break-all text-2xl font-bold sm:text-3xl ${stat.color}`}
-              >
-                {stat.value}
-              </h2>
             </div>
           );
         })}
       </div>
 
-      {/* Invoice Management */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-5 text-lg font-bold text-[#10264d]">
-          Invoice Management
-        </h2>
-
-        {/* Search */}
-        <div className="relative mb-4 w-full min-w-0">
-          <Search
-            size={17}
-            className="absolute left-3 top-3.5 text-slate-400"
-          />
-
-          <input
-            type="search"
-            value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
-            placeholder="Search invoices..."
-            className={`${inputClass} pl-10`}
-          />
-        </div>
-
-        {/* Filter */}
-        <div className="mb-5 w-full min-w-0">
-          <p className="mb-2 text-xs font-medium text-slate-500">
-            Filter by Payment Status
-          </p>
-
-          <CustomDropdown
-            value={filter}
-            options={filterOptions}
-            onChange={setFilter}
-          />
-        </div>
-
-        {/* Invoice Cards */}
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-400">
-            No invoices found
-          </div>
-        ) : (
-          <div className="flex w-full min-w-0 flex-col gap-4">
-            {filtered.map((payment) => {
-              const status =
-                getStatus(payment);
-
-              const balance =
-                getBalance(payment);
-
-              return (
-                <article
-                  key={payment.id}
-                  className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5"
-                >
-                  {/* Invoice Header */}
-                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
-                    <div className="min-w-0">
-                      <p className="break-all text-xs font-semibold text-blue-700">
-                        {payment.invoice}
-                      </p>
-
-                      <h3 className="mt-2 break-words text-base font-bold text-[#10264d]">
-                        {payment.customer}
-                      </h3>
-
-                      <p className="mt-1 text-xs text-slate-500">
-                        {payment.date || "No date"}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`w-fit max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusStyle[status]
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </div>
-
-                  {/* Invoice Details */}
-                  <Detail
-                    label="Phone Number"
-                    value={payment.phone}
-                  />
-
-                  <Detail
-                    label="Event"
-                    value={payment.event}
-                  />
-
-                  <Detail
-                    label="Package"
-                    value={payment.packageName}
-                  />
-
-                  <Detail
-                    label="Payment Method"
-                    value={payment.method}
-                  />
-
-                  <Detail
-                    label="Total Amount"
-                    value={currency(
-                      payment.total
-                    )}
-                  />
-
-                  <Detail
-                    label="Amount Received"
-                    value={currency(
-                      payment.advance
-                    )}
-                    color="text-green-700"
-                  />
-
-                  <Detail
-                    label="Pending Balance"
-                    value={currency(balance)}
-                    color="text-orange-600"
-                  />
-
-                  {payment.notes && (
-                    <Detail
-                      label="Notes"
-                      value={payment.notes}
-                    />
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                    {balance > 0 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openAddPayment(
-                            payment.id
-                          )
-                        }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                      >
-                        <Plus size={17} />
-                        Add Payment
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        printInvoice(payment)
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-100"
-                    >
-                      <Printer size={17} />
-                      Print Invoice
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deletePayment(
-                          payment.id
-                        )
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      <Trash2 size={17} />
-                      Delete Invoice
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Additional Payment Form */}
-      {selectedPayment && (
-        <section
-          ref={paymentRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-5 flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-4">
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-[#10264d]">
-                Add Payment
+      {/* INVOICE MANAGEMENT */}
+      <section className="min-w-0 rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#10264d]">
+                Invoice Management
               </h2>
 
-              <p className="mt-1 break-words text-sm text-slate-500">
-                {selectedPayment.customer} ·{" "}
-                {selectedPayment.invoice}
+              <p className="mt-1 text-sm text-slate-500">
+                View and manage customer billing records.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={closeAddPayment}
-              className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-              aria-label="Close payment form"
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <div className="relative w-full sm:min-w-[230px] lg:w-72">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search invoices..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+
+              <div className="w-full sm:w-44">
+                <CustomDropdown
+                  value={filter}
+                  options={filterOptions}
+                  onChange={setFilter}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="py-16 text-center text-sm text-slate-400">
+            No invoices found
+          </div>
+        ) : (
+          <>
+            {/* DESKTOP TABLE */}
+            <div className="hidden w-full overflow-x-auto lg:block">
+              <table className="w-full min-w-[1050px] border-collapse text-left">
+                <thead className="bg-slate-50">
+                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {[
+                      "Invoice",
+                      "Customer",
+                      "Event / Package",
+                      "Total",
+                      "Received",
+                      "Balance",
+                      "Status",
+                      "Actions",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        className="px-5 py-4"
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((payment) => {
+                    const status = getStatus(payment);
+                    const balance = getBalance(payment);
+
+                    return (
+                      <tr
+                        key={payment.id}
+                        className="transition hover:bg-blue-50/40"
+                      >
+                        <td className="px-5 py-5">
+                          <p className="text-sm font-semibold text-blue-700">
+                            {payment.invoice}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            {payment.date || "No date"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="text-sm font-semibold text-[#10264d]">
+                            {payment.customer}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            {payment.phone}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="text-sm font-medium text-slate-700">
+                            {payment.event}
+                          </p>
+
+                          <p className="mt-1 max-w-40 break-words text-xs text-slate-500">
+                            {payment.packageName}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-5 text-sm font-semibold text-[#10264d]">
+                          {currency(payment.total)}
+                        </td>
+
+                        <td className="px-5 py-5 text-sm font-semibold text-green-700">
+                          {currency(payment.advance)}
+                        </td>
+
+                        <td className="px-5 py-5 text-sm font-semibold text-orange-600">
+                          {currency(balance)}
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <span
+                            className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-semibold ${statusStyle[status]}`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-2">
+                            {balance > 0 && (
+                              <button
+                                type="button"
+                                title="Add Payment"
+                                onClick={() =>
+                                  openAddPayment(payment.id)
+                                }
+                                className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+                              >
+                                <Plus size={17} />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              title="Print Invoice"
+                              onClick={() =>
+                                printInvoice(payment)
+                              }
+                              className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
+                            >
+                              <Printer size={17} />
+                            </button>
+
+                            <button
+                              type="button"
+                              title="Delete Invoice"
+                              onClick={() =>
+                                deletePayment(payment.id)
+                              }
+                              className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE CARDS */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+              {filtered.map((payment) => {
+                const status = getStatus(payment);
+                const balance = getBalance(payment);
+
+                return (
+                  <article
+                    key={payment.id}
+                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
+                      <div className="min-w-0">
+                        <p className="break-all text-xs font-semibold text-blue-700">
+                          {payment.invoice}
+                        </p>
+
+                        <h3 className="mt-2 break-words text-base font-bold text-[#10264d]">
+                          {payment.customer}
+                        </h3>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {payment.date || "No date"}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${statusStyle[status]}`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {[
+                        ["Phone Number", payment.phone],
+                        ["Event", payment.event],
+                        ["Package", payment.packageName],
+                        ["Payment Method", payment.method],
+                        [
+                          "Total Amount",
+                          currency(payment.total),
+                        ],
+                        [
+                          "Amount Received",
+                          currency(payment.advance),
+                        ],
+                        [
+                          "Pending Balance",
+                          currency(balance),
+                        ],
+                        ...(payment.notes
+                          ? [["Notes", payment.notes]]
+                          : []),
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="flex flex-col gap-1 border-b border-slate-100 pb-3 last:border-0"
+                        >
+                          <p className="text-xs text-slate-400">
+                            {label}
+                          </p>
+
+                          <p className="break-words text-sm font-semibold text-[#10264d]">
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
+                      {balance > 0 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openAddPayment(payment.id)
+                          }
+                          className="flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700"
+                        >
+                          <Plus size={17} />
+                          Add Payment
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          printInvoice(payment)
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d]"
+                      >
+                        <Printer size={17} />
+                        Print Invoice
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          deletePayment(payment.id)
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                      >
+                        <Trash2 size={17} />
+                        Delete Invoice
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* CREATE INVOICE MODAL */}
+      {showForm && (
+        <ModalShell
+          title="Create New Invoice"
+          description="Create a new customer payment invoice"
+          icon={Receipt}
+          onClose={closeForm}
+          onSubmit={savePayment}
+          submitLabel="Save Invoice"
+        >
+          <div className="space-y-8">
+            <section>
+              <SectionHeading
+                icon={UserRound}
+                title="Customer Information"
+              />
+
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField
+                  label="Customer Name"
+                  required
+                >
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={form.customer}
+                    onChange={(event) =>
+                      update(
+                        "customer",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter customer name"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField
+                  label="Phone Number"
+                  required
+                >
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    required
+                    value={form.phone}
+                    onChange={(event) =>
+                      update(
+                        "phone",
+                        event.target.value.replace(
+                          /\D/g,
+                          ""
+                        )
+                      )
+                    }
+                    placeholder="Enter 10-digit mobile number"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Event Type">
+                  <CustomDropdown
+                    value={form.event}
+                    options={eventOptions}
+                    onChange={(value) =>
+                      update("event", value)
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Package Name"
+                  required
+                >
+                  <input
+                    type="text"
+                    required
+                    value={form.packageName}
+                    onChange={(event) =>
+                      update(
+                        "packageName",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter package name"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+            </section>
+
+            <section>
+              <SectionHeading
+                icon={IndianRupee}
+                title="Billing Information"
+              />
+
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <FormField
+                  label="Total Amount"
+                  required
+                >
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    value={form.total}
+                    onChange={(event) =>
+                      update(
+                        "total",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter total amount"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Advance Received">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.advance}
+                    onChange={(event) =>
+                      update(
+                        "advance",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter advance amount"
+                    className={inputClass}
+                  />
+                </FormField>
+
+                <FormField label="Payment Method">
+                  <CustomDropdown
+                    value={form.method}
+                    options={methodOptions}
+                    onChange={(value) =>
+                      update("method", value)
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="Invoice Date"
+                  required
+                >
+                  <input
+                    type="date"
+                    required
+                    value={form.date}
+                    onChange={(event) =>
+                      update(
+                        "date",
+                        event.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+
+              <div className="mt-5 rounded-xl border border-blue-100 bg-[#edf4ff] p-5">
+                <p className="text-sm font-medium text-[#627895]">
+                  Remaining Balance
+                </p>
+
+                <h3 className="mt-2 text-2xl font-bold text-[#112e60]">
+                  {currency(
+                    Math.max(
+                      0,
+                      toAmount(form.total) -
+                        toAmount(form.advance)
+                    )
+                  )}
+                </h3>
+              </div>
+            </section>
+
+            <section>
+              <SectionHeading
+                icon={FileText}
+                title="Additional Information"
+              />
+
+              <FormField label="Notes">
+                <textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(event) =>
+                    update(
+                      "notes",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Enter additional payment details..."
+                  className={inputClass}
+                />
+              </FormField>
+            </section>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+              >
+                {error}
+              </p>
+            )}
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ADD PAYMENT MODAL */}
+      {selectedPayment && (
+        <ModalShell
+          title="Add Payment"
+          description={`${selectedPayment.customer} · ${selectedPayment.invoice}`}
+          icon={CreditCard}
+          onClose={closeAddPayment}
+          onSubmit={saveAdditionalPayment}
+          submitLabel="Save Payment"
+          maxWidth="max-w-[650px]"
+        >
+          <div className="space-y-6">
+            <SectionHeading
+              icon={Wallet}
+              title="Payment Information"
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-xs font-medium text-slate-500">
+                  Total Invoice Amount
+                </p>
+
+                <h3 className="mt-2 text-xl font-bold text-[#10264d]">
+                  {currency(selectedPayment.total)}
+                </h3>
+              </div>
+
+              <div className="rounded-xl border border-green-100 bg-green-50 p-4">
+                <p className="text-xs font-medium text-green-700">
+                  Amount Received
+                </p>
+
+                <h3 className="mt-2 text-xl font-bold text-green-700">
+                  {currency(selectedPayment.advance)}
+                </h3>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
+              <p className="text-sm font-medium text-orange-700">
+                Pending Balance
+              </p>
+
+              <h3 className="mt-2 text-2xl font-bold text-orange-700">
+                {currency(
+                  getBalance(selectedPayment)
+                )}
+              </h3>
+            </div>
+
+            <FormField
+              label="Payment Amount"
+              required
             >
-              <X size={22} />
-            </button>
-          </div>
-
-          <div className="mb-5 rounded-xl bg-blue-50 p-4">
-            <p className="text-sm text-slate-500">
-              Pending Balance
-            </p>
-
-            <h3 className="mt-2 break-all text-2xl font-bold text-[#10264d]">
-              {currency(
-                getBalance(selectedPayment)
-              )}
-            </h3>
-          </div>
-
-          <form
-            onSubmit={saveAdditionalPayment}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Payment Amount">
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 required
+                autoFocus
                 value={paymentAmount}
                 onChange={(event) => {
                   setPaymentAmount(
@@ -1000,246 +1414,15 @@ export default function Payments() {
             {paymentError && (
               <p
                 role="alert"
-                className="break-words text-sm font-medium text-red-600"
+                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
               >
                 {paymentError}
               </p>
             )}
-
-            <div className="flex flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeAddPayment}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                Save Payment
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
-      {/* Create Invoice Form */}
-      {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-6 flex min-w-0 items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                Create Invoice
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Enter customer billing information.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={closeForm}
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100"
-              aria-label="Close invoice form"
-            >
-              <X size={22} />
-            </button>
           </div>
-
-          <form
-            onSubmit={savePayment}
-            className="flex w-full min-w-0 flex-col gap-5"
-          >
-            <FormField label="Customer Name">
-              <input
-                type="text"
-                required
-                value={form.customer}
-                onChange={(event) =>
-                  update(
-                    "customer",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter customer name"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Phone Number">
-              <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                required
-                value={form.phone}
-                onChange={(event) =>
-                  update(
-                    "phone",
-                    event.target.value.replace(
-                      /\D/g,
-                      ""
-                    )
-                  )
-                }
-                placeholder="Enter 10-digit phone number"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Package Name">
-              <input
-                type="text"
-                required
-                value={form.packageName}
-                onChange={(event) =>
-                  update(
-                    "packageName",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter package name"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Event Type">
-              <CustomDropdown
-                value={form.event}
-                options={eventOptions}
-                onChange={(value) =>
-                  update("event", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Total Amount">
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
-                value={form.total}
-                onChange={(event) =>
-                  update(
-                    "total",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter total amount"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Advance Received">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.advance}
-                onChange={(event) =>
-                  update(
-                    "advance",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter advance amount"
-                className={inputClass}
-              />
-            </FormField>
-
-            {/* Balance Preview */}
-            <div className="w-full min-w-0 rounded-xl bg-blue-50 p-4">
-              <p className="text-sm text-slate-500">
-                Remaining Balance
-              </p>
-
-              <h3 className="mt-2 break-all text-2xl font-bold text-[#10264d]">
-                {currency(
-                  Math.max(
-                    0,
-                    toAmount(form.total) -
-                      toAmount(form.advance)
-                  )
-                )}
-              </h3>
-            </div>
-
-            <FormField label="Payment Method">
-              <CustomDropdown
-                value={form.method}
-                options={methodOptions}
-                onChange={(value) =>
-                  update("method", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Invoice Date">
-              <input
-                type="date"
-                required
-                value={form.date}
-                onChange={(event) =>
-                  update(
-                    "date",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  update(
-                    "notes",
-                    event.target.value
-                  )
-                }
-                placeholder="Additional payment details..."
-                className={inputClass}
-              />
-            </FormField>
-
-            {error && (
-              <p
-                role="alert"
-                className="break-words text-sm font-medium text-red-600"
-              >
-                {error}
-              </p>
-            )}
-
-            <div className="flex w-full flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                Save Invoice
-              </button>
-            </div>
-          </form>
-        </section>
+        </ModalShell>
       )}
     </div>
   );
 }
+

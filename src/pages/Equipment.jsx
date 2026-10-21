@@ -1,98 +1,58 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
-  Camera,
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  X,
-  Save,
-  CheckCircle2,
-  AlertTriangle,
-  Package,
-  History,
-  ChevronDown,
-  Check,
+  Camera, Plus, Search, Pencil, Trash2, X, Save,
+  Wrench, CheckCircle2, AlertTriangle, Package,
+  CalendarDays, UserRound, IndianRupee, History,
+  Download, ChevronDown, Check, ClipboardList,
 } from "lucide-react";
 
 const EQUIPMENT_KEY = "studioraw_equipment";
 const HISTORY_KEY = "studioraw_equipment_history";
-const STAFF_KEY = "studioraw_staff";
 
 const categories = [
-  "Camera",
-  "Lens",
-  "Lighting",
-  "Tripod",
-  "Drone",
-  "Audio Equipment",
-  "Gimbal",
-  "Memory & Storage",
-  "Other",
+  "Camera", "Lens", "Lighting", "Audio", "Tripod",
+  "Drone", "Computer", "Storage", "Accessories", "Other",
 ];
 
 const statuses = [
-  "Available",
-  "In Use",
-  "Maintenance",
-  "Unavailable",
+  "Available", "In Use", "Maintenance", "Damaged",
 ];
 
-const emptyForm = {
+const conditions = ["Excellent", "Good", "Fair", "Poor"];
+
+const emptyForm = () => ({
   name: "",
   category: "Camera",
   brand: "",
   model: "",
   serialNumber: "",
+  quantity: "1",
   purchaseDate: "",
-  purchaseCost: "",
+  purchasePrice: "",
+  condition: "Excellent",
   status: "Available",
   assignedTo: "",
-  shootName: "",
+  location: "",
   lastServiceDate: "",
   nextServiceDate: "",
-  maintenanceCost: "",
   notes: "",
-};
+});
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400";
 
-const statusStyles = {
-  Available: "bg-green-100 text-green-700",
-  "In Use": "bg-blue-100 text-blue-700",
-  Maintenance: "bg-amber-100 text-amber-700",
-  Unavailable: "bg-red-100 text-red-700",
+const statusStyle = {
+  Available: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "In Use": "bg-blue-50 text-blue-700 ring-blue-200",
+  Maintenance: "bg-amber-50 text-amber-700 ring-amber-200",
+  Damaged: "bg-rose-50 text-rose-700 ring-rose-200",
 };
 
-function readArray(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-}
-
-function createId() {
-  return (
-    globalThis.crypto?.randomUUID?.() ||
-    `EQ-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  );
-}
-
-function money(value) {
-  return `₹${Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-
+const formatDate = (value) => {
+  if (!value) return "—";
   const date = new Date(`${value}T00:00:00`);
-
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("en-IN", {
@@ -100,1210 +60,876 @@ function formatDate(value) {
         month: "short",
         year: "numeric",
       });
-}
+};
 
-function formatHistoryDate(value) {
-  if (!value) return "Not available";
+const formatMoney = (value) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
 
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-}
-
-function todayKey() {
-  const date = new Date();
-
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
-function CustomDropdown({
-  value,
-  options,
-  onChange,
-  placeholder = "Select option",
-}) {
+function Dropdown({ value, options, onChange }) {
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  const normalizedOptions = options.map((option) =>
-    typeof option === "string"
-      ? { value: option, label: option }
-      : option
-  );
-
-  const selected = normalizedOptions.find(
-    (option) => String(option.value) === String(value)
-  );
 
   return (
-    <div
-      ref={dropdownRef}
-      className="w-full min-w-0 max-w-full"
-    >
+    <div className="relative">
       <button
         type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((previous) => !previous)}
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        onClick={() => setOpen(!open)}
+        className={`${inputClass} flex items-center justify-between gap-2 text-left`}
       >
-        <span className="min-w-0 flex-1 break-words">
-          {selected?.label || placeholder}
-        </span>
-
-        <ChevronDown
-          size={18}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
+        <span className="truncate">{value}</span>
+        <ChevronDown size={16} className="shrink-0" />
       </button>
 
       {open && (
-        <div
-          role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-        >
-          {normalizedOptions.map((option) => {
-            const isSelected =
-              String(option.value) === String(value);
-
-            return (
-              <button
-                key={String(option.value)}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                  isSelected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option.label}
-                </span>
-
-                {isSelected && (
-                  <Check
-                    size={16}
-                    className="shrink-0"
-                  />
-                )}
-              </button>
-            );
-          })}
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${
+                value === option
+                  ? "bg-blue-50 font-semibold text-blue-700"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {option}
+              {value === option && <Check size={15} />}
+            </button>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function FormField({ label, children }) {
+function Field({ label, children, required = false }) {
   return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
+    <div className="min-w-0">
+      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
         {label}
-      </p>
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {children}
     </div>
   );
 }
 
-function Detail({ label, value }) {
+function Badge({ status }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
-
-      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-        {value === undefined ||
-        value === null ||
-        value === ""
-          ? "—"
-          : value}
-      </p>
-    </div>
+    <span className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ${statusStyle[status] || "bg-slate-100 text-slate-600 ring-slate-200"}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {status || "Available"}
+    </span>
   );
+}
+
+function loadData(key) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 export default function Equipment() {
   const [equipment, setEquipment] = useState(() =>
-    readArray(EQUIPMENT_KEY)
+    loadData(EQUIPMENT_KEY)
   );
 
   const [history, setHistory] = useState(() =>
-    readArray(HISTORY_KEY)
+    loadData(HISTORY_KEY)
   );
 
-  const [staff, setStaff] = useState(() =>
-    readArray(STAFF_KEY)
-  );
-
-  const [activeTab, setActiveTab] = useState("equipment");
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-
-  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [activeTab, setActiveTab] = useState("Equipment");
   const [error, setError] = useState("");
 
-  const formRef = useRef(null);
-
   useEffect(() => {
-    localStorage.setItem(
-      EQUIPMENT_KEY,
-      JSON.stringify(equipment)
-    );
+    localStorage.setItem(EQUIPMENT_KEY, JSON.stringify(equipment));
   }, [equipment]);
 
   useEffect(() => {
-    localStorage.setItem(
-      HISTORY_KEY,
-      JSON.stringify(history)
-    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
-    const syncStaff = () => {
-      setStaff(readArray(STAFF_KEY));
+    if (!showForm) return;
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setShowForm(false);
     };
 
-    window.addEventListener("storage", syncStaff);
-    window.addEventListener("focus", syncStaff);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      window.removeEventListener("storage", syncStaff);
-      window.removeEventListener("focus", syncStaff);
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", handleEscape);
     };
-  }, []);
+  }, [showForm]);
 
-  const scrollToForm = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
-  };
-
-  const addHistory = (record) => {
-    setHistory((previous) => [
-      {
-        id: createId(),
-        date: new Date().toISOString(),
-        ...record,
-      },
-      ...previous,
-    ]);
-  };
-
-  const updateField = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+  const update = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setError("");
   };
 
   const openAdd = () => {
-    setActiveTab("equipment");
-    setStaff(readArray(STAFF_KEY));
-    setForm({ ...emptyForm });
+    setForm(emptyForm());
     setEditingId(null);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const openEdit = (item) => {
-    setActiveTab("equipment");
-    setStaff(readArray(STAFF_KEY));
-    setForm({
-      ...emptyForm,
-      ...item,
-      purchaseCost: String(item.purchaseCost ?? ""),
-      maintenanceCost: String(item.maintenanceCost ?? ""),
-    });
+    setForm({ ...emptyForm(), ...item });
     setEditingId(item.id);
     setError("");
     setShowForm(true);
-    scrollToForm();
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm({ ...emptyForm });
+    setForm(emptyForm());
     setError("");
   };
 
-  const saveEquipment = (event) => {
+  const addHistory = (action, itemName, details) => {
+    const entry = {
+      id: globalThis.crypto?.randomUUID?.() || `H-${Date.now()}`,
+      action,
+      itemName,
+      details,
+      date: new Date().toISOString(),
+    };
+    setHistory((prev) => [entry, ...prev]);
+  };
+
+  const handleSave = (event) => {
     event.preventDefault();
 
-    const purchaseCost = Number(form.purchaseCost || 0);
-    const maintenanceCost = Number(
-      form.maintenanceCost || 0
-    );
-
     if (!form.name.trim()) {
-      setError("Please enter equipment name.");
+      setError("Equipment name is required.");
       return;
     }
 
-    if (
-      !Number.isFinite(purchaseCost) ||
-      purchaseCost < 0 ||
-      !Number.isFinite(maintenanceCost) ||
-      maintenanceCost < 0
-    ) {
-      setError("Please enter valid cost values.");
+    const quantity = Number(form.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setError("Enter a valid quantity.");
       return;
     }
 
-    const serial = String(
-      form.serialNumber || ""
-    ).trim();
+    const price = form.purchasePrice === ""
+      ? ""
+      : Number(form.purchasePrice);
 
-    const duplicateSerial = equipment.some(
-      (item) =>
-        serial !== "" &&
-        String(item.serialNumber || "")
-          .trim()
-          .toLowerCase() === serial.toLowerCase() &&
-        item.id !== editingId
-    );
-
-    if (duplicateSerial) {
-      setError(
-        "This serial number already exists."
-      );
+    if (price !== "" && (!Number.isFinite(price) || price < 0)) {
+      setError("Enter a valid purchase price.");
       return;
     }
 
-    const record = {
+    const data = {
       ...form,
-      id: editingId || createId(),
       name: form.name.trim(),
-      serialNumber: serial,
-      purchaseCost,
-      maintenanceCost,
-      updatedAt: new Date().toISOString(),
+      quantity,
+      purchasePrice: price,
+      id: editingId || globalThis.crypto?.randomUUID?.() || `EQ-${Date.now()}`,
     };
 
     if (editingId) {
-      const oldItem = equipment.find(
-        (item) => item.id === editingId
+      const previous = equipment.find((item) => item.id === editingId);
+      setEquipment((prev) =>
+        prev.map((item) => item.id === editingId ? data : item)
       );
-
-      setEquipment((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? record : item
-        )
+      addHistory(
+        "Updated",
+        data.name,
+        previous?.status !== data.status
+          ? `Status changed from ${previous?.status} to ${data.status}`
+          : "Equipment details updated"
       );
-
-      addHistory({
-        equipmentId: record.id,
-        equipmentName: record.name,
-        action: "Updated",
-        details:
-          oldItem?.status !== record.status
-            ? `Status: ${oldItem?.status || "Unknown"} → ${record.status}`
-            : "Equipment details updated",
-      });
     } else {
-      setEquipment((previous) => [
-        record,
-        ...previous,
-      ]);
-
-      addHistory({
-        equipmentId: record.id,
-        equipmentName: record.name,
-        action: "Added",
-        details: "New equipment registered",
-      });
+      setEquipment((prev) => [data, ...prev]);
+      addHistory("Added", data.name, "New equipment registered");
     }
 
     closeForm();
   };
 
-  const deleteEquipment = (item) => {
-    if (!window.confirm(`Delete ${item.name}?`)) {
-      return;
-    }
+  const handleDelete = (item) => {
+    if (!window.confirm(`Delete ${item.name}?`)) return;
 
-    setEquipment((previous) =>
-      previous.filter(
-        (record) => record.id !== item.id
-      )
+    setEquipment((prev) =>
+      prev.filter((record) => record.id !== item.id)
     );
-
-    addHistory({
-      equipmentId: item.id,
-      equipmentName: item.name,
-      action: "Deleted",
-      details: "Equipment removed from inventory",
-    });
-
-    if (editingId === item.id) {
-      closeForm();
-    }
+    addHistory("Deleted", item.name, "Equipment record deleted");
   };
 
-  const changeStatus = (item, newStatus) => {
-    if (item.status === newStatus) {
-      return;
-    }
-
-    setEquipment((previous) =>
-      previous.map((record) =>
-        record.id === item.id
-          ? {
-              ...record,
-              status: newStatus,
-              updatedAt: new Date().toISOString(),
-            }
-          : record
-      )
-    );
-
-    addHistory({
-      equipmentId: item.id,
-      equipmentName: item.name,
-      action: "Status Changed",
-      details: `${item.status} → ${newStatus}`,
-    });
-
-    if (editingId === item.id) {
-      setForm((previous) => ({
-        ...previous,
-        status: newStatus,
-      }));
-    }
-  };
-
-  const filteredEquipment = useMemo(() => {
+  const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return equipment.filter((item) => {
       const matchesSearch = [
-        item.name,
-        item.brand,
-        item.model,
-        item.serialNumber,
-        item.assignedTo,
-        item.shootName,
+        item.name, item.category, item.brand, item.model,
+        item.serialNumber, item.assignedTo, item.location,
       ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(query)
+        String(value || "").toLowerCase().includes(query)
       );
 
-      const matchesCategory =
-        categoryFilter === "All" ||
-        item.category === categoryFilter;
-
-      const matchesStatus =
-        statusFilter === "All" ||
-        item.status === statusFilter;
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesStatus
-      );
+      return matchesSearch &&
+        (statusFilter === "All" || item.status === statusFilter);
     });
-  }, [
-    equipment,
-    search,
-    categoryFilter,
-    statusFilter,
-  ]);
-
-  const today = todayKey();
-
-  const maintenanceDue = equipment.filter(
-    (item) =>
-      item.nextServiceDate &&
-      item.nextServiceDate <= today
-  ).length;
+  }, [equipment, search, statusFilter]);
 
   const stats = [
     {
       label: "Total Equipment",
       value: equipment.length,
-      icon: Camera,
-      color: "text-blue-700",
+      icon: Package,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+      accent: "bg-blue-600",
     },
     {
       label: "Available",
-      value: equipment.filter(
-        (item) => item.status === "Available"
-      ).length,
+      value: equipment.filter((item) => item.status === "Available").length,
       icon: CheckCircle2,
-      color: "text-green-700",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      accent: "bg-emerald-500",
     },
     {
       label: "In Use",
-      value: equipment.filter(
-        (item) => item.status === "In Use"
-      ).length,
-      icon: Package,
-      color: "text-indigo-700",
+      value: equipment.filter((item) => item.status === "In Use").length,
+      icon: Camera,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+      accent: "bg-violet-500",
     },
     {
-      label: "Maintenance Due",
-      value: maintenanceDue,
-      icon: AlertTriangle,
-      color: "text-amber-700",
+      label: "Maintenance",
+      value: equipment.filter((item) => item.status === "Maintenance").length,
+      icon: Wrench,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      accent: "bg-amber-500",
     },
   ];
 
-  const staffOptions = [
-    {
-      label: "Not Assigned",
-      value: "",
-    },
-    ...staff
-      .filter((person) => person.name)
-      .map((person) => ({
-        label: `${person.name}${
-          person.role ? ` – ${person.role}` : ""
-        }`,
-        value: person.name,
-      })),
-  ];
+  const exportCSV = () => {
+    const keys = [
+      "name", "category", "brand", "model", "serialNumber",
+      "quantity", "purchaseDate", "purchasePrice", "condition",
+      "status", "assignedTo", "location", "lastServiceDate",
+      "nextServiceDate", "notes",
+    ];
 
-  if (
-    form.assignedTo &&
-    !staffOptions.some(
-      (option) => option.value === form.assignedTo
-    )
-  ) {
-    staffOptions.push({
-      label: form.assignedTo,
-      value: form.assignedTo,
+    const csvValue = (value) => {
+      const raw = String(value ?? "");
+      const safe = /^[\s]*[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+
+    const rows = [
+      keys.map(csvValue).join(","),
+      ...filtered.map((item) =>
+        keys.map((key) => csvValue(item[key])).join(",")
+      ),
+    ];
+
+    const blob = new Blob(["\uFEFF", rows.join("\r\n")], {
+      type: "text/csv;charset=utf-8;",
     });
-  }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "studioraw_equipment.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
+    <div className="min-h-screen min-w-0 bg-[#f6f8fc] px-3 py-5 sm:px-6 lg:px-8 lg:py-8">
 
-      {/* Header */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="min-w-0">
-          <h1 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl">
+      {/* HEADER */}
+      <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+            Studio Raw / Operations
+          </p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Equipment Management
           </h1>
-
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Manage studio cameras, lenses, lighting and equipment.
+          <p className="mt-2 text-sm text-slate-500">
+            Track photography equipment, assignments and maintenance.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openAdd}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
-        >
-          <Plus size={18} />
-          Add Equipment
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={exportCSV}
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-[#10264d] shadow-sm hover:bg-slate-50"
+          >
+            <Download size={17} />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 hover:bg-blue-900"
+          >
+            <Plus size={18} />
+            Add Equipment
+          </button>
+        </div>
       </div>
 
-      {/* Statistics */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* STATS */}
+      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
-
           return (
             <div
               key={stat.label}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 text-sm font-medium text-slate-500">
-                  {stat.label}
-                </p>
-
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon
-                    size={22}
-                    className={stat.color}
-                  />
+              <div className={`absolute left-0 top-0 h-1 w-full ${stat.accent}`} />
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                  <h2 className="mt-3 text-3xl font-extrabold text-[#10264d]">
+                    {stat.value}
+                  </h2>
+                </div>
+                <div className={`rounded-2xl p-3 ${stat.bg}`}>
+                  <Icon size={23} className={stat.color} />
                 </div>
               </div>
-
-              <h2
-                className={`mt-3 break-words text-3xl font-bold ${stat.color}`}
-              >
-                {stat.value}
-              </h2>
+              <p className="mt-5 text-xs text-slate-400">
+                Equipment inventory overview
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Main Section */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+      {/* MAIN SECTION */}
+      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex gap-2">
+              {["Equipment", "History"].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTab === tab
+                      ? "bg-[#10264d] text-white"
+                      : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {tab === "Equipment"
+                    ? <Camera size={16} />
+                    : <History size={16} />}
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-        {/* Tabs */}
-        <div className="mb-5 flex w-full min-w-0 flex-col gap-3 border-b border-slate-100 pb-5">
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("equipment")
-            }
-            className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
-              activeTab === "equipment"
-                ? "bg-[#10264d] text-white"
-                : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            <Camera size={17} />
-            Equipment List
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("history")
-            }
-            className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
-              activeTab === "history"
-                ? "bg-[#10264d] text-white"
-                : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            <History size={17} />
-            Activity History
-          </button>
+            {activeTab === "Equipment" && (
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="relative w-full sm:w-72">
+                  <Search
+                    size={17}
+                    className="absolute left-3.5 top-3.5 text-slate-400"
+                  />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search equipment..."
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+                <div className="w-full sm:w-44">
+                  <Dropdown
+                    value={statusFilter}
+                    options={["All", ...statuses]}
+                    onChange={setStatusFilter}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {activeTab === "equipment" ? (
-          <>
-            <h2 className="mb-5 text-lg font-bold text-[#10264d]">
-              Equipment List
-            </h2>
-
-            {/* Search */}
-            <div className="relative mb-4 w-full min-w-0">
-              <Search
-                size={17}
-                className="absolute left-3 top-3.5 text-slate-400"
-              />
-
-              <input
-                type="search"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search equipment..."
-                className={`${inputClass} pl-10`}
-              />
+        {activeTab === "Equipment" ? (
+          filtered.length === 0 ? (
+            <div className="flex flex-col items-center py-20 text-center">
+              <Camera size={42} className="mb-4 text-slate-300" />
+              <h3 className="font-bold text-[#10264d]">
+                No equipment found
+              </h3>
+              <p className="mt-2 text-sm text-slate-400">
+                Add equipment or adjust your search filters.
+              </p>
             </div>
+          ) : (
+            <>
+              {/* DESKTOP TABLE */}
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[1000px] text-left">
+                  <thead className="bg-[#f8faff]">
+                    <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <th className="px-5 py-4">Equipment</th>
+                      <th className="px-5 py-4">Category</th>
+                      <th className="px-5 py-4">Quantity</th>
+                      <th className="px-5 py-4">Assigned To</th>
+                      <th className="px-5 py-4">Condition</th>
+                      <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
 
-            {/* Filters */}
-            <div className="mb-5 flex w-full min-w-0 flex-col gap-4">
-              <FormField label="Filter by Category">
-                <CustomDropdown
-                  value={categoryFilter}
-                  options={[
-                    {
-                      label: "All Categories",
-                      value: "All",
-                    },
-                    ...categories,
-                  ]}
-                  onChange={setCategoryFilter}
-                />
-              </FormField>
-
-              <FormField label="Filter by Status">
-                <CustomDropdown
-                  value={statusFilter}
-                  options={[
-                    {
-                      label: "All Status",
-                      value: "All",
-                    },
-                    ...statuses,
-                  ]}
-                  onChange={setStatusFilter}
-                />
-              </FormField>
-            </div>
-
-            {/* Equipment Cards */}
-            {filteredEquipment.length === 0 ? (
-              <div className="py-12 text-center">
-                <Camera
-                  size={44}
-                  className="mx-auto mb-3 text-slate-300"
-                />
-
-                <p className="text-sm text-slate-400">
-                  No equipment found
-                </p>
-              </div>
-            ) : (
-              <div className="flex w-full min-w-0 flex-col gap-4">
-                {filteredEquipment.map((item) => {
-                  const serviceDue =
-                    item.nextServiceDate &&
-                    item.nextServiceDate <= today;
-
-                  return (
-                    <article
-                      key={item.id}
-                      className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                    >
-                      {/* Equipment Title */}
-                      <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-[#10264d]">
-                            <Camera size={23} />
+                  <tbody className="divide-y divide-slate-100">
+                    {filtered.map((item) => (
+                      <tr key={item.id} className="hover:bg-blue-50/30">
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                              <Camera size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-[#10264d]">
+                                {item.name}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {[item.brand, item.model].filter(Boolean).join(" ") || "No model"}
+                              </p>
+                            </div>
                           </div>
-
-                          <div className="min-w-0 flex-1">
-                            <h3 className="break-words text-lg font-bold text-[#10264d]">
-                              {item.name}
-                            </h3>
-
-                            <p className="mt-1 break-words text-sm text-slate-500">
-                              {[item.brand, item.model]
-                                .filter(Boolean)
-                                .join(" ") ||
-                                "Brand / Model not specified"}
-                            </p>
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-600">
+                          {item.category}
+                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-[#10264d]">
+                          {item.quantity}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-600">
+                          {item.assignedTo || "Unassigned"}
+                        </td>
+                        <td className="px-5 py-5 text-sm text-slate-600">
+                          {item.condition}
+                        </td>
+                        <td className="px-5 py-5">
+                          <Badge status={item.status} />
+                        </td>
+                        <td className="px-5 py-5">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(item)}
+                              className="rounded-lg bg-blue-50 p-2.5 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              className="rounded-lg bg-red-50 p-2.5 text-red-600 hover:bg-red-100"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
-                        </div>
-
-                        <span
-                          className={`w-fit max-w-full rounded-lg px-3 py-2 text-xs font-semibold ${
-                            statusStyles[item.status] ||
-                            "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-
-                        {serviceDue && (
-                          <span className="flex w-fit max-w-full items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700">
-                            <AlertTriangle size={14} />
-                            Maintenance Due
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Equipment Details */}
-                      <Detail
-                        label="Category"
-                        value={item.category}
-                      />
-
-                      <Detail
-                        label="Serial Number"
-                        value={
-                          item.serialNumber ||
-                          "Not specified"
-                        }
-                      />
-
-                      <Detail
-                        label="Assigned Staff"
-                        value={
-                          item.assignedTo ||
-                          "Not assigned"
-                        }
-                      />
-
-                      <Detail
-                        label="Shoot / Project"
-                        value={
-                          item.shootName ||
-                          "Not assigned"
-                        }
-                      />
-
-                      <Detail
-                        label="Purchase Date"
-                        value={formatDate(
-                          item.purchaseDate
-                        )}
-                      />
-
-                      <Detail
-                        label="Purchase Cost"
-                        value={money(
-                          item.purchaseCost
-                        )}
-                      />
-
-                      <Detail
-                        label="Last Service Date"
-                        value={formatDate(
-                          item.lastServiceDate
-                        )}
-                      />
-
-                      <Detail
-                        label="Next Service Date"
-                        value={formatDate(
-                          item.nextServiceDate
-                        )}
-                      />
-
-                      <Detail
-                        label="Maintenance Cost"
-                        value={money(
-                          item.maintenanceCost
-                        )}
-                      />
-
-                      {item.notes && (
-                        <Detail
-                          label="Notes"
-                          value={item.notes}
-                        />
-                      )}
-
-                      {/* Quick Status Update */}
-                      <div className="w-full min-w-0 rounded-xl border border-slate-200 bg-white p-4">
-                        <FormField label="Update Availability">
-                          <CustomDropdown
-                            value={item.status}
-                            options={statuses}
-                            onChange={(value) =>
-                              changeStatus(item, value)
-                            }
-                          />
-                        </FormField>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex w-full flex-col gap-3 border-t border-slate-200 pt-4">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openEdit(item)
-                          }
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-                        >
-                          <Pencil size={17} />
-                          Edit Equipment
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            deleteEquipment(item)
-                          }
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={17} />
-                          Delete Equipment
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </>
+
+              {/* MOBILE CARDS */}
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+                {filtered.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-[#10264d]">{item.name}</h3>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {item.category}
+                        </p>
+                      </div>
+                      <Camera size={20} className="shrink-0 text-blue-600" />
+                    </div>
+
+                    <div className="mb-4">
+                      <Badge status={item.status} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-400">Brand</p>
+                        <p className="font-semibold">{item.brand || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Model</p>
+                        <p className="font-semibold">{item.model || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Quantity</p>
+                        <p className="font-semibold">{item.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400">Condition</p>
+                        <p className="font-semibold">{item.condition}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-slate-400">Assigned To</p>
+                        <p className="font-semibold">{item.assignedTo || "Unassigned"}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white"
+                      >
+                        <Pencil size={15} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                      >
+                        <Trash2 size={15} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )
         ) : (
-          <>
-            <div className="mb-5 flex items-center gap-2">
-              <History
-                size={20}
-                className="text-blue-700"
-              />
-
-              <h2 className="text-lg font-bold text-[#10264d]">
-                Equipment Activity History
-              </h2>
-            </div>
-
+          <div className="p-4 sm:p-6">
             {history.length === 0 ? (
-              <div className="py-12 text-center">
-                <History
-                  size={42}
-                  className="mx-auto mb-3 text-slate-300"
-                />
-
-                <p className="text-sm text-slate-400">
-                  No equipment activity recorded
-                </p>
+              <div className="py-16 text-center">
+                <History size={38} className="mx-auto mb-3 text-slate-300" />
+                <p className="text-sm text-slate-500">No equipment history yet.</p>
               </div>
             ) : (
-              <div className="flex w-full min-w-0 flex-col gap-4">
-                {history.map((record) => {
-                  const actionStyles = {
-                    Added:
-                      "bg-green-100 text-green-700",
-                    Updated:
-                      "bg-blue-100 text-blue-700",
-                    Deleted:
-                      "bg-red-100 text-red-700",
-                    "Status Changed":
-                      "bg-indigo-100 text-indigo-700",
-                  };
-
-                  return (
-                    <article
-                      key={record.id}
-                      className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5"
-                    >
-                      <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 pb-4">
-                        <h3 className="break-words text-base font-bold text-[#10264d]">
-                          {record.equipmentName}
-                        </h3>
-
-                        <span
-                          className={`w-fit rounded-lg px-3 py-2 text-xs font-semibold ${
-                            actionStyles[
-                              record.action
-                            ] ||
-                            "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {record.action}
-                        </span>
+              <div className="space-y-3">
+                {history.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-blue-50 p-2.5 text-blue-600">
+                        <History size={17} />
                       </div>
-
-                      <Detail
-                        label="Date & Time"
-                        value={formatHistoryDate(
-                          record.date
-                        )}
-                      />
-
-                      <Detail
-                        label="Activity Details"
-                        value={
-                          record.details ||
-                          "No details"
-                        }
-                      />
-                    </article>
-                  );
-                })}
+                      <div>
+                        <p className="text-sm font-bold text-[#10264d]">
+                          {entry.itemName}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {entry.action} — {entry.details}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      {entry.date
+                        ? new Date(entry.date).toLocaleString("en-IN")
+                        : "—"}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </section>
 
-      {/* Add / Edit Form */}
-      {showForm && (
-        <section
-          ref={formRef}
-          className="w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
-        >
-          <div className="mb-6 flex items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="min-w-0">
-              <h2 className="break-words text-xl font-bold text-[#10264d]">
-                {editingId
-                  ? "Edit Equipment"
-                  : "Add Equipment"}
-              </h2>
+      {/* CENTER MODAL - PORTAL TO BODY */}
+      {showForm && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+          <div
+            className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+            onClick={closeForm}
+          />
 
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Equipment details and maintenance information.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={closeForm}
-              aria-label="Close form"
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-100"
-            >
-              <X size={22} />
-            </button>
-          </div>
-
-          <form
-            onSubmit={saveEquipment}
-            className="flex w-full min-w-0 flex-col gap-5"
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingId ? "Edit Equipment" : "Add Equipment"}
+            className="relative z-10 mx-auto flex max-h-[92dvh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
           >
-            <FormField label="Equipment Name">
-              <input
-                type="text"
-                required
-                value={form.name}
-                onChange={(event) =>
-                  updateField(
-                    "name",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter equipment name"
-                className={inputClass}
-              />
-            </FormField>
+            {/* MODAL HEADER */}
+            <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
+                    Equipment Operations
+                  </p>
+                  <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
+                    {editingId ? "Edit Equipment" : "Add Equipment"}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Manage photography equipment details.
+                  </p>
+                </div>
 
-            <FormField label="Equipment Category">
-              <CustomDropdown
-                value={form.category}
-                options={categories}
-                onChange={(value) =>
-                  updateField("category", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Brand">
-              <input
-                type="text"
-                value={form.brand}
-                onChange={(event) =>
-                  updateField(
-                    "brand",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter brand"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Model">
-              <input
-                type="text"
-                value={form.model}
-                onChange={(event) =>
-                  updateField(
-                    "model",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter model"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Serial Number">
-              <input
-                type="text"
-                value={form.serialNumber}
-                onChange={(event) =>
-                  updateField(
-                    "serialNumber",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter serial number"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Purchase Date">
-              <input
-                type="date"
-                value={form.purchaseDate}
-                onChange={(event) =>
-                  updateField(
-                    "purchaseDate",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Purchase Cost (₹)">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.purchaseCost}
-                onChange={(event) =>
-                  updateField(
-                    "purchaseCost",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter purchase cost"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Availability Status">
-              <CustomDropdown
-                value={form.status}
-                options={statuses}
-                onChange={(value) =>
-                  updateField("status", value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Assign Staff">
-              <CustomDropdown
-                value={form.assignedTo}
-                options={staffOptions}
-                onChange={(value) =>
-                  updateField("assignedTo", value)
-                }
-                placeholder="Not Assigned"
-              />
-            </FormField>
-
-            <FormField label="Shoot / Project Name">
-              <input
-                type="text"
-                value={form.shootName}
-                onChange={(event) =>
-                  updateField(
-                    "shootName",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter shoot or project name"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Last Service Date">
-              <input
-                type="date"
-                value={form.lastServiceDate}
-                onChange={(event) =>
-                  updateField(
-                    "lastServiceDate",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Next Service Date">
-              <input
-                type="date"
-                value={form.nextServiceDate}
-                onChange={(event) =>
-                  updateField(
-                    "nextServiceDate",
-                    event.target.value
-                  )
-                }
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Maintenance Cost (₹)">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.maintenanceCost}
-                onChange={(event) =>
-                  updateField(
-                    "maintenanceCost",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter maintenance cost"
-                className={inputClass}
-              />
-            </FormField>
-
-            <FormField label="Equipment Notes">
-              <textarea
-                rows={4}
-                value={form.notes}
-                onChange={(event) =>
-                  updateField(
-                    "notes",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter equipment notes..."
-                className={inputClass}
-              />
-            </FormField>
-
-            {error && (
-              <p
-                role="alert"
-                className="flex items-start gap-2 break-words text-sm font-medium text-red-600"
-              >
-                <AlertTriangle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
-                {error}
-              </p>
-            )}
-
-            <div className="flex w-full flex-col gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-blue-900"
-              >
-                <Save size={17} />
-                {editingId
-                  ? "Update Equipment"
-                  : "Save Equipment"}
-              </button>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
-          </form>
-        </section>
+
+            <form
+              onSubmit={handleSave}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              {/* SCROLLABLE CONTENT */}
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+
+                {/* BASIC INFORMATION */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                    <Camera size={18} className="text-blue-600" />
+                    Basic Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <Field label="Equipment Name" required>
+                      <input
+                        required
+                        value={form.name}
+                        onChange={(e) => update("name", e.target.value)}
+                        placeholder="Canon EOS R5"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Category">
+                      <Dropdown
+                        value={form.category}
+                        options={categories}
+                        onChange={(v) => update("category", v)}
+                      />
+                    </Field>
+
+                    <Field label="Brand">
+                      <input
+                        value={form.brand}
+                        onChange={(e) => update("brand", e.target.value)}
+                        placeholder="Canon"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Model">
+                      <input
+                        value={form.model}
+                        onChange={(e) => update("model", e.target.value)}
+                        placeholder="EOS R5"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Serial Number">
+                      <input
+                        value={form.serialNumber}
+                        onChange={(e) => update("serialNumber", e.target.value)}
+                        placeholder="Serial number"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Quantity" required>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        required
+                        value={form.quantity}
+                        onChange={(e) => update("quantity", e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* PURCHASE DETAILS */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                    <IndianRupee size={18} className="text-blue-600" />
+                    Purchase Details
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <Field label="Purchase Date">
+                      <input
+                        type="date"
+                        value={form.purchaseDate}
+                        onChange={(e) => update("purchaseDate", e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Purchase Price (₹)">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.purchasePrice}
+                        onChange={(e) => update("purchasePrice", e.target.value)}
+                        placeholder="Enter amount"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* EQUIPMENT STATUS */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                    <Wrench size={18} className="text-blue-600" />
+                    Equipment Status & Assignment
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <Field label="Condition">
+                      <Dropdown
+                        value={form.condition}
+                        options={conditions}
+                        onChange={(v) => update("condition", v)}
+                      />
+                    </Field>
+
+                    <Field label="Status">
+                      <Dropdown
+                        value={form.status}
+                        options={statuses}
+                        onChange={(v) => update("status", v)}
+                      />
+                    </Field>
+
+                    <Field label="Assigned To">
+                      <input
+                        value={form.assignedTo}
+                        onChange={(e) => update("assignedTo", e.target.value)}
+                        placeholder="Staff name"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Location">
+                      <input
+                        value={form.location}
+                        onChange={(e) => update("location", e.target.value)}
+                        placeholder="Studio / Branch"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* MAINTENANCE */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                    <CalendarDays size={18} className="text-blue-600" />
+                    Maintenance Details
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <Field label="Last Service Date">
+                      <input
+                        type="date"
+                        value={form.lastServiceDate}
+                        onChange={(e) => update("lastServiceDate", e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Next Service Date">
+                      <input
+                        type="date"
+                        value={form.nextServiceDate}
+                        onChange={(e) => update("nextServiceDate", e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <div className="sm:col-span-2">
+                      <Field label="Notes">
+                        <textarea
+                          rows={3}
+                          value={form.notes}
+                          onChange={(e) => update("notes", e.target.value)}
+                          placeholder="Equipment notes..."
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <AlertTriangle size={18} />
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              {/* FOOTER */}
+              <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white hover:bg-blue-900"
+                  >
+                    <Save size={17} />
+                    {editingId ? "Update Equipment" : "Save Equipment"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

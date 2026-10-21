@@ -48,6 +48,7 @@ export default function App() {
   // Login
   const handleLogin = () => {
     localStorage.setItem("studioraw_logged_in", "true");
+
     setIsLoggedIn(true);
     setActivePage("dashboard");
     setSidebarOpen(false);
@@ -56,6 +57,7 @@ export default function App() {
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("studioraw_logged_in");
+
     setIsLoggedIn(false);
     setActivePage("dashboard");
     setSidebarOpen(false);
@@ -96,6 +98,7 @@ export default function App() {
     if (!mediaQuery.matches) return;
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     return () => {
@@ -183,7 +186,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50 lg:bg-[#f5f7fb]">
+
       {/* Sidebar */}
       <Sidebar
         activePage={activePage}
@@ -195,7 +199,15 @@ export default function App() {
       />
 
       {/* Main Layout */}
-      <div className="flex min-h-screen w-full min-w-0 max-w-full flex-col lg:ml-64 lg:w-[calc(100%-16rem)]">
+      <div
+        className="
+          flex min-h-screen w-full min-w-0 max-w-full flex-col
+          lg:ml-[280px]
+          lg:w-[calc(100%-280px)]
+          lg:max-w-[calc(100%-280px)]
+        "
+      >
+
         {/* Header */}
         <Header
           activePage={activePage}
@@ -206,7 +218,7 @@ export default function App() {
         />
 
         {/* Page Content */}
-        <main className="w-full min-w-0 max-w-full flex-1 overflow-x-hidden">
+        <main className="w-full min-w-0 max-w-full flex-1 overflow-x-hidden lg:bg-[#f5f7fb]">
           <div className="w-full min-w-0 max-w-full">
             {renderPage()}
           </div>

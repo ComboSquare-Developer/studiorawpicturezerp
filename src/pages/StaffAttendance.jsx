@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   UserCheck,
@@ -12,6 +12,8 @@ import {
   Download,
   ChevronDown,
   Check,
+  ClipboardCheck,
+  CalendarCheck2,
 } from "lucide-react";
 
 const STAFF_KEY = "studioraw_staff";
@@ -44,7 +46,7 @@ function createId() {
 }
 
 const inputStyle =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#dbe4f0] bg-white px-3 py-2.5 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const statusColors = {
   Present: "bg-green-100 text-green-700",
@@ -61,133 +63,97 @@ const statusOptions = [
   { label: "Half Day", value: "Half Day" },
 ];
 
-function CustomDropdown({
-  value,
-  options,
-  onChange,
-  placeholder = "Select status",
-}) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  const selected = options.find(
-    (option) => String(option.value) === String(value)
-  );
-
+function StatusSelect({ value, onChange }) {
   return (
-    <div ref={dropdownRef} className="w-full min-w-0 max-w-full">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((previous) => !previous)}
-        className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-          statusColors[value] || "bg-white text-[#10264d]"
+    <div className="relative min-w-0">
+      <select
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+        className={`w-full min-w-[125px] appearance-none rounded-xl border border-[#dbe4f0] px-3 py-2.5 pr-8 text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
+          statusColors[value] || "bg-white text-slate-600"
         }`}
       >
-        <span className="min-w-0 flex-1 break-words">
-          {selected?.label || placeholder}
-        </span>
+        {statusOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
 
-        <ChevronDown
-          size={18}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+      />
+    </div>
+  );
+}
+
+function StatCard({ stat }) {
+  const Icon = stat.icon;
+
+  return (
+    <div className="min-w-0 rounded-2xl border border-[#e8edf5] bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[#72819a]">
+            {stat.label}
+          </p>
+
+          <h3 className={`mt-3 text-3xl font-bold ${stat.color}`}>
+            {stat.value}
+          </h3>
+        </div>
+
+        <div className={`rounded-xl p-3 ${stat.bg}`}>
+          <Icon size={22} className={stat.color} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimeInput({ value, onChange }) {
+  return (
+    <input
+      type="time"
+      value={value || ""}
+      onChange={(event) => onChange(event.target.value)}
+      className={`${inputStyle} min-w-[105px]`}
+    />
+  );
+}
+
+function AttendanceActions({
+  person,
+  onCheckIn,
+  onCheckOut,
+  compact = false,
+}) {
+  return (
+    <div
+      className={
+        compact
+          ? "flex flex-col gap-2"
+          : "flex flex-col gap-2 sm:flex-row"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onCheckIn(person)}
+        className="flex items-center justify-center gap-1.5 rounded-lg bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-100"
+      >
+        <UserCheck size={15} />
+        Check In
       </button>
 
-      {open && (
-        <div
-          role="listbox"
-          className="mt-2 max-h-60 w-full min-w-0 overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-        >
-          {options.map((option) => {
-            const isSelected =
-              String(option.value) === String(value);
-
-            return (
-              <button
-                key={option.value || "not-marked"}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
-                  isSelected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option.label}
-                </span>
-
-                {isSelected && (
-                  <Check size={16} className="shrink-0" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Detail({ label, value }) {
-  return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
-
-      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-        {value === undefined ||
-        value === null ||
-        value === ""
-          ? "—"
-          : value}
-      </p>
-    </div>
-  );
-}
-
-function FormField({ label, children }) {
-  return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
-        {label}
-      </p>
-      {children}
+      <button
+        type="button"
+        onClick={() => onCheckOut(person)}
+        className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2.5 text-xs font-semibold text-[#174b91] transition hover:bg-blue-100"
+      >
+        <Clock3 size={15} />
+        Check Out
+      </button>
     </div>
   );
 }
@@ -218,18 +184,28 @@ export default function StaffAttendance() {
     };
 
     window.addEventListener("focus", refreshStaff);
+    window.addEventListener("storage", refreshStaff);
 
     return () => {
       window.removeEventListener("focus", refreshStaff);
+      window.removeEventListener("storage", refreshStaff);
     };
   }, []);
 
-  const getRecord = (staffId, date = selectedDate) =>
-    attendance.find(
-      (record) =>
-        String(record.staffId) === String(staffId) &&
-        record.date === date
-    );
+  const recordMap = useMemo(() => {
+    const map = new Map();
+
+    attendance.forEach((record) => {
+      if (record.date === selectedDate) {
+        map.set(String(record.staffId), record);
+      }
+    });
+
+    return map;
+  }, [attendance, selectedDate]);
+
+  const getRecord = (staffId) =>
+    recordMap.get(String(staffId));
 
   const updateAttendance = (person, updates) => {
     setAttendance((previous) => {
@@ -241,7 +217,9 @@ export default function StaffAttendance() {
 
       if (index !== -1) {
         return previous.map((record, i) =>
-          i === index ? { ...record, ...updates } : record
+          i === index
+            ? { ...record, ...updates }
+            : record
         );
       }
 
@@ -345,29 +323,33 @@ export default function StaffAttendance() {
 
   const month = selectedDate.slice(0, 7);
 
-  const monthlySummary = staff.map((person) => {
-    const records = attendance.filter(
-      (record) =>
-        String(record.staffId) === String(person.id) &&
-        record.date.startsWith(month)
-    );
+  const monthlySummary = useMemo(
+    () =>
+      staff.map((person) => {
+        const records = attendance.filter(
+          (record) =>
+            String(record.staffId) === String(person.id) &&
+            String(record.date || "").startsWith(month)
+        );
 
-    return {
-      person,
-      present: records.filter(
-        (record) => record.status === "Present"
-      ).length,
-      absent: records.filter(
-        (record) => record.status === "Absent"
-      ).length,
-      leave: records.filter(
-        (record) => record.status === "Leave"
-      ).length,
-      halfDay: records.filter(
-        (record) => record.status === "Half Day"
-      ).length,
-    };
-  });
+        return {
+          person,
+          present: records.filter(
+            (record) => record.status === "Present"
+          ).length,
+          absent: records.filter(
+            (record) => record.status === "Absent"
+          ).length,
+          leave: records.filter(
+            (record) => record.status === "Leave"
+          ).length,
+          halfDay: records.filter(
+            (record) => record.status === "Half Day"
+          ).length,
+        };
+      }),
+    [staff, attendance, month]
+  );
 
   const exportCSV = () => {
     const rows = [
@@ -417,170 +399,185 @@ export default function StaffAttendance() {
     URL.revokeObjectURL(url);
   };
 
+  const checkInNow = (person) => {
+    updateAttendance(person, {
+      status: "Present",
+      checkIn: currentTime(),
+    });
+  };
+
+  const checkOutNow = (person) => {
+    updateAttendance(person, {
+      checkOut: currentTime(),
+    });
+  };
+
   const stats = [
     {
       label: "Total Staff",
       value: staff.length,
       icon: Users,
       color: "text-blue-700",
+      bg: "bg-blue-50",
     },
     {
       label: "Present",
       value: presentCount,
       icon: UserCheck,
       color: "text-green-700",
+      bg: "bg-green-50",
     },
     {
       label: "Absent",
       value: absentCount,
       icon: UserX,
       color: "text-red-600",
+      bg: "bg-red-50",
     },
     {
       label: "On Leave",
       value: leaveCount,
       icon: CalendarDays,
       color: "text-amber-600",
+      bg: "bg-amber-50",
     },
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
-      {/* Page Heading */}
-      <div className="flex w-full min-w-0 flex-col gap-5">
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-bold text-[#10264d]">
-            Staff Attendance
-          </h1>
+    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
+      {/* Page Header */}
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white shadow-sm">
+            <ClipboardCheck size={24} />
+          </div>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Daily attendance, staff check-in and monthly reports
-          </p>
+          <div className="min-w-0">
+            <h1 className="break-words text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
+              Staff Attendance
+            </h1>
+
+            <p className="mt-1 text-sm leading-6 text-[#8190a7]">
+              Daily attendance, staff check-in and monthly reports
+            </p>
+          </div>
         </div>
 
         {/* Date Navigation */}
-        <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-[#10264d]">
-            Attendance Date
-          </p>
+        <div className="flex flex-col gap-2 rounded-2xl border border-[#e7edf6] bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => changeDate(-1)}
+            title="Previous Day"
+            className="flex items-center justify-center gap-2 rounded-xl border border-[#e1e7f0] px-4 py-2.5 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
+          >
+            <ChevronLeft size={18} />
+            <span className="sm:hidden">Previous Day</span>
+          </button>
 
-          <div className="flex w-full min-w-0 flex-col gap-3">
-            <button
-              type="button"
-              onClick={() => changeDate(-1)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
-            >
-              <ChevronLeft size={18} />
-              Previous Day
-            </button>
+          <div className="relative">
+            <CalendarDays
+              size={17}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#174b91]"
+            />
 
             <input
               type="date"
               value={selectedDate}
-              onChange={(event) =>
-                setSelectedDate(event.target.value)
-              }
-              className={inputStyle}
+              onChange={(event) => {
+                if (event.target.value) {
+                  setSelectedDate(event.target.value);
+                }
+              }}
+              className={`${inputStyle} pl-10`}
             />
-
-            <button
-              type="button"
-              onClick={() => changeDate(1)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
-            >
-              Next Day
-              <ChevronRight size={18} />
-            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => changeDate(1)}
+            title="Next Day"
+            className="flex items-center justify-center gap-2 rounded-xl border border-[#e1e7f0] px-4 py-2.5 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50"
+          >
+            <span className="sm:hidden">Next Day</span>
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
 
       {/* Statistics */}
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        {stats.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <div
-              key={item.label}
-              className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 text-sm font-medium text-slate-500">
-                  {item.label}
-                </p>
-
-                <div className="shrink-0 rounded-xl bg-blue-50 p-3">
-                  <Icon size={22} className={item.color} />
-                </div>
-              </div>
-
-              <h2
-                className={`mt-3 break-words text-3xl font-bold ${item.color}`}
-              >
-                {item.value}
-              </h2>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} stat={stat} />
+        ))}
       </div>
 
-      {/* Main Section */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+      {/* Main Content */}
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e7edf6] bg-white shadow-sm">
         {/* Tabs */}
-        <div className="mb-6 flex w-full min-w-0 flex-col gap-3 border-b border-slate-100 pb-5">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:p-6">
           <button
             type="button"
             onClick={() => setActiveTab("daily")}
-            className={`w-full rounded-xl px-5 py-3 text-sm font-semibold transition ${
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
               activeTab === "daily"
-                ? "bg-[#10264d] text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-[#112e60] text-white"
+                : "bg-[#f4f7fb] text-[#52627d] hover:bg-slate-100"
             }`}
           >
+            <ClipboardCheck size={18} />
             Daily Attendance
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("monthly")}
-            className={`w-full rounded-xl px-5 py-3 text-sm font-semibold transition ${
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
               activeTab === "monthly"
-                ? "bg-[#10264d] text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-[#112e60] text-white"
+                : "bg-[#f4f7fb] text-[#52627d] hover:bg-slate-100"
             }`}
           >
+            <CalendarCheck2 size={18} />
             Monthly Report
           </button>
         </div>
 
         {activeTab === "daily" ? (
-          <div className="flex w-full min-w-0 flex-col gap-5">
-            {/* Daily Actions */}
-            <button
-              type="button"
-              onClick={markAllPresent}
-              disabled={staff.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <UserCheck size={18} />
-              Mark All Present
-            </button>
+          <>
+            {/* Daily Toolbar */}
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <h2 className="text-lg font-bold text-[#10264d]">
+                  Daily Attendance Register
+                </h2>
+
+                <p className="mt-1 text-sm text-[#8190a7]">
+                  Manage staff attendance for {selectedDate}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={markAllPresent}
+                disabled={!staff.length}
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <UserCheck size={18} />
+                Mark All Present
+              </button>
+            </div>
 
             {/* Search */}
-            <div className="w-full min-w-0">
-              <p className="mb-2 text-sm font-medium text-slate-700">
-                Search Staff
-              </p>
-
-              <div className="relative w-full min-w-0">
+            <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div className="relative w-full sm:max-w-sm">
                 <Search
                   size={18}
                   className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                 />
 
                 <input
-                  type="text"
+                  type="search"
                   value={search}
                   onChange={(event) =>
                     setSearch(event.target.value)
@@ -591,164 +588,256 @@ export default function StaffAttendance() {
               </div>
             </div>
 
-            <div className="flex w-full min-w-0 flex-col gap-4">
-              {filteredStaff.map((person) => {
-                const record = getRecord(person.id);
+            {filteredStaff.length === 0 ? (
+              <div className="px-5 py-16 text-center">
+                <Users
+                  size={42}
+                  className="mx-auto mb-3 text-slate-300"
+                />
 
-                return (
-                  <article
-                    key={person.id}
-                    className="flex w-full min-w-0 flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                  >
-                    {/* Staff Info */}
-                    <div className="flex w-full min-w-0 items-start gap-3">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                        <Users size={22} />
-                      </div>
+                <p className="text-sm font-semibold text-slate-600">
+                  {staff.length === 0
+                    ? "No staff available"
+                    : "No matching staff found"}
+                </p>
 
-                      <div className="min-w-0 flex-1">
-                        <h3 className="break-words text-base font-bold text-[#10264d]">
-                          {person.name || "Unnamed Staff"}
-                        </h3>
+                <p className="mt-2 text-sm text-slate-400">
+                  {staff.length === 0
+                    ? "Add staff in Settings first."
+                    : "Try another staff name or role."}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden overflow-x-auto xl:block">
+                  <table className="w-full min-w-[1080px] border-collapse text-left">
+                    <thead className="bg-[#f7f9fc]">
+                      <tr className="text-xs font-semibold uppercase tracking-wider text-[#8190a7]">
+                        {[
+                          "Staff Member",
+                          "Status",
+                          "Check In",
+                          "Check Out",
+                          "Notes",
+                          "Quick Actions",
+                        ].map((heading) => (
+                          <th
+                            key={heading}
+                            className="px-4 py-4"
+                          >
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
 
-                        <p className="mt-1 break-words text-sm text-slate-500">
-                          {person.role || "Staff"}
-                        </p>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredStaff.map((person) => {
+                        const record = getRecord(person.id);
 
-                        <span
-                          className={`mt-3 inline-flex max-w-full rounded-full px-3 py-1 text-xs font-semibold ${
-                            statusColors[record?.status] ||
-                            "bg-slate-200 text-slate-600"
-                          }`}
-                        >
-                          {record?.status || "Not Marked"}
-                        </span>
-                      </div>
-                    </div>
+                        return (
+                          <tr
+                            key={person.id}
+                            className="align-top transition hover:bg-blue-50/30"
+                          >
+                            <td className="px-4 py-5">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#174b91]">
+                                  <Users size={19} />
+                                </div>
 
-                    <div className="flex w-full min-w-0 flex-col gap-4 border-t border-slate-200 pt-4">
-                      {/* Status */}
-                      <FormField label="Attendance Status">
-                        <CustomDropdown
-                          value={record?.status || ""}
-                          options={statusOptions}
-                          onChange={(value) =>
-                            updateAttendance(person, {
-                              status: value,
-                            })
-                          }
-                        />
-                      </FormField>
+                                <div className="min-w-0">
+                                  <p className="max-w-40 break-words text-sm font-semibold text-[#10264d]">
+                                    {person.name || "Unnamed Staff"}
+                                  </p>
 
-                      {/* Check In */}
-                      <FormField label="Check In Time">
-                        <input
-                          type="time"
-                          value={record?.checkIn || ""}
-                          onChange={(event) =>
-                            updateAttendance(person, {
-                              checkIn: event.target.value,
-                            })
-                          }
-                          className={inputStyle}
-                        />
-                      </FormField>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {person.role || "Staff"}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
 
-                      {/* Check Out */}
-                      <FormField label="Check Out Time">
-                        <input
-                          type="time"
-                          value={record?.checkOut || ""}
-                          onChange={(event) =>
-                            updateAttendance(person, {
-                              checkOut: event.target.value,
-                            })
-                          }
-                          className={inputStyle}
-                        />
-                      </FormField>
+                            <td className="px-4 py-5">
+                              <StatusSelect
+                                value={record?.status || ""}
+                                onChange={(value) =>
+                                  updateAttendance(person, {
+                                    status: value,
+                                  })
+                                }
+                              />
+                            </td>
 
-                      {/* Notes */}
-                      <FormField label="Attendance Notes">
-                        <textarea
-                          value={record?.notes || ""}
-                          onChange={(event) =>
-                            updateAttendance(person, {
-                              notes: event.target.value,
-                            })
-                          }
-                          placeholder="Add attendance note..."
-                          rows={3}
-                          className={`${inputStyle} resize-y`}
-                        />
-                      </FormField>
-                    </div>
+                            <td className="px-4 py-5">
+                              <TimeInput
+                                value={record?.checkIn || ""}
+                                onChange={(value) =>
+                                  updateAttendance(person, {
+                                    checkIn: value,
+                                  })
+                                }
+                              />
+                            </td>
 
-                    {/* Actions */}
-                    <div className="flex w-full min-w-0 flex-col gap-3 border-t border-slate-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateAttendance(person, {
-                            status: "Present",
-                            checkIn: currentTime(),
-                          })
-                        }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
-                      >
-                        <UserCheck size={18} />
-                        Check In Now
-                      </button>
+                            <td className="px-4 py-5">
+                              <TimeInput
+                                value={record?.checkOut || ""}
+                                onChange={(value) =>
+                                  updateAttendance(person, {
+                                    checkOut: value,
+                                  })
+                                }
+                              />
+                            </td>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateAttendance(person, {
-                            checkOut: currentTime(),
-                          })
-                        }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-950"
-                      >
-                        <Clock3 size={18} />
-                        Check Out Now
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+                            <td className="px-4 py-5">
+                              <textarea
+                                rows={2}
+                                value={record?.notes || ""}
+                                onChange={(event) =>
+                                  updateAttendance(person, {
+                                    notes: event.target.value,
+                                  })
+                                }
+                                placeholder="Add note..."
+                                className={`${inputStyle} min-w-[150px] resize-y`}
+                              />
+                            </td>
 
-              {filteredStaff.length === 0 && (
-                <div className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-                  <Users
-                    size={32}
-                    className="mb-3 text-slate-300"
-                  />
-
-                  <p className="text-sm font-semibold text-slate-600">
-                    {staff.length === 0
-                      ? "No staff available"
-                      : "No matching staff found"}
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {staff.length === 0
-                      ? "Add staff in Settings first."
-                      : "Try another staff name or role."}
-                  </p>
+                            <td className="px-4 py-5">
+                              <AttendanceActions
+                                person={person}
+                                onCheckIn={checkInNow}
+                                onCheckOut={checkOutNow}
+                                compact
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </div>
-          </div>
+
+                {/* Mobile / Tablet Cards */}
+                <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:hidden sm:p-6">
+                  {filteredStaff.map((person) => {
+                    const record = getRecord(person.id);
+
+                    return (
+                      <article
+                        key={person.id}
+                        className="min-w-0 rounded-2xl border border-[#e1e7f0] bg-white p-5 shadow-sm"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#174b91]">
+                            <Users size={22} />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h3 className="break-words text-base font-bold text-[#10264d]">
+                              {person.name || "Unnamed Staff"}
+                            </h3>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {person.role || "Staff"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-slate-500">
+                              Attendance Status
+                            </p>
+
+                            <StatusSelect
+                              value={record?.status || ""}
+                              onChange={(value) =>
+                                updateAttendance(person, {
+                                  status: value,
+                                })
+                              }
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="mb-2 text-xs font-semibold text-slate-500">
+                                Check In
+                              </p>
+
+                              <TimeInput
+                                value={record?.checkIn || ""}
+                                onChange={(value) =>
+                                  updateAttendance(person, {
+                                    checkIn: value,
+                                  })
+                                }
+                              />
+                            </div>
+
+                            <div>
+                              <p className="mb-2 text-xs font-semibold text-slate-500">
+                                Check Out
+                              </p>
+
+                              <TimeInput
+                                value={record?.checkOut || ""}
+                                onChange={(value) =>
+                                  updateAttendance(person, {
+                                    checkOut: value,
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="mb-2 text-xs font-semibold text-slate-500">
+                              Attendance Notes
+                            </p>
+
+                            <textarea
+                              rows={3}
+                              value={record?.notes || ""}
+                              onChange={(event) =>
+                                updateAttendance(person, {
+                                  notes: event.target.value,
+                                })
+                              }
+                              placeholder="Add attendance note..."
+                              className={`${inputStyle} resize-y`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-5 border-t border-slate-100 pt-4">
+                          <AttendanceActions
+                            person={person}
+                            onCheckIn={checkInNow}
+                            onCheckOut={checkOutNow}
+                          />
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           /* Monthly Report */
-          <div className="flex w-full min-w-0 flex-col gap-5">
-            <div className="flex w-full min-w-0 flex-col gap-3">
+          <>
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div>
                 <h2 className="text-lg font-bold text-[#10264d]">
                   Monthly Attendance Report
                 </h2>
 
-                <p className="mt-2 break-words text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[#8190a7]">
                   Report Month: {month}
                 </p>
               </div>
@@ -756,77 +845,149 @@ export default function StaffAttendance() {
               <button
                 type="button"
                 onClick={exportCSV}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-950"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1a4384]"
               >
                 <Download size={18} />
                 Export CSV
               </button>
             </div>
 
-            <div className="flex w-full min-w-0 flex-col gap-4">
-              {monthlySummary.map((item) => (
-                <article
-                  key={item.person.id}
-                  className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                >
-                  <div className="flex w-full min-w-0 items-center gap-3 border-b border-slate-200 pb-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                      <Users size={21} />
-                    </div>
+            {monthlySummary.length === 0 ? (
+              <div className="px-5 py-16 text-center">
+                <CalendarDays
+                  size={40}
+                  className="mx-auto mb-3 text-slate-300"
+                />
 
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
+                <p className="text-sm text-slate-500">
+                  No staff available for the report.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop Monthly Table */}
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[700px] border-collapse text-left">
+                    <thead className="bg-[#f7f9fc]">
+                      <tr className="text-xs font-semibold uppercase tracking-wider text-[#8190a7]">
+                        {[
+                          "Staff Member",
+                          "Present",
+                          "Absent",
+                          "Leave",
+                          "Half Day",
+                        ].map((heading) => (
+                          <th
+                            key={heading}
+                            className="px-6 py-4"
+                          >
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100">
+                      {monthlySummary.map((item) => (
+                        <tr
+                          key={item.person.id}
+                          className="transition hover:bg-blue-50/30"
+                        >
+                          <td className="px-6 py-5">
+                            <p className="text-sm font-semibold text-[#10264d]">
+                              {item.person.name || "Unnamed Staff"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {item.person.role || "Staff"}
+                            </p>
+                          </td>
+
+                          <td className="px-6 py-5 text-sm font-bold text-green-700">
+                            {item.present}
+                          </td>
+
+                          <td className="px-6 py-5 text-sm font-bold text-red-600">
+                            {item.absent}
+                          </td>
+
+                          <td className="px-6 py-5 text-sm font-bold text-amber-600">
+                            {item.leave}
+                          </td>
+
+                          <td className="px-6 py-5 text-sm font-bold text-blue-700">
+                            {item.halfDay}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Monthly Cards */}
+                <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+                  {monthlySummary.map((item) => (
+                    <article
+                      key={item.person.id}
+                      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    >
+                      <h3 className="text-base font-bold text-[#10264d]">
                         {item.person.name || "Unnamed Staff"}
                       </h3>
 
-                      <p className="mt-1 break-words text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-slate-500">
                         {item.person.role || "Staff"}
                       </p>
-                    </div>
-                  </div>
 
-                  <div className="flex w-full min-w-0 flex-col gap-3">
-                    <Detail
-                      label="Present Days"
-                      value={item.present}
-                    />
+                      <div className="mt-5 grid grid-cols-2 gap-3">
+                        {[
+                          {
+                            label: "Present",
+                            value: item.present,
+                            color: "text-green-700",
+                          },
+                          {
+                            label: "Absent",
+                            value: item.absent,
+                            color: "text-red-600",
+                          },
+                          {
+                            label: "Leave",
+                            value: item.leave,
+                            color: "text-amber-600",
+                          },
+                          {
+                            label: "Half Day",
+                            value: item.halfDay,
+                            color: "text-blue-700",
+                          },
+                        ].map((entry) => (
+                          <div
+                            key={entry.label}
+                            className="rounded-xl bg-[#f7f9fc] p-4"
+                          >
+                            <p className="text-xs text-slate-500">
+                              {entry.label}
+                            </p>
 
-                    <Detail
-                      label="Absent Days"
-                      value={item.absent}
-                    />
-
-                    <Detail
-                      label="Leave Days"
-                      value={item.leave}
-                    />
-
-                    <Detail
-                      label="Half Days"
-                      value={item.halfDay}
-                    />
-                  </div>
-                </article>
-              ))}
-
-              {monthlySummary.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-                  <CalendarDays
-                    size={32}
-                    className="mx-auto mb-3 text-slate-300"
-                  />
-
-                  <p className="text-sm font-medium text-slate-500">
-                    No staff available for the report.
-                  </p>
+                            <p
+                              className={`mt-2 text-2xl font-bold ${entry.color}`}
+                            >
+                              {entry.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </>
+            )}
+          </>
         )}
       </section>
 
-      <p className="break-words text-xs leading-5 text-slate-400">
+      <p className="text-xs leading-5 text-slate-400">
         Attendance is automatically saved in this browser.
       </p>
     </div>

@@ -55,6 +55,7 @@ const money = (value) =>
 
 const todayKey = () => {
   const d = new Date();
+
   return `${d.getFullYear()}-${String(
     d.getMonth() + 1
   ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -79,6 +80,7 @@ const toNumber = (value) => {
   const result = Number(
     String(value ?? "0").replace(/[₹,\s]/g, "")
   );
+
   return Number.isFinite(result) ? result : 0;
 };
 
@@ -111,6 +113,10 @@ const bookingDate = (item) =>
   item.shootDate ||
   "";
 
+/* =========================
+   STATISTICS CARD
+========================= */
+
 function StatCard({
   title,
   value,
@@ -119,31 +125,40 @@ function StatCard({
   subtitle,
 }) {
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-200 hover:shadow-md">
-      <div className="flex min-w-0 items-start justify-between gap-3">
+    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-200 hover:shadow-md lg:group lg:relative lg:overflow-hidden lg:rounded-[22px] lg:border-[#e6ecf5] lg:p-6 lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)] lg:hover:-translate-y-1 lg:hover:border-[#cbd9ee] lg:hover:shadow-[0_15px_35px_rgba(16,38,77,0.10)]">
+
+      <div className="pointer-events-none absolute -right-10 -top-10 hidden h-32 w-32 rounded-full bg-blue-50/70 blur-2xl lg:block" />
+
+      <div className="relative flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-slate-500 lg:text-[13px] lg:font-semibold lg:text-[#75839a]">
             {title}
           </p>
 
-          <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-[#10264d]">
+          <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-[#10264d] lg:mt-4 lg:text-[clamp(19px,1.65vw,28px)] lg:font-extrabold">
             {value}
           </h2>
 
-          <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-2 text-xs leading-5 text-slate-400 lg:mt-3 lg:text-[11px] lg:text-[#98a4b7]">
             {subtitle}
           </p>
         </div>
 
         <div
-          className={`shrink-0 rounded-xl p-3 ${color}`}
+          className={`shrink-0 rounded-xl p-3 lg:rounded-2xl lg:p-3.5 lg:transition-transform lg:duration-300 lg:group-hover:scale-110 ${color}`}
         >
           <Icon size={21} />
         </div>
       </div>
+
+      <div className="absolute bottom-0 left-6 right-6 hidden h-[2px] rounded-full bg-gradient-to-r from-[#244d8b]/50 to-transparent opacity-0 transition-opacity duration-300 lg:block lg:group-hover:opacity-100" />
     </div>
   );
 }
+
+/* =========================
+   SECTION TITLE
+========================= */
 
 function SectionTitle({
   title,
@@ -151,17 +166,17 @@ function SectionTitle({
   icon: Icon,
 }) {
   return (
-    <div className="mb-5 flex min-w-0 items-center gap-3">
-      <div className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#10264d]">
+    <div className="mb-5 flex min-w-0 items-center gap-3 lg:mb-7 lg:gap-4">
+      <div className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#10264d] lg:rounded-2xl lg:bg-[#edf3fc] lg:p-3">
         <Icon size={20} />
       </div>
 
       <div className="min-w-0">
-        <h2 className="break-words text-base font-bold text-[#10264d] sm:text-lg">
+        <h2 className="break-words text-base font-bold text-[#10264d] sm:text-lg lg:text-[18px] lg:font-extrabold lg:tracking-[-0.02em]">
           {title}
         </h2>
 
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-slate-400 lg:text-[#91a0b5]">
           {subtitle}
         </p>
       </div>
@@ -169,13 +184,21 @@ function SectionTitle({
   );
 }
 
+/* =========================
+   EMPTY STATE
+========================= */
+
 function EmptyState({ message }) {
   return (
-    <div className="py-10 text-center text-sm text-slate-400">
+    <div className="py-10 text-center text-sm text-slate-400 lg:rounded-2xl lg:border lg:border-dashed lg:border-[#e2e9f3] lg:bg-[#fafcff] lg:py-14">
       {message}
     </div>
   );
 }
+
+/* =========================
+   CHART PANEL
+========================= */
 
 function ChartPanel({
   title,
@@ -188,7 +211,7 @@ function ChartPanel({
   formatter,
 }) {
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
       <SectionTitle
         title={title}
         subtitle={subtitle}
@@ -196,7 +219,7 @@ function ChartPanel({
       />
 
       <div className="w-full min-w-0">
-        <div className="grid h-56 w-full grid-cols-6 items-end gap-1 border-b border-slate-200 pb-2 sm:gap-3">
+        <div className="grid h-56 w-full grid-cols-6 items-end gap-1 border-b border-slate-200 pb-2 sm:gap-3 lg:h-64 lg:gap-4 lg:border-[#e9eef5] lg:pb-3">
           {data.map((item) => {
             const value = item[dataKey] || 0;
 
@@ -207,10 +230,10 @@ function ChartPanel({
             return (
               <div
                 key={item.key}
-                className="flex h-full min-w-0 flex-col items-center justify-end gap-2"
+                className="flex h-full min-w-0 flex-col items-center justify-end gap-2 lg:gap-3"
               >
                 <span
-                  className="w-full truncate text-center text-[9px] font-semibold text-[#10264d] sm:text-xs"
+                  className="w-full truncate text-center text-[9px] font-semibold text-[#10264d] sm:text-xs lg:text-[12px]"
                   title={String(value)}
                 >
                   {formatter
@@ -219,13 +242,13 @@ function ChartPanel({
                 </span>
 
                 <div
-                  className={`w-full max-w-12 rounded-t-lg transition-all duration-300 ${barColor}`}
+                  className={`w-full max-w-12 rounded-t-lg transition-all duration-300 lg:max-w-14 lg:rounded-t-xl lg:hover:opacity-80 ${barColor}`}
                   style={{
                     height: `${height}%`,
                   }}
                 />
 
-                <span className="text-[10px] text-slate-500 sm:text-xs">
+                <span className="text-[10px] text-slate-500 sm:text-xs lg:font-medium lg:text-[#8190a6]">
                   {item.label}
                 </span>
               </div>
@@ -237,19 +260,27 @@ function ChartPanel({
   );
 }
 
+/* =========================
+   INFORMATION ROW
+========================= */
+
 function InfoRow({ label, value }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
+    <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0 lg:border-[#e9eef5]">
+      <p className="text-xs font-medium text-slate-400 lg:text-[11px] lg:font-semibold lg:tracking-wide">
         {label}
       </p>
 
-      <p className="break-words text-sm font-semibold text-[#10264d]">
+      <p className="break-words text-sm font-semibold text-[#10264d] lg:text-[13px]">
         {value || "—"}
       </p>
     </div>
   );
 }
+
+/* =========================
+   DASHBOARD
+========================= */
 
 export default function Dashboard() {
   const [data, setData] = useState(getAllData);
@@ -605,15 +636,20 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
-      {/* Dashboard Heading */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen w-full min-w-0 max-w-full bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
+
+      {/* DASHBOARD HEADING */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:mb-8">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-[#10264d] sm:text-2xl lg:text-3xl">
+          <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.18em] text-[#7690b2] lg:block">
+            Studio Performance
+          </p>
+
+          <h1 className="text-xl font-bold text-[#10264d] sm:text-2xl lg:text-[30px] lg:font-extrabold lg:tracking-[-0.04em]">
             Dashboard Overview
           </h1>
 
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm lg:mt-2 lg:text-[#8290a5]">
             Welcome to Studio Raw Picturez ERP & CRM
           </p>
         </div>
@@ -621,38 +657,46 @@ export default function Dashboard() {
         <button
           type="button"
           onClick={refresh}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] hover:bg-blue-50 sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] hover:bg-blue-50 sm:w-auto lg:rounded-2xl lg:border-[#e2e8f2] lg:px-5 lg:shadow-[0_4px_16px_rgba(16,38,77,0.04)] lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md"
         >
           <RefreshCw size={17} />
           Refresh Dashboard
         </button>
       </div>
 
-      {/* Business Overview Banner */}
-      <div className="mb-6 w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-r from-[#10264d] to-[#244d8b] p-5 text-white shadow-lg sm:p-8">
-        <div className="flex min-w-0 items-start justify-between gap-3">
+      {/* BUSINESS OVERVIEW BANNER */}
+      <div className="mb-6 w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-r from-[#10264d] to-[#244d8b] p-5 text-white shadow-lg sm:p-8 lg:relative lg:mb-8 lg:rounded-[28px] lg:bg-gradient-to-br lg:from-[#091b36] lg:via-[#143662] lg:to-[#28548b] lg:p-9 lg:shadow-[0_18px_45px_rgba(16,38,77,0.15)]">
+
+        {/* DESKTOP DECORATION */}
+        <div className="pointer-events-none absolute inset-0 hidden overflow-hidden lg:block">
+          <div className="absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/10" />
+          <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/10" />
+          <div className="absolute -right-32 bottom-[-170px] h-[350px] w-[350px] rounded-full bg-blue-300/10 blur-[70px]" />
+        </div>
+
+        <div className="relative flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-blue-200 sm:text-sm">
+            <p className="text-xs text-blue-200 sm:text-sm lg:text-[12px] lg:font-semibold lg:tracking-[0.12em]">
               Studio Business Overview
             </p>
 
-            <h2 className="mt-2 break-words text-xl font-bold sm:text-2xl">
+            <h2 className="mt-2 break-words text-xl font-bold sm:text-2xl lg:mt-4 lg:text-[30px] lg:font-extrabold lg:tracking-[-0.035em]">
               Manage Your Studio Smarter
             </h2>
 
-            <p className="mt-2 max-w-xl text-xs leading-6 text-blue-100 sm:text-sm">
+            <p className="mt-2 max-w-xl text-xs leading-6 text-blue-100 sm:text-sm lg:mt-4 lg:max-w-2xl lg:leading-7 lg:text-blue-100/75">
               Track customers, bookings, payments,
               production and deliveries from one dashboard.
             </p>
           </div>
 
-          <div className="hidden shrink-0 rounded-2xl bg-white/10 p-4 sm:block">
+          <div className="hidden shrink-0 rounded-2xl bg-white/10 p-4 sm:block lg:rounded-[22px] lg:border lg:border-white/15 lg:bg-white/10 lg:p-5 lg:backdrop-blur-sm">
             <Activity size={36} />
           </div>
         </div>
 
-        {/* Financial Details - Mobile Vertical */}
-        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-white/20 pt-5 md:grid-cols-3">
+        {/* FINANCIAL DETAILS */}
+        <div className="relative mt-6 grid grid-cols-1 gap-4 border-t border-white/20 pt-5 md:grid-cols-3 lg:mt-8 lg:gap-5 lg:pt-7">
           {[
             ["Total Billed", stats.billed],
             ["Total Received", stats.paid],
@@ -660,13 +704,13 @@ export default function Dashboard() {
           ].map(([label, amount]) => (
             <div
               key={label}
-              className="min-w-0 rounded-xl bg-white/10 p-4"
+              className="min-w-0 rounded-xl bg-white/10 p-4 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/[0.09] lg:p-5 lg:backdrop-blur-sm lg:transition-all lg:duration-300 lg:hover:bg-white/[0.15]"
             >
-              <p className="text-xs text-blue-200">
+              <p className="text-xs text-blue-200 lg:text-[12px] lg:font-medium">
                 {label}
               </p>
 
-              <p className="mt-2 break-words text-xl font-bold">
+              <p className="mt-2 break-words text-xl font-bold lg:mt-3 lg:text-[clamp(19px,1.7vw,27px)] lg:font-extrabold">
                 {money(amount)}
               </p>
             </div>
@@ -674,8 +718,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* All Statistics */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+      {/* ALL STATISTICS */}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 lg:mb-8 lg:gap-5">
         {cards.map((card) => (
           <StatCard
             key={card.title}
@@ -684,8 +728,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+      {/* CHARTS */}
+      <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 lg:mb-8 lg:gap-5">
         <ChartPanel
           title="Booking Overview"
           subtitle="Last six months"
@@ -712,9 +756,11 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Upcoming Bookings */}
-      <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+      {/* UPCOMING BOOKINGS AND FOLLOW-UPS */}
+      <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 lg:mb-8 lg:gap-5">
+
+        {/* UPCOMING BOOKINGS */}
+        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
           <SectionTitle
             title="Upcoming Bookings"
             subtitle="Scheduled customer events"
@@ -724,11 +770,11 @@ export default function Dashboard() {
           {upcomingBookings.length === 0 ? (
             <EmptyState message="No upcoming bookings found" />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:gap-4">
               {upcomingBookings.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4"
+                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
                 >
                   <InfoRow
                     label="Customer"
@@ -759,8 +805,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Follow-up Reminders */}
-        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+        {/* FOLLOW-UP REMINDERS */}
+        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
           <SectionTitle
             title="Customer Follow-up Reminders"
             subtitle="Pending customer communications"
@@ -770,11 +816,11 @@ export default function Dashboard() {
           {upcomingFollowups.length === 0 ? (
             <EmptyState message="No pending follow-ups" />
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 lg:gap-4">
               {upcomingFollowups.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4"
+                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
                 >
                   <InfoRow
                     label="Customer"
@@ -801,8 +847,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Activities */}
-      <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+      {/* RECENT ACTIVITIES */}
+      <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
         <SectionTitle
           title="Recent Activities"
           subtitle="Latest recorded studio workflow items"
@@ -812,17 +858,17 @@ export default function Dashboard() {
         {recentActivities.length === 0 ? (
           <EmptyState message="No recent activities available" />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:gap-4">
             {recentActivities.map((item) => {
               const Icon = item.icon;
 
               return (
                 <div
                   key={item.id}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4"
+                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-700">
+                    <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-700 lg:rounded-2xl">
                       <Icon size={19} />
                     </div>
 
@@ -853,8 +899,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Footer */}
-      <p className="mt-6 text-center text-xs leading-5 text-slate-400">
+      {/* FOOTER */}
+      <p className="mt-6 text-center text-xs leading-5 text-slate-400 lg:mt-8">
         StudioRaw Picturez ERP & CRM · Dashboard data
         stored locally in this browser
       </p>
