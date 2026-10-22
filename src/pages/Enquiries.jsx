@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
@@ -18,11 +18,12 @@ import {
   ClipboardList,
   Save,
   Users,
-  IndianRupee,
   Phone,
   CalendarClock,
   MessageSquareText,
   ArrowUpRight,
+  Filter,
+  Inbox,
 } from "lucide-react";
 
 const KEY = "studio_raw_enquiries";
@@ -70,37 +71,8 @@ const emptyForm = {
   notes: "",
 };
 
-const demoEnquiries = [
-  {
-    id: "ENQ-1001",
-    customer: "Rahul",
-    phone: "9876543210",
-    service: "Wedding Photography",
-    eventDate: "2026-11-15",
-    budget: "85000",
-    source: "Instagram",
-    stage: "Qualified",
-    owner: "Demo Admin",
-    nextFollowUp: "2026-10-25",
-    notes: "Interested in premium wedding package",
-  },
-  {
-    id: "ENQ-1002",
-    customer: "Anitha",
-    phone: "9876501234",
-    service: "Maternity Photography",
-    eventDate: "2026-11-20",
-    budget: "15000",
-    source: "Referral",
-    stage: "Follow-up",
-    owner: "Demo Admin",
-    nextFollowUp: "2026-10-22",
-    notes: "Send package details",
-  },
-];
-
 const fieldClass =
-  "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100 lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5";
+  "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
 
 const formatMoney = (value) =>
   value === "" || value == null
@@ -121,26 +93,19 @@ const formatDate = (value) => {
   });
 };
 
-const getStageStyle = (stage) => {
-  switch (stage) {
-    case "New":
-      return "bg-blue-50 text-blue-700 border-blue-100";
-    case "Contacted":
-      return "bg-sky-50 text-sky-700 border-sky-100";
-    case "Qualified":
-      return "bg-violet-50 text-violet-700 border-violet-100";
-    case "Quoted":
-      return "bg-amber-50 text-amber-700 border-amber-100";
-    case "Follow-up":
-      return "bg-orange-50 text-orange-700 border-orange-100";
-    case "Won/Converted":
-      return "bg-emerald-50 text-emerald-700 border-emerald-100";
-    case "Lost":
-      return "bg-red-50 text-red-700 border-red-100";
-    default:
-      return "bg-slate-50 text-slate-600 border-slate-200";
-  }
+const stageStyles = {
+  New: "bg-blue-50 text-blue-700 border-blue-100",
+  Contacted: "bg-sky-50 text-sky-700 border-sky-100",
+  Qualified: "bg-violet-50 text-violet-700 border-violet-100",
+  Quoted: "bg-amber-50 text-amber-700 border-amber-100",
+  "Follow-up": "bg-orange-50 text-orange-700 border-orange-100",
+  "Won/Converted":
+    "bg-emerald-50 text-emerald-700 border-emerald-100",
+  Lost: "bg-red-50 text-red-700 border-red-100",
 };
+
+const getStageStyle = (stage) =>
+  stageStyles[stage] || "bg-slate-50 text-slate-600 border-slate-200";
 
 function CustomDropdown({
   value,
@@ -148,99 +113,138 @@ function CustomDropdown({
   onChange,
   placeholder = "Select option",
   compact = false,
+  status = false,
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [menuPosition, setMenuPosition] = useState(null);
 
   useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
+    if (!open) return;
+
+    const closeOutside = (event) => {
+      if (!dropdownRef.current?.contains(event.target) &&
+          !event.target.closest?.("[data-enquiry-dropdown-menu]")) {
         setOpen(false);
       }
     };
 
-    const handleEscape = (event) => {
+    const closeEscape = (event) => {
       if (event.key === "Escape") setOpen(false);
     };
 
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
+    const closeOnScroll = () => setOpen(false);
+
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    window.addEventListener("scroll", closeOnScroll, true);
+    window.addEventListener("resize", closeOnScroll);
 
     return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeEscape);
+      window.removeEventListener("scroll", closeOnScroll, true);
+      window.removeEventListener("resize", closeOnScroll);
     };
-  }, []);
+  }, [open]);
+
+  const toggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const menuHeight = Math.min(options.length * 41 + 12, 230);
+      const openUp =
+        window.innerHeight - rect.bottom < menuHeight &&
+        rect.top > menuHeight;
+
+      setMenuPosition({
+        top: openUp
+          ? Math.max(8, rect.top - menuHeight - 6)
+          : rect.bottom + 6,
+        left: Math.max(
+          8,
+          Math.min(rect.left, window.innerWidth - Math.max(rect.width, 175) - 8)
+        ),
+        width: Math.max(rect.width, 175),
+      });
+    }
+
+    setOpen((previous) => !previous);
+  };
 
   return (
     <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={toggle}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce4ef] bg-white px-3 py-2.5 text-left text-xs font-semibold text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:text-sm ${
-          compact
-            ? "lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5"
-            : ""
+        className={`flex w-full min-w-0 items-center justify-between gap-1.5 border text-left font-semibold outline-none transition focus:ring-2 focus:ring-blue-100 ${
+          status
+            ? `rounded-lg px-2 py-2 text-[10px] xl:px-2.5 xl:text-[11px] ${getStageStyle(value)}`
+            : `rounded-xl border-[#dce4ef] bg-white px-3.5 py-3 text-sm text-[#10264d] hover:border-blue-300 ${
+                compact ? "min-h-[44px]" : ""
+              }`
         }`}
       >
         <span className="min-w-0 flex-1 truncate">
           {value || placeholder}
         </span>
-
         <ChevronDown
-          size={16}
-          className={`shrink-0 text-slate-500 transition-transform ${
+          size={14}
+          className={`shrink-0 transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {open && (
-        <div
-          role="listbox"
-          className="absolute left-0 right-0 top-full z-[90] mt-1 max-h-52 overflow-y-auto rounded-xl border border-[#dce4ef] bg-white p-1 shadow-[0_12px_35px_rgba(16,38,77,0.15)]"
-        >
-          {options.map((option) => {
-            const selected = value === option;
-
-            return (
+      {open &&
+        menuPosition &&
+        createPortal(
+          <div
+            data-enquiry-dropdown-menu
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuPosition.width,
+              maxHeight: 230,
+              zIndex: 9999,
+            }}
+            className="overflow-y-auto rounded-xl border border-[#e2e8f0] bg-white p-1.5 shadow-[0_15px_40px_rgba(16,38,77,0.15)]"
+          >
+            {options.map((option) => (
               <button
                 key={option}
                 type="button"
                 role="option"
-                aria-selected={selected}
+                aria-selected={value === option}
                 onClick={() => {
                   onChange(option);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition sm:text-sm ${
-                  selected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition ${
+                  value === option
+                    ? "bg-blue-50 font-bold text-blue-700"
+                    : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                <span className="min-w-0 flex-1 break-words">
-                  {option}
-                </span>
-
-                {selected && <Check size={15} />}
+                <span>{option}</span>
+                {value === option && <Check size={14} />}
               </button>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
 
 function SummaryCard({ title, value, icon: Icon, color }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:shadow-md sm:p-5">
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-500 sm:text-sm">
           {title}
@@ -258,31 +262,10 @@ function SummaryCard({ title, value, icon: Icon, color }) {
   );
 }
 
-function CompactDetail({ label, value, icon: Icon, full = false }) {
-  return (
-    <div
-      className={`min-w-0 rounded-xl bg-[#f7f9fd] px-3 py-3 ${
-        full ? "col-span-2" : ""
-      }`}
-    >
-      <div className="mb-1.5 flex items-center gap-1.5 text-[#8b99ae]">
-        {Icon && <Icon size={13} className="shrink-0" />}
-        <span className="text-[10px] font-medium sm:text-[11px]">
-          {label}
-        </span>
-      </div>
-
-      <p className="break-words text-xs font-semibold leading-5 text-[#10264d] sm:text-[13px]">
-        {value === "" || value == null ? "—" : value}
-      </p>
-    </div>
-  );
-}
-
 function FormField({ label, required = false, children }) {
   return (
-    <div className="w-full min-w-0">
-      <label className="mb-2 block text-sm font-medium text-slate-700 lg:mb-1.5 lg:text-xs lg:font-semibold lg:text-[#344767]">
+    <div className="min-w-0">
+      <label className="mb-2 block text-xs font-semibold text-[#344767]">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
@@ -304,15 +287,29 @@ function FormSectionTitle({ icon: Icon, title }) {
   );
 }
 
+function DetailItem({ icon: Icon, label, value }) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 flex items-center gap-1.5 text-[11px] text-slate-400">
+        <Icon size={13} />
+        {label}
+      </div>
+      <p className="break-words text-xs font-semibold text-[#243b60]">
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
+
 export default function Enquiries() {
   const [enquiries, setEnquiries] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY);
-      if (!saved) return demoEnquiries;
+      if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : demoEnquiries;
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return demoEnquiries;
+      return [];
     }
   });
 
@@ -336,14 +333,11 @@ export default function Enquiries() {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     customerInputRef.current?.focus();
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setShowForm(false);
-        setEditing(null);
-        setError("");
         return;
       }
 
@@ -363,10 +357,7 @@ export default function Enquiries() {
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
-      } else if (
-        !event.shiftKey &&
-        document.activeElement === last
-      ) {
+      } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
         first.focus();
       }
@@ -381,23 +372,55 @@ export default function Enquiries() {
     };
   }, [showForm]);
 
-  const filtered = enquiries.filter((item) => {
+  const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
 
-    const matchesSearch = [
-      item.customer,
-      item.phone,
-      item.service,
-      item.id,
-    ].some((value) =>
-      String(value || "").toLowerCase().includes(query)
-    );
+    return enquiries.filter((item) => {
+      const matchesSearch = [
+        item.customer,
+        item.phone,
+        item.service,
+        item.id,
+        item.source,
+      ].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      );
 
-    const matchesStage =
-      stageFilter === "All" || item.stage === stageFilter;
+      return (
+        matchesSearch &&
+        (stageFilter === "All" || item.stage === stageFilter)
+      );
+    });
+  }, [enquiries, search, stageFilter]);
 
-    return matchesSearch && matchesStage;
-  });
+  const counts = [
+    {
+      title: "Total Enquiries",
+      value: enquiries.length,
+      icon: PhoneCall,
+      color: "bg-blue-50 text-blue-700",
+    },
+    {
+      title: "New Leads",
+      value: enquiries.filter((item) => item.stage === "New").length,
+      icon: Clock3,
+      color: "bg-violet-50 text-violet-700",
+    },
+    {
+      title: "Follow-ups",
+      value: enquiries.filter((item) => item.stage === "Follow-up").length,
+      icon: CalendarDays,
+      color: "bg-amber-50 text-amber-700",
+    },
+    {
+      title: "Converted",
+      value: enquiries.filter(
+        (item) => item.stage === "Won/Converted"
+      ).length,
+      icon: CheckCircle2,
+      color: "bg-emerald-50 text-emerald-700",
+    },
+  ];
 
   const openForm = (item = null) => {
     previousFocusRef.current = document.activeElement;
@@ -439,12 +462,17 @@ export default function Enquiries() {
     if (editing) {
       setEnquiries((previous) =>
         previous.map((item) =>
-          item.id === editing ? { ...item, ...updatedForm } : item
+          item.id === editing
+            ? { ...item, ...updatedForm }
+            : item
         )
       );
     } else {
       setEnquiries((previous) => [
-        { ...updatedForm, id: `ENQ-${Date.now()}` },
+        {
+          ...updatedForm,
+          id: `ENQ-${Date.now()}`,
+        },
         ...previous,
       ]);
     }
@@ -453,10 +481,15 @@ export default function Enquiries() {
   };
 
   const remove = (id) => {
-    if (window.confirm("Are you sure you want to delete this enquiry?")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this enquiry?"
+      )
+    ) {
       setEnquiries((previous) =>
         previous.filter((item) => item.id !== id)
       );
+
       if (editing === id) closeForm();
     }
   };
@@ -469,345 +502,241 @@ export default function Enquiries() {
     );
   };
 
-  const counts = [
-    {
-      title: "Total Enquiries",
-      value: enquiries.length,
-      icon: PhoneCall,
-      color: "bg-blue-50 text-blue-700",
-    },
-    {
-      title: "New Leads",
-      value: enquiries.filter((item) => item.stage === "New").length,
-      icon: Clock3,
-      color: "bg-violet-50 text-violet-700",
-    },
-    {
-      title: "Follow-ups",
-      value: enquiries.filter((item) => item.stage === "Follow-up").length,
-      icon: CalendarDays,
-      color: "bg-amber-50 text-amber-700",
-    },
-    {
-      title: "Converted",
-      value: enquiries.filter(
-        (item) => item.stage === "Won/Converted"
-      ).length,
-      icon: CheckCircle2,
-      color: "bg-emerald-50 text-emerald-700",
-    },
-  ];
-
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
+      {/* PAGE HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#7e93af]">
             Customer Relationship Management
           </p>
 
-          <h2 className="text-xl font-bold text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
+          <h2 className="text-2xl font-extrabold text-[#10264d] lg:text-[29px]">
             Enquiries & Leads
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Track customer enquiries, follow-ups and conversions.
+            Manage enquiries, follow-ups and lead conversions.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => openForm()}
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4274] lg:w-auto"
+          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4274]"
         >
           <Plus size={18} />
           Add Enquiry
         </button>
       </div>
 
-      {/* SUMMARY */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
         {counts.map((item) => (
           <SummaryCard key={item.title} {...item} />
         ))}
       </div>
 
-      {/* LIST */}
-      <section className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+      {/* ENQUIRIES LIST */}
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_4px_24px_rgba(16,38,77,0.035)]">
+        {/* LIST HEADER */}
+        <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between xl:px-6">
           <div>
             <h3 className="text-lg font-bold text-[#10264d]">
               Enquiries List
             </h3>
-            <p className="mt-1 text-xs text-slate-400">
+
+            <p className="mt-1 text-xs text-[#8b99ae]">
               {filtered.length} enquiries found
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
-            <div className="relative min-w-0 lg:w-[280px]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-[260px] xl:w-[300px]">
               <Search
-                size={18}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={17}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
               />
+
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search enquiries..."
-                className={`${fieldClass} pl-10`}
+                className="h-11 w-full rounded-xl border border-[#dce4ef] bg-white pl-10 pr-4 text-sm text-[#10264d] outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
-            <div className="min-w-0 sm:w-[190px]">
-              <CustomDropdown
-                value={stageFilter}
-                options={["All", ...stages]}
-                onChange={setStageFilter}
-                compact
+            <div className="flex items-center gap-2 sm:w-[190px]">
+              <Filter
+                size={16}
+                className="shrink-0 text-slate-400 sm:hidden"
               />
+
+              <div className="min-w-0 flex-1">
+                <CustomDropdown
+                  value={stageFilter}
+                  options={["All", ...stages]}
+                  onChange={setStageFilter}
+                  compact
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* MOBILE COMPACT CARDS */}
-        <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
-          {filtered.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-sm text-slate-400">
-              No enquiries found.
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <article
-                key={item.id}
-                className="min-w-0 rounded-2xl border border-[#e3eaf3] bg-white p-4 shadow-[0_4px_16px_rgba(16,38,77,0.045)]"
-              >
-                {/* CARD HEADER */}
-                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
-                      <UserRound size={20} />
-                    </div>
+        {/* DESKTOP TABLE - NO HORIZONTAL SCROLL */}
+        <div className="hidden w-full min-w-0 lg:block">
+          <table className="w-full table-fixed border-collapse text-left">
+            <colgroup>
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "18%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "6%" }} />
+            </colgroup>
 
-                    <div className="min-w-0">
-                      <h4 className="truncate text-sm font-bold text-[#10264d]">
-                        {item.customer}
-                      </h4>
-
-                      <p className="mt-1 truncate text-[10px] font-semibold text-[#4972a8]">
-                        {item.id}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openForm(item)}
-                      className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
-                      aria-label={`Edit ${item.customer}`}
-                    >
-                      <Pencil size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => remove(item.id)}
-                      className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                      aria-label={`Delete ${item.customer}`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* HIGHLIGHT */}
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <span
-                    className={`inline-flex min-w-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${getStageStyle(
-                      item.stage || "New"
-                    )}`}
+            <thead>
+              <tr className="border-b border-[#e9eef5] bg-[#f8fafd]">
+                {[
+                  "Enquiry ID",
+                  "Customer",
+                  "Service",
+                  "Event Date",
+                  "Budget",
+                  "Source",
+                  "Stage",
+                  "Actions",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    className={`break-words px-2 py-3 text-[10px] font-bold uppercase tracking-[0.02em] text-[#8290a5] xl:px-3 xl:text-[11px] ${
+                      heading === "Actions" ? "text-center" : ""
+                    }`}
                   >
-                    {item.stage || "New"}
-                  </span>
-
-                  <span className="text-sm font-bold text-[#10264d]">
-                    {formatMoney(item.budget)}
-                  </span>
-                </div>
-
-                {/* 2 COLUMN DETAILS */}
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <CompactDetail
-                    label="Phone"
-                    value={item.phone}
-                    icon={Phone}
-                  />
-
-                  <CompactDetail
-                    label="Event Date"
-                    value={formatDate(item.eventDate)}
-                    icon={CalendarDays}
-                  />
-
-                  <CompactDetail
-                    label="Service"
-                    value={item.service}
-                    icon={Camera}
-                  />
-
-                  <CompactDetail
-                    label="Lead Source"
-                    value={item.source}
-                    icon={ArrowUpRight}
-                  />
-
-                  <CompactDetail
-                    label="Assigned Staff"
-                    value={item.owner}
-                    icon={UserRound}
-                  />
-
-                  <CompactDetail
-                    label="Follow-up"
-                    value={formatDate(item.nextFollowUp)}
-                    icon={CalendarClock}
-                  />
-
-                  {item.notes && (
-                    <CompactDetail
-                      label="Notes / Requirements"
-                      value={item.notes}
-                      icon={MessageSquareText}
-                      full
-                    />
-                  )}
-                </div>
-
-                {/* STAGE */}
-                <div className="mt-3 border-t border-[#edf1f6] pt-3">
-                  <p className="mb-2 text-[11px] font-semibold text-slate-500">
-                    Update Lead Stage
-                  </p>
-
-                  <CustomDropdown
-                    value={item.stage || "New"}
-                    options={stages}
-                    onChange={(stage) => changeStage(item.id, stage)}
-                  />
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-
-        {/* DESKTOP TABLE */}
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="w-full min-w-[1050px] border-collapse text-left">
-            <thead className="bg-[#f7f9fd]">
-              <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
-                <th className="px-5 py-4">Enquiry ID</th>
-                <th className="px-5 py-4">Customer</th>
-                <th className="px-5 py-4">Service</th>
-                <th className="px-5 py-4">Event Date</th>
-                <th className="px-5 py-4">Budget</th>
-                <th className="px-5 py-4">Lead Source</th>
-                <th className="px-5 py-4">Stage</th>
-                <th className="px-5 py-4 text-center">Actions</th>
+                    {heading}
+                  </th>
+                ))}
               </tr>
             </thead>
 
             <tbody className="divide-y divide-[#edf1f6]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-16 text-center text-sm text-slate-400"
-                  >
-                    No enquiries found.
+                  <td colSpan={8}>
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                      <Inbox
+                        size={36}
+                        className="mb-3 text-slate-300"
+                      />
+                      <p className="text-sm font-medium">
+                        No enquiries found
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filtered.map((item) => (
                   <tr
                     key={item.id}
-                    className="transition hover:bg-[#f8faff]"
+                    className="group transition-colors hover:bg-[#f8faff]"
                   >
-                    <td className="whitespace-nowrap px-5 py-4 text-xs font-bold text-[#4972a8]">
-                      {item.id}
+                    {/* ENQUIRY ID */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <span className="block break-all text-[10px] font-bold text-[#376aa7] xl:text-xs">
+                        {item.id}
+                      </span>
                     </td>
 
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a]">
-                          <UserRound size={17} />
+                    {/* CUSTOMER */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a] xl:flex">
+                          <UserRound size={16} />
                         </div>
 
                         <div className="min-w-0">
-                          <p className="font-semibold text-[#10264d]">
+                          <p
+                            className="truncate text-xs font-bold text-[#10264d] xl:text-[13px]"
+                            title={item.customer}
+                          >
                             {item.customer}
                           </p>
-                          <p className="mt-1 text-xs text-slate-400">
+
+                          <p className="mt-1 truncate text-[10px] text-[#8b99ae] xl:text-[11px]">
                             {item.phone}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-sm text-[#52627b]">
-                      {item.service || "—"}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-sm text-[#52627b]">
-                      {formatDate(item.eventDate)}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-[#10264d]">
-                      {formatMoney(item.budget)}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#52627b]">
-                      {item.source || "—"}
-                    </td>
-
-                    <td className="min-w-[160px] px-5 py-4">
-                      <span
-                        className={`mb-1 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getStageStyle(
-                          item.stage || "New"
-                        )}`}
+                    {/* SERVICE */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <p
+                        className="line-clamp-2 break-words text-xs leading-5 text-[#52627b]"
+                        title={item.service}
                       >
-                        {item.stage || "New"}
-                      </span>
+                        {item.service || "—"}
+                      </p>
+                    </td>
 
+                    {/* EVENT DATE */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <p className="text-[11px] leading-5 text-[#52627b] xl:text-xs">
+                        {formatDate(item.eventDate)}
+                      </p>
+                    </td>
+
+                    {/* BUDGET */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <p className="break-words text-[11px] font-bold text-[#10264d] xl:text-xs">
+                        {formatMoney(item.budget)}
+                      </p>
+                    </td>
+
+                    {/* SOURCE */}
+                    <td className="px-2 py-3 align-middle xl:px-3">
+                      <p className="break-words text-xs text-[#52627b]">
+                        {item.source || "—"}
+                      </p>
+                    </td>
+
+                    {/* STAGE - SINGLE DROPDOWN */}
+                    <td className="px-1 py-3 align-middle xl:px-2">
                       <CustomDropdown
                         value={item.stage || "New"}
                         options={stages}
                         onChange={(stage) =>
                           changeStage(item.id, stage)
                         }
-                        compact
+                        status
                       />
                     </td>
 
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-center gap-2">
+                    {/* ACTIONS */}
+                    <td className="px-0.5 py-3 align-middle">
+                      <div className="flex items-center justify-center gap-0">
                         <button
                           type="button"
                           onClick={() => openForm(item)}
-                          className="rounded-lg p-2 text-[#376aa7] hover:bg-blue-50"
+                          title="Edit enquiry"
                           aria-label={`Edit ${item.customer}`}
+                          className="rounded-md p-1 text-[#376aa7] transition hover:bg-blue-50"
                         >
-                          <Pencil size={17} />
+                          <Pencil size={14} />
                         </button>
 
                         <button
                           type="button"
                           onClick={() => remove(item.id)}
-                          className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                          title="Delete enquiry"
                           aria-label={`Delete ${item.customer}`}
+                          className="rounded-md p-1 text-red-500 transition hover:bg-red-50"
                         >
-                          <Trash2 size={17} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -818,13 +747,131 @@ export default function Enquiries() {
           </table>
         </div>
 
-        <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
-          <p className="text-xs text-[#8290a5]">
+        {/* MOBILE / TABLET CARDS */}
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
+          {filtered.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center py-12 text-slate-400">
+              <Inbox size={34} className="mb-3 text-slate-300" />
+              <p className="text-sm">No enquiries found</p>
+            </div>
+          ) : (
+            filtered.map((item) => (
+              <article
+                key={item.id}
+                className="min-w-0 rounded-xl border border-[#e5ebf3] bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
+                      <UserRound size={19} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-[#10264d]">
+                        {item.customer}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold text-[#4972a8]">
+                        {item.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openForm(item)}
+                      aria-label={`Edit ${item.customer}`}
+                      className="rounded-lg bg-blue-50 p-2 text-blue-700"
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => remove(item.id)}
+                      aria-label={`Delete ${item.customer}`}
+                      className="rounded-lg bg-red-50 p-2 text-red-600"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-lg font-bold text-[#10264d]">
+                    {formatMoney(item.budget)}
+                  </span>
+
+                  <div className="w-[145px] max-w-[55%]">
+                    <CustomDropdown
+                      value={item.stage || "New"}
+                      options={stages}
+                      onChange={(stage) =>
+                        changeStage(item.id, stage)
+                      }
+                      status
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
+                  <DetailItem
+                    icon={Phone}
+                    label="Phone"
+                    value={item.phone}
+                  />
+
+                  <DetailItem
+                    icon={CalendarDays}
+                    label="Event Date"
+                    value={formatDate(item.eventDate)}
+                  />
+
+                  <DetailItem
+                    icon={Camera}
+                    label="Service"
+                    value={item.service}
+                  />
+
+                  <DetailItem
+                    icon={ArrowUpRight}
+                    label="Lead Source"
+                    value={item.source}
+                  />
+
+                  <DetailItem
+                    icon={UserRound}
+                    label="Assigned Staff"
+                    value={item.owner}
+                  />
+
+                  <DetailItem
+                    icon={CalendarClock}
+                    label="Follow-up"
+                    value={formatDate(item.nextFollowUp)}
+                  />
+                </div>
+
+                {item.notes && (
+                  <div className="mt-4 rounded-lg bg-[#f7f9fd] p-3">
+                    <DetailItem
+                      icon={MessageSquareText}
+                      label="Notes"
+                      value={item.notes}
+                    />
+                  </div>
+                )}
+              </article>
+            ))
+          )}
+        </div>
+
+        {/* FOOTER */}
+        <div className="flex flex-col gap-1 border-t border-[#edf1f6] px-4 py-4 text-xs text-[#8290a5] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>
             Showing {filtered.length} of {enquiries.length} enquiries
           </p>
-          <span className="text-xs text-[#8290a5]">
-            Studio Raw Picturez CRM
-          </span>
+          <span>Studio Raw Picturez CRM</span>
         </div>
       </section>
 
@@ -844,12 +891,17 @@ export default function Enquiries() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="enquiry-modal-title"
-              className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)] lg:max-w-[800px]"
+              className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)]"
             >
-              <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7 lg:px-8">
+              {/* MODAL HEADER */}
+              <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                    {editing ? <Pencil size={19} /> : <Plus size={21} />}
+                    {editing ? (
+                      <Pencil size={19} />
+                    ) : (
+                      <Plus size={21} />
+                    )}
                   </div>
 
                   <div className="min-w-0">
@@ -859,6 +911,7 @@ export default function Enquiries() {
                     >
                       {editing ? "Edit Enquiry" : "Add New Enquiry"}
                     </h3>
+
                     <p className="mt-1 text-xs text-[#8491a5]">
                       {editing
                         ? "Update customer enquiry information"
@@ -878,11 +931,11 @@ export default function Enquiries() {
               </div>
 
               <form
-                id="enquiry-form"
                 onSubmit={save}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 lg:px-8">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
+                  {/* CUSTOMER INFORMATION */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Users}
@@ -895,7 +948,10 @@ export default function Enquiries() {
                         type="text"
                         value={form.customer}
                         onChange={(event) =>
-                          updateField("customer", event.target.value)
+                          updateField(
+                            "customer",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter customer name"
                         className={fieldClass}
@@ -928,7 +984,6 @@ export default function Enquiries() {
                         onChange={(value) =>
                           updateField("source", value)
                         }
-                        compact
                       />
                     </FormField>
 
@@ -945,6 +1000,7 @@ export default function Enquiries() {
                     </FormField>
                   </div>
 
+                  {/* EVENT DETAILS */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Camera}
@@ -958,7 +1014,6 @@ export default function Enquiries() {
                         onChange={(value) =>
                           updateField("service", value)
                         }
-                        compact
                       />
                     </FormField>
 
@@ -967,7 +1022,10 @@ export default function Enquiries() {
                         type="date"
                         value={form.eventDate}
                         onChange={(event) =>
-                          updateField("eventDate", event.target.value)
+                          updateField(
+                            "eventDate",
+                            event.target.value
+                          )
                         }
                         className={fieldClass}
                       />
@@ -991,13 +1049,17 @@ export default function Enquiries() {
                         type="date"
                         value={form.nextFollowUp}
                         onChange={(event) =>
-                          updateField("nextFollowUp", event.target.value)
+                          updateField(
+                            "nextFollowUp",
+                            event.target.value
+                          )
                         }
                         className={fieldClass}
                       />
                     </FormField>
                   </div>
 
+                  {/* LEAD MANAGEMENT */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={ClipboardList}
@@ -1011,7 +1073,6 @@ export default function Enquiries() {
                         onChange={(value) =>
                           updateField("stage", value)
                         }
-                        compact
                       />
                     </FormField>
 
@@ -1023,10 +1084,13 @@ export default function Enquiries() {
                           rows={3}
                           value={form.notes}
                           onChange={(event) =>
-                            updateField("notes", event.target.value)
+                            updateField(
+                              "notes",
+                              event.target.value
+                            )
                           }
                           placeholder="Enter enquiry requirements or special notes..."
-                          className={`${fieldClass} h-auto resize-y lg:h-auto lg:min-h-[85px]`}
+                          className={`${fieldClass} min-h-[85px] resize-y`}
                         />
                       </FormField>
                     </div>
@@ -1042,7 +1106,8 @@ export default function Enquiries() {
                   )}
                 </div>
 
-                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7 lg:px-8">
+                {/* MODAL FOOTER */}
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
                   <button
                     type="button"
                     onClick={closeForm}
