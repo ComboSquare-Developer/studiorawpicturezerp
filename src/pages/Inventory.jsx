@@ -5,6 +5,7 @@ import {
   Package,
   Plus,
   Search,
+  Eye,
   Pencil,
   Trash2,
   X,
@@ -17,6 +18,12 @@ import {
   ChevronDown,
   Check,
   IndianRupee,
+  CalendarDays,
+  Building2,
+  Hash,
+  StickyNote,
+  Clock3,
+  ArrowRightLeft,
 } from "lucide-react";
 
 const INVENTORY_KEY = "studioraw_inventory";
@@ -34,7 +41,7 @@ const categories = [
 
 const units = ["Pieces", "Boxes", "Rolls", "Packs", "Sets"];
 
-const emptyForm = {
+const createEmptyForm = () => ({
   name: "",
   category: "Albums",
   sku: "",
@@ -44,10 +51,10 @@ const emptyForm = {
   unitCost: "",
   supplier: "",
   notes: "",
-};
+});
 
 const inputClass =
-  "block w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 function readArray(key) {
   try {
@@ -87,9 +94,27 @@ function formatDate(value) {
       });
 }
 
+const typeColors = {
+  IN: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  OUT: "bg-amber-50 text-amber-700 ring-amber-200",
+  OPENING: "bg-blue-50 text-blue-700 ring-blue-200",
+  ADJUSTMENT: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+  DELETED: "bg-red-50 text-red-700 ring-red-200",
+};
+
 function CustomDropdown({ value, options, onChange }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const normalizedOptions = options.map((option) =>
+    typeof option === "string"
+      ? { label: option, value: option }
+      : option
+  );
+
+  const selected = normalizedOptions.find(
+    (option) => String(option.value) === String(value)
+  );
 
   useEffect(() => {
     const handleOutside = (event) => {
@@ -114,16 +139,6 @@ function CustomDropdown({ value, options, onChange }) {
     };
   }, []);
 
-  const normalizedOptions = options.map((option) =>
-    typeof option === "string"
-      ? { label: option, value: option }
-      : option
-  );
-
-  const selected = normalizedOptions.find(
-    (option) => String(option.value) === String(value)
-  );
-
   return (
     <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
@@ -131,15 +146,15 @@ function CustomDropdown({ value, options, onChange }) {
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((previous) => !previous)}
-        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium`}
       >
-        <span className="min-w-0 flex-1 break-words">
-          {selected?.label || value || "Select"}
+        <span className="min-w-0 flex-1 truncate">
+          {selected?.label || "Select"}
         </span>
 
         <ChevronDown
-          size={18}
-          className={`shrink-0 transition ${
+          size={17}
+          className={`shrink-0 transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -148,7 +163,7 @@ function CustomDropdown({ value, options, onChange }) {
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
         >
           {normalizedOptions.map((option) => {
             const isSelected =
@@ -164,10 +179,10 @@ function CustomDropdown({ value, options, onChange }) {
                   onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                   isSelected
                     ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
+                    : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 <span className="min-w-0 flex-1 break-words">
@@ -186,25 +201,36 @@ function CustomDropdown({ value, options, onChange }) {
   );
 }
 
-function FormField({ label, children }) {
+function FormField({ label, children, required = false }) {
   return (
-    <div className="w-full min-w-0">
-      <p className="mb-2 text-sm font-medium text-slate-700">
+    <div className="min-w-0">
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
         {label}
-      </p>
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
       {children}
     </div>
   );
 }
 
-function Detail({ label, value }) {
+function DetailBox({ label, value, icon: Icon, full = false }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
+    <div
+      className={`min-w-0 rounded-xl border border-slate-100 bg-[#f7f9fc] p-3 ${
+        full ? "col-span-2" : ""
+      }`}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
+        {Icon && (
+          <Icon size={13} className="shrink-0 text-slate-400" />
+        )}
 
-      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
+        <p className="text-[11px] font-medium text-slate-500">
+          {label}
+        </p>
+      </div>
+
+      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-bold text-[#10264d]">
         {value === undefined ||
         value === null ||
         value === ""
@@ -215,7 +241,89 @@ function Detail({ label, value }) {
   );
 }
 
-function Modal({ title, subtitle, onClose, children, width = "max-w-[780px]" }) {
+function StatusBadge({ low }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ${
+        low
+          ? "bg-red-50 text-red-700 ring-red-200"
+          : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {low ? "Low Stock" : "In Stock"}
+    </span>
+  );
+}
+
+function MovementBadge({ type }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-inset ${
+        typeColors[type] ||
+        "bg-slate-100 text-slate-600 ring-slate-200"
+      }`}
+    >
+      {type}
+    </span>
+  );
+}
+
+function IconButton({
+  icon: Icon,
+  title,
+  onClick,
+  color = "blue",
+}) {
+  const colors = {
+    blue: "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100",
+    red: "border-red-100 bg-red-50 text-red-600 hover:bg-red-100",
+    slate:
+      "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+    green:
+      "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    amber:
+      "border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100",
+  };
+
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${colors[color]}`}
+    >
+      <Icon size={16} />
+    </button>
+  );
+}
+
+function Modal({
+  title,
+  subtitle,
+  onClose,
+  children,
+  width = "max-w-[780px]",
+}) {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
       <div
@@ -224,6 +332,7 @@ function Modal({ title, subtitle, onClose, children, width = "max-w-[780px]" }) 
       />
 
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -248,7 +357,7 @@ function Modal({ title, subtitle, onClose, children, width = "max-w-[780px]" }) 
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100"
+            className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
           >
             <X size={20} />
           </button>
@@ -258,6 +367,187 @@ function Modal({ title, subtitle, onClose, children, width = "max-w-[780px]" }) 
       </div>
     </div>,
     document.body
+  );
+}
+
+function InventoryCard({
+  item,
+  onView,
+  onEdit,
+  onDelete,
+  onStock,
+}) {
+  const quantity = Number(item.quantity || 0);
+  const minimumStock = Number(item.minimumStock || 0);
+  const isLowStock = quantity <= minimumStock;
+
+  return (
+    <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:border-blue-200 hover:shadow-md sm:p-5">
+      {/* CARD HEADER */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <Package size={21} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words text-sm font-extrabold text-[#10264d] sm:text-base">
+              {item.name}
+            </h3>
+
+            <p className="mt-1 break-all text-xs text-slate-400">
+              {item.sku || "No SKU"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <IconButton
+            icon={Eye}
+            title="View Inventory"
+            onClick={() => onView(item)}
+            color="slate"
+          />
+
+          <IconButton
+            icon={Pencil}
+            title="Edit Inventory"
+            onClick={() => onEdit(item)}
+          />
+
+          <IconButton
+            icon={Trash2}
+            title="Delete Inventory"
+            onClick={() => onDelete(item)}
+            color="red"
+          />
+        </div>
+      </div>
+
+      {/* CATEGORY AND STATUS */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+          {item.category || "Other"}
+        </span>
+
+        <StatusBadge low={isLowStock} />
+      </div>
+
+      {/* DETAILS */}
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <DetailBox
+          label="Available Stock"
+          value={`${quantity.toLocaleString("en-IN")} ${
+            item.unit || "Pieces"
+          }`}
+          icon={Boxes}
+        />
+
+        <DetailBox
+          label="Minimum Stock"
+          value={minimumStock}
+          icon={AlertTriangle}
+        />
+
+        <DetailBox
+          label="Unit Cost"
+          value={currency(item.unitCost)}
+          icon={IndianRupee}
+        />
+
+        <DetailBox
+          label="Stock Value"
+          value={currency(
+            quantity * Number(item.unitCost || 0)
+          )}
+          icon={IndianRupee}
+        />
+
+        <DetailBox
+          label="Supplier"
+          value={item.supplier || "Not specified"}
+          icon={Building2}
+          full
+        />
+      </div>
+
+      {/* ACTIONS */}
+      <div className="mt-auto grid grid-cols-2 gap-2.5 border-t border-slate-100 pt-4">
+        <button
+          type="button"
+          onClick={() => onStock(item, "IN")}
+          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 sm:text-sm"
+        >
+          <ArrowDownToLine size={17} />
+          Stock In
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStock(item, "OUT")}
+          className="flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-3 text-xs font-bold text-amber-700 transition hover:bg-amber-100 sm:text-sm"
+        >
+          <ArrowUpFromLine size={17} />
+          Stock Out
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function HistoryCard({ record }) {
+  const quantity = Number(record.quantity || 0);
+
+  return (
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+            <History size={20} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words text-sm font-extrabold text-[#10264d] sm:text-base">
+              {record.itemName}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Stock Movement
+            </p>
+          </div>
+        </div>
+
+        <MovementBadge type={record.type} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <DetailBox
+          label="Movement"
+          value={record.type}
+          icon={ArrowRightLeft}
+        />
+
+        <DetailBox
+          label="Stock Change"
+          value={quantity > 0 ? `+${quantity}` : quantity}
+          icon={Boxes}
+        />
+
+        <DetailBox
+          label="Date & Time"
+          value={formatDate(record.date)}
+          icon={CalendarDays}
+          full
+        />
+
+        <DetailBox
+          label="Notes"
+          value={record.note || "No notes"}
+          icon={StickyNote}
+          full
+        />
+      </div>
+    </article>
   );
 }
 
@@ -276,7 +566,9 @@ export default function Inventory() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [form, setForm] = useState(createEmptyForm);
+
+  const [viewItem, setViewItem] = useState(null);
 
   const [stockItem, setStockItem] = useState(null);
   const [stockType, setStockType] = useState("IN");
@@ -300,17 +592,6 @@ export default function Inventory() {
     );
   }, [history]);
 
-  useEffect(() => {
-    if (!showForm && !stockItem) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showForm, stockItem]);
-
   const addHistory = (record) => {
     setHistory((previous) => [
       {
@@ -333,9 +614,10 @@ export default function Inventory() {
 
   const openAdd = () => {
     setTab("inventory");
-    setForm({ ...emptyForm });
+    setForm(createEmptyForm());
     setEditingId(null);
     setStockItem(null);
+    setViewItem(null);
     setError("");
     setShowForm(true);
   };
@@ -344,7 +626,7 @@ export default function Inventory() {
     setTab("inventory");
 
     setForm({
-      ...emptyForm,
+      ...createEmptyForm(),
       ...item,
       quantity: String(item.quantity ?? ""),
       minimumStock: String(item.minimumStock ?? 0),
@@ -353,6 +635,7 @@ export default function Inventory() {
 
     setEditingId(item.id);
     setStockItem(null);
+    setViewItem(null);
     setError("");
     setShowForm(true);
   };
@@ -360,7 +643,7 @@ export default function Inventory() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm({ ...emptyForm });
+    setForm(createEmptyForm());
     setError("");
   };
 
@@ -413,10 +696,7 @@ export default function Inventory() {
         )
       );
 
-      if (
-        old &&
-        Number(old.quantity) !== quantity
-      ) {
+      if (old && Number(old.quantity) !== quantity) {
         addHistory({
           itemId: record.id,
           itemName: record.name,
@@ -462,11 +742,13 @@ export default function Inventory() {
 
     if (editingId === item.id) closeForm();
     if (stockItem?.id === item.id) closeStock();
+    if (viewItem?.id === item.id) setViewItem(null);
   };
 
   const openStock = (item, type) => {
     setTab("inventory");
     closeForm();
+    setViewItem(null);
 
     setStockItem(item);
     setStockType(type);
@@ -618,17 +900,12 @@ export default function Inventory() {
     },
   ];
 
-  const typeColors = {
-    IN: "bg-green-100 text-green-700",
-    OUT: "bg-amber-100 text-amber-700",
-    OPENING: "bg-blue-100 text-blue-700",
-    ADJUSTMENT: "bg-indigo-100 text-indigo-700",
-    DELETED: "bg-red-100 text-red-700",
-  };
+  const currentStockItem = stockItem
+    ? items.find((item) => item.id === stockItem.id)
+    : null;
 
   return (
     <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
-
       {/* HEADER */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -665,7 +942,9 @@ export default function Inventory() {
               key={stat.title}
               className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className={`absolute left-0 top-0 h-1 w-full ${stat.accent}`} />
+              <div
+                className={`absolute left-0 top-0 h-1 w-full ${stat.accent}`}
+              />
 
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -673,12 +952,16 @@ export default function Inventory() {
                     {stat.title}
                   </p>
 
-                  <h2 className={`mt-3 break-words text-3xl font-extrabold ${stat.color}`}>
+                  <h2
+                    className={`mt-3 break-words text-3xl font-extrabold ${stat.color}`}
+                  >
                     {stat.value}
                   </h2>
                 </div>
 
-                <div className={`shrink-0 rounded-2xl p-3 ${stat.bg}`}>
+                <div
+                  className={`shrink-0 rounded-2xl p-3 ${stat.bg}`}
+                >
                   <Icon size={23} className={stat.color} />
                 </div>
               </div>
@@ -693,13 +976,12 @@ export default function Inventory() {
 
       {/* MAIN SECTION */}
       <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-
         {/* TABS */}
         <div className="flex flex-wrap gap-3 border-b border-slate-100 p-4 sm:p-6">
           <button
             type="button"
             onClick={() => setTab("inventory")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
               tab === "inventory"
                 ? "bg-[#10264d] text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -712,7 +994,7 @@ export default function Inventory() {
           <button
             type="button"
             onClick={() => setTab("history")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
               tab === "history"
                 ? "bg-[#10264d] text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -726,7 +1008,7 @@ export default function Inventory() {
         {tab === "inventory" ? (
           <>
             {/* FILTERS */}
-            <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[#10264d]">
                   Inventory Items
@@ -770,14 +1052,21 @@ export default function Inventory() {
 
             {filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
-                <Package size={42} className="mb-4 text-slate-300" />
+                <div className="mb-4 rounded-2xl bg-slate-50 p-5">
+                  <Package
+                    size={36}
+                    className="text-slate-300"
+                  />
+                </div>
 
                 <h3 className="font-bold text-[#10264d]">
                   No inventory items found
                 </h3>
 
                 <p className="mt-2 text-sm text-slate-400">
-                  Add inventory or adjust your search filters.
+                  {items.length === 0
+                    ? "Start by adding your first inventory item."
+                    : "Try changing your search or category filter."}
                 </p>
 
                 <button
@@ -790,271 +1079,23 @@ export default function Inventory() {
                 </button>
               </div>
             ) : (
-              <>
-                {/* DESKTOP TABLE */}
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full min-w-[1100px] text-left">
-                    <thead className="bg-[#f8faff]">
-                      <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        <th className="px-5 py-4">Item</th>
-                        <th className="px-5 py-4">Category</th>
-                        <th className="px-5 py-4">Available</th>
-                        <th className="px-5 py-4">Min Stock</th>
-                        <th className="px-5 py-4">Unit Cost</th>
-                        <th className="px-5 py-4">Total Value</th>
-                        <th className="px-5 py-4">Status</th>
-                        <th className="px-5 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredItems.map((item) => {
-                        const quantity = Number(item.quantity || 0);
-                        const minimumStock = Number(item.minimumStock || 0);
-                        const isLowStock = quantity <= minimumStock;
-
-                        return (
-                          <tr
-                            key={item.id}
-                            className="transition hover:bg-blue-50/30"
-                          >
-                            <td className="px-5 py-5">
-                              <div className="flex items-center gap-3">
-                                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                                  <Package size={19} />
-                                </div>
-
-                                <div>
-                                  <p className="text-sm font-bold text-[#10264d]">
-                                    {item.name}
-                                  </p>
-
-                                  <p className="mt-1 text-xs text-slate-400">
-                                    {item.sku || "No SKU"}
-                                  </p>
-
-                                  {item.supplier && (
-                                    <p className="mt-1 text-xs text-slate-400">
-                                      {item.supplier}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-slate-600">
-                              {item.category}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <p className="text-sm font-bold text-[#10264d]">
-                                {quantity.toLocaleString("en-IN")}
-                              </p>
-
-                              <p className="text-xs text-slate-400">
-                                {item.unit || "Pieces"}
-                              </p>
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-slate-600">
-                              {minimumStock}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm text-slate-600">
-                              {currency(item.unitCost)}
-                            </td>
-
-                            <td className="px-5 py-5 text-sm font-bold text-[#10264d]">
-                              {currency(
-                                quantity * Number(item.unitCost || 0)
-                              )}
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <span
-                                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                                  isLowStock
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-green-100 text-green-700"
-                                }`}
-                              >
-                                {isLowStock ? "Low Stock" : "In Stock"}
-                              </span>
-                            </td>
-
-                            <td className="px-5 py-5">
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  type="button"
-                                  title="Stock In"
-                                  onClick={() => openStock(item, "IN")}
-                                  className="rounded-lg bg-green-50 p-2.5 text-green-700 hover:bg-green-100"
-                                >
-                                  <ArrowDownToLine size={16} />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  title="Stock Out"
-                                  onClick={() => openStock(item, "OUT")}
-                                  className="rounded-lg bg-amber-50 p-2.5 text-amber-700 hover:bg-amber-100"
-                                >
-                                  <ArrowUpFromLine size={16} />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  title="Edit Inventory"
-                                  onClick={() => openEdit(item)}
-                                  className="rounded-lg bg-blue-50 p-2.5 text-blue-700 hover:bg-blue-100"
-                                >
-                                  <Pencil size={16} />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  title="Delete Item"
-                                  onClick={() => deleteItem(item)}
-                                  className="rounded-lg bg-red-50 p-2.5 text-red-600 hover:bg-red-100"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* MOBILE / TABLET CARDS */}
-                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-                  {filteredItems.map((item) => {
-                    const quantity = Number(item.quantity || 0);
-                    const minimumStock = Number(item.minimumStock || 0);
-                    const isLowStock = quantity <= minimumStock;
-
-                    return (
-                      <article
-                        key={item.id}
-                        className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md"
-                      >
-                        <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                          <div className="min-w-0">
-                            <h3 className="break-words text-base font-bold text-[#10264d]">
-                              {item.name}
-                            </h3>
-
-                            <p className="mt-1 text-xs text-slate-400">
-                              {item.category}
-                            </p>
-                          </div>
-
-                          <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-600">
-                            <Package size={20} />
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <span
-                            className={`inline-block rounded-full px-3 py-1.5 text-xs font-semibold ${
-                              isLowStock
-                                ? "bg-red-100 text-red-700"
-                                : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {isLowStock ? "Low Stock" : "In Stock"}
-                          </span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <Detail
-                            label="SKU / Item Code"
-                            value={item.sku || "Not specified"}
-                          />
-
-                          <Detail
-                            label="Available Stock"
-                            value={`${quantity.toLocaleString("en-IN")} ${
-                              item.unit || "Pieces"
-                            }`}
-                          />
-
-                          <Detail
-                            label="Minimum Stock"
-                            value={minimumStock}
-                          />
-
-                          <Detail
-                            label="Unit Cost"
-                            value={currency(item.unitCost)}
-                          />
-
-                          <Detail
-                            label="Total Stock Value"
-                            value={currency(
-                              quantity * Number(item.unitCost || 0)
-                            )}
-                          />
-
-                          <Detail
-                            label="Supplier"
-                            value={item.supplier || "Not specified"}
-                          />
-
-                          {item.notes && (
-                            <Detail label="Notes" value={item.notes} />
-                          )}
-                        </div>
-
-                        <div className="mt-5 grid grid-cols-2 gap-2 border-t border-slate-200 pt-4">
-                          <button
-                            type="button"
-                            onClick={() => openStock(item, "IN")}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-green-50 px-3 py-3 text-xs font-semibold text-green-700"
-                          >
-                            <ArrowDownToLine size={16} />
-                            Stock In
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openStock(item, "OUT")}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-700"
-                          >
-                            <ArrowUpFromLine size={16} />
-                            Stock Out
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openEdit(item)}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-3 py-3 text-xs font-semibold text-white"
-                          >
-                            <Pencil size={16} />
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => deleteItem(item)}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-3 text-xs font-semibold text-red-600"
-                          >
-                            <Trash2 size={16} />
-                            Delete
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </>
+              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:p-6">
+                {filteredItems.map((item) => (
+                  <InventoryCard
+                    key={item.id}
+                    item={item}
+                    onView={setViewItem}
+                    onEdit={openEdit}
+                    onDelete={deleteItem}
+                    onStock={openStock}
+                  />
+                ))}
+              </div>
             )}
           </>
         ) : (
           <>
-            {/* STOCK HISTORY */}
+            {/* HISTORY HEADER */}
             <div className="border-b border-slate-100 p-4 sm:p-6">
               <h2 className="flex items-center gap-2 text-lg font-bold text-[#10264d]">
                 <History size={20} className="text-blue-700" />
@@ -1067,114 +1108,149 @@ export default function Inventory() {
             </div>
 
             {history.length === 0 ? (
-              <div className="py-16 text-center">
-                <History size={42} className="mx-auto mb-3 text-slate-300" />
-                <p className="text-sm text-slate-400">
+              <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+                <History
+                  size={42}
+                  className="mb-4 text-slate-300"
+                />
+
+                <h3 className="font-bold text-[#10264d]">
                   No stock history available
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Stock movements will appear here.
                 </p>
               </div>
             ) : (
-              <>
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full min-w-[800px] text-left">
-                    <thead className="bg-[#f8faff]">
-                      <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        <th className="px-5 py-4">Item</th>
-                        <th className="px-5 py-4">Date & Time</th>
-                        <th className="px-5 py-4">Movement</th>
-                        <th className="px-5 py-4">Stock Change</th>
-                        <th className="px-5 py-4">Note</th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-slate-100">
-                      {history.map((record) => (
-                        <tr key={record.id} className="hover:bg-slate-50">
-                          <td className="px-5 py-4 text-sm font-semibold text-[#10264d]">
-                            {record.itemName}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-slate-600">
-                            {formatDate(record.date)}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span
-                              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                                typeColors[record.type] ||
-                                "bg-slate-100 text-slate-700"
-                              }`}
-                            >
-                              {record.type}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4 text-sm font-bold text-[#10264d]">
-                            {Number(record.quantity) > 0
-                              ? `+${record.quantity}`
-                              : String(record.quantity)}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-slate-600">
-                            {record.note || "No notes"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-                  {history.map((record) => (
-                    <article
-                      key={record.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
-                    >
-                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                        <h3 className="break-words font-bold text-[#10264d]">
-                          {record.itemName}
-                        </h3>
-
-                        <span
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                            typeColors[record.type] ||
-                            "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {record.type}
-                        </span>
-                      </div>
-
-                      <div className="space-y-4">
-                        <Detail
-                          label="Date & Time"
-                          value={formatDate(record.date)}
-                        />
-
-                        <Detail
-                          label="Stock Change"
-                          value={
-                            Number(record.quantity) > 0
-                              ? `+${record.quantity}`
-                              : String(record.quantity)
-                          }
-                        />
-
-                        <Detail
-                          label="Note"
-                          value={record.note || "No notes"}
-                        />
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </>
+              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:p-6">
+                {history.map((record) => (
+                  <HistoryCard
+                    key={record.id}
+                    record={record}
+                  />
+                ))}
+              </div>
             )}
           </>
         )}
       </section>
 
-      {/* ADD / EDIT INVENTORY CENTER MODAL */}
+      {/* VIEW INVENTORY MODAL */}
+      {viewItem && (
+        <Modal
+          title="Inventory Details"
+          subtitle="View complete stock item information."
+          onClose={() => setViewItem(null)}
+          width="max-w-[650px]"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-7">
+            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
+                <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+                  <Package size={24} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words text-lg font-extrabold text-[#10264d]">
+                    {viewItem.name}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    {viewItem.category}
+                  </p>
+
+                  <div className="mt-3">
+                    <StatusBadge
+                      low={
+                        Number(viewItem.quantity || 0) <=
+                        Number(viewItem.minimumStock || 0)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <DetailBox
+                  label="SKU / Item Code"
+                  value={viewItem.sku || "Not specified"}
+                  icon={Hash}
+                  full
+                />
+
+                <DetailBox
+                  label="Available Stock"
+                  value={`${Number(
+                    viewItem.quantity || 0
+                  ).toLocaleString("en-IN")} ${
+                    viewItem.unit || "Pieces"
+                  }`}
+                  icon={Boxes}
+                />
+
+                <DetailBox
+                  label="Minimum Stock"
+                  value={viewItem.minimumStock}
+                  icon={AlertTriangle}
+                />
+
+                <DetailBox
+                  label="Unit Cost"
+                  value={currency(viewItem.unitCost)}
+                  icon={IndianRupee}
+                />
+
+                <DetailBox
+                  label="Total Value"
+                  value={currency(
+                    Number(viewItem.quantity || 0) *
+                      Number(viewItem.unitCost || 0)
+                  )}
+                  icon={IndianRupee}
+                />
+
+                <DetailBox
+                  label="Supplier"
+                  value={viewItem.supplier || "Not specified"}
+                  icon={Building2}
+                  full
+                />
+
+                <DetailBox
+                  label="Notes"
+                  value={viewItem.notes || "No notes"}
+                  icon={StickyNote}
+                  full
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setViewItem(null)}
+                className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openEdit(viewItem)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-900"
+              >
+                <Pencil size={16} />
+                Edit Inventory
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ADD / EDIT INVENTORY MODAL */}
       {showForm && (
         <Modal
           title={editingId ? "Edit Inventory" : "Add Inventory"}
@@ -1186,16 +1262,18 @@ export default function Inventory() {
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
-
-              {/* ITEM DETAILS */}
+              {/* ITEM INFORMATION */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
-                  <Package size={18} className="text-blue-600" />
+                  <Package
+                    size={18}
+                    className="text-blue-600"
+                  />
                   Item Information
                 </h3>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Item Name">
+                  <FormField label="Item Name" required>
                     <input
                       type="text"
                       required
@@ -1242,15 +1320,18 @@ export default function Inventory() {
                 </div>
               </div>
 
-              {/* STOCK DETAILS */}
+              {/* STOCK & PRICING */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
-                  <Boxes size={18} className="text-blue-600" />
+                  <Boxes
+                    size={18}
+                    className="text-blue-600"
+                  />
                   Stock & Pricing
                 </h3>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Quantity">
+                  <FormField label="Quantity" required>
                     <input
                       type="number"
                       min="0"
@@ -1265,7 +1346,7 @@ export default function Inventory() {
                     />
                   </FormField>
 
-                  <FormField label="Minimum Stock">
+                  <FormField label="Minimum Stock" required>
                     <input
                       type="number"
                       min="0"
@@ -1273,7 +1354,10 @@ export default function Inventory() {
                       required
                       value={form.minimumStock}
                       onChange={(event) =>
-                        update("minimumStock", event.target.value)
+                        update(
+                          "minimumStock",
+                          event.target.value
+                        )
                       }
                       className={inputClass}
                     />
@@ -1327,7 +1411,10 @@ export default function Inventory() {
                   role="alert"
                   className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
                 >
-                  <AlertTriangle size={18} className="shrink-0" />
+                  <AlertTriangle
+                    size={18}
+                    className="shrink-0"
+                  />
                   {error}
                 </div>
               )}
@@ -1359,7 +1446,7 @@ export default function Inventory() {
         </Modal>
       )}
 
-      {/* STOCK IN / OUT CENTER MODAL */}
+      {/* STOCK IN / OUT MODAL */}
       {stockItem && (
         <Modal
           title={`Stock ${stockType === "IN" ? "In" : "Out"}`}
@@ -1379,9 +1466,7 @@ export default function Inventory() {
 
                 <p className="mt-3 break-words text-3xl font-extrabold text-[#10264d]">
                   {Number(
-                    items.find(
-                      (item) => item.id === stockItem.id
-                    )?.quantity || 0
+                    currentStockItem?.quantity || 0
                   ).toLocaleString("en-IN")}{" "}
                   <span className="text-base font-semibold text-slate-500">
                     {stockItem.unit || "Pieces"}
@@ -1391,7 +1476,7 @@ export default function Inventory() {
 
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <div className="space-y-5">
-                  <FormField label="Quantity">
+                  <FormField label="Quantity" required>
                     <input
                       type="number"
                       min="1"
@@ -1426,7 +1511,10 @@ export default function Inventory() {
                   role="alert"
                   className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
                 >
-                  <AlertTriangle size={18} className="shrink-0" />
+                  <AlertTriangle
+                    size={18}
+                    className="shrink-0"
+                  />
                   {stockError}
                 </div>
               )}
@@ -1447,7 +1535,7 @@ export default function Inventory() {
                   type="submit"
                   className={`flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white ${
                     stockType === "IN"
-                      ? "bg-green-700 hover:bg-green-800"
+                      ? "bg-emerald-700 hover:bg-emerald-800"
                       : "bg-[#10264d] hover:bg-blue-900"
                   }`}
                 >
@@ -1457,7 +1545,8 @@ export default function Inventory() {
                     <ArrowUpFromLine size={17} />
                   )}
 
-                  Confirm Stock {stockType === "IN" ? "In" : "Out"}
+                  Confirm Stock{" "}
+                  {stockType === "IN" ? "In" : "Out"}
                 </button>
               </div>
             </div>

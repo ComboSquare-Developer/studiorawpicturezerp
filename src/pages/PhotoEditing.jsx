@@ -48,24 +48,9 @@ const events = [
   "Other",
 ];
 
-const editingStatuses = [
-  "Not Started",
-  "In Progress",
-  "Completed",
-];
-
-const selectionStatuses = [
-  "Pending",
-  "In Progress",
-  "Completed",
-];
-
-const approvalStatuses = [
-  "Pending",
-  "Approved",
-  "Rejected",
-];
-
+const editingStatuses = ["Not Started", "In Progress", "Completed"];
+const selectionStatuses = ["Pending", "In Progress", "Completed"];
+const approvalStatuses = ["Pending", "Approved", "Rejected"];
 const priorities = ["Low", "Normal", "High", "Urgent"];
 
 const statusColors = {
@@ -85,7 +70,7 @@ const priorityColors = {
 };
 
 const inputClass =
-  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 function readRecords() {
   try {
@@ -105,9 +90,21 @@ function createId() {
 
 function formatCount(value) {
   const number = Number(value || 0);
-  return (Number.isFinite(number) ? number : 0).toLocaleString(
-    "en-IN"
-  );
+  return (Number.isFinite(number) ? number : 0).toLocaleString("en-IN");
+}
+
+function formatDate(value) {
+  if (!value) return "Not specified";
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function getProgress(status) {
@@ -167,7 +164,7 @@ function CustomDropdown({ value, options, onChange }) {
       {open && (
         <div
           role="listbox"
-          className="mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-md"
+          className="relative z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-md"
         >
           {options.map((option) => {
             const selected = value === option;
@@ -202,6 +199,29 @@ function CustomDropdown({ value, options, onChange }) {
   );
 }
 
+function MobileDetail({ label, value, icon: Icon, full = false }) {
+  return (
+    <div className={`min-w-0 ${full ? "col-span-2" : ""}`}>
+      <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
+        {label}
+      </p>
+
+      <div className="mt-1 flex min-w-0 items-start gap-1.5">
+        {Icon && (
+          <Icon
+            size={13}
+            className="mt-0.5 shrink-0 text-[#4972a8]"
+          />
+        )}
+
+        <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
+          {value || "—"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Detail({ label, value, icon: Icon }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
@@ -211,10 +231,7 @@ function Detail({ label, value, icon: Icon }) {
 
       <div className="flex min-w-0 items-start gap-2">
         {Icon && (
-          <Icon
-            size={16}
-            className="mt-0.5 shrink-0 text-blue-600"
-          />
+          <Icon size={16} className="mt-0.5 shrink-0 text-blue-600" />
         )}
 
         <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
@@ -222,6 +239,20 @@ function Detail({ label, value, icon: Icon }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function StatusBadge({ value, priority = false }) {
+  const color = priority
+    ? priorityColors[value] || priorityColors.Normal
+    : statusColors[value] || statusColors.Pending;
+
+  return (
+    <span
+      className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1.5 text-[10px] font-semibold sm:px-3 sm:text-xs ${color}`}
+    >
+      {value || "Pending"}
+    </span>
   );
 }
 
@@ -275,11 +306,10 @@ function ModalShell({
         aria-label={title}
         className="flex max-h-[96dvh] w-full max-w-[850px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[92dvh] sm:rounded-3xl"
       >
-        {/* FIXED MODAL HEADER */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-8 sm:py-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4 sm:px-8 sm:py-6">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#10264d] text-white">
-              <Images size={23} />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#10264d] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
+              <Images size={22} />
             </div>
 
             <div className="min-w-0">
@@ -303,16 +333,11 @@ function ModalShell({
           </button>
         </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          {/* SCROLLABLE MODAL BODY */}
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-[#f8faff] px-4 py-5 sm:px-8 sm:py-7">
             {children}
           </div>
 
-          {/* FIXED MODAL FOOTER */}
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-8">
             <button
               type="button"
@@ -508,7 +533,7 @@ export default function PhotoEditing() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-7">
+    <div className="min-h-screen w-full min-w-0 space-y-5 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-6 lg:px-7">
       {/* PAGE HEADER */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -531,38 +556,42 @@ export default function PhotoEditing() {
         </button>
       </div>
 
-      {/* STATISTICS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* COMPACT 2x2 MOBILE STATISTICS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.title}
-              className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="min-w-0 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm transition hover:shadow-md sm:p-5 lg:hover:-translate-y-1"
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.title}
-                </p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium leading-4 text-slate-500 sm:text-sm">
+                    {stat.title}
+                  </p>
 
-                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
-                  <Icon size={22} className={stat.color} />
+                  <h2
+                    className={`mt-2 break-all text-xl font-bold sm:mt-3 sm:text-3xl ${stat.color}`}
+                  >
+                    {stat.value}
+                  </h2>
+                </div>
+
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
+                >
+                  <Icon size={17} className={stat.color} />
                 </div>
               </div>
-
-              <h2
-                className={`mt-3 break-words text-3xl font-bold ${stat.color}`}
-              >
-                {stat.value}
-              </h2>
             </div>
           );
         })}
       </div>
 
       {/* EDITING PROJECTS */}
-      <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+      <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:p-6">
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-bold text-[#10264d]">
@@ -614,198 +643,368 @@ export default function PhotoEditing() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {filtered.map((item) => {
-              const progress = getProgress(item.editingStatus);
+          <>
+            {/* DESKTOP PROJECT CARDS */}
+            <div className="hidden grid-cols-1 gap-4 lg:grid xl:grid-cols-2">
+              {filtered.map((item) => {
+                const progress = getProgress(item.editingStatus);
 
-              return (
-                <article
-                  key={item.id}
-                  className="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md sm:p-5"
-                >
-                  {/* PROJECT HEADER */}
-                  <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
-                        {item.customer}
-                      </h3>
+                return (
+                  <article
+                    key={item.id}
+                    className="flex min-w-0 flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:shadow-md"
+                  >
+                    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-base font-bold text-[#10264d]">
+                          {item.customer}
+                        </h3>
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        {item.event}
-                      </p>
-                    </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {item.event}
+                        </p>
+                      </div>
 
-                    <span
-                      className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-                        statusColors[item.editingStatus] ||
-                        statusColors["Not Started"]
-                      }`}
-                    >
-                      {item.editingStatus || "Not Started"}
-                    </span>
-                  </div>
-
-                  {/* PROJECT DETAILS */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Detail
-                      label="Shoot Date"
-                      value={item.shootDate || "Not specified"}
-                      icon={CalendarDays}
-                    />
-
-                    <Detail
-                      label="Assigned Editor"
-                      value={item.editor || "Not assigned"}
-                      icon={UserRound}
-                    />
-
-                    <Detail
-                      label="Editing Deadline"
-                      value={item.deadline || "Not assigned"}
-                      icon={Clock3}
-                    />
-                  </div>
-
-                  {/* PHOTO COUNTS */}
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl bg-blue-50 p-4">
-                      <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                        <Images size={16} />
-                        Total Photos
-                      </p>
-
-                      <p className="mt-2 break-all text-2xl font-bold text-blue-800">
-                        {formatCount(item.totalPhotos)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl bg-indigo-50 p-4">
-                      <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                        <ImageIcon size={16} />
-                        Selected Photos
-                      </p>
-
-                      <p className="mt-2 break-all text-2xl font-bold text-indigo-800">
-                        {formatCount(item.selectedPhotos)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* STATUS DETAILS */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div>
-                      <p className="mb-2 text-xs font-medium text-slate-400">
-                        Selection Status
-                      </p>
-
-                      <span
-                        className={`inline-flex rounded-lg px-3 py-2 text-xs font-semibold ${
-                          statusColors[item.selectionStatus] ||
-                          statusColors.Pending
-                        }`}
-                      >
-                        {item.selectionStatus || "Pending"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="mb-2 text-xs font-medium text-slate-400">
-                        Client Approval
-                      </p>
-
-                      <span
-                        className={`inline-flex rounded-lg px-3 py-2 text-xs font-semibold ${
-                          statusColors[item.approvalStatus] ||
-                          statusColors.Pending
-                        }`}
-                      >
-                        {item.approvalStatus || "Pending"}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
-                        <Flag size={15} />
-                        Priority
-                      </p>
-
-                      <span
-                        className={`inline-flex rounded-lg px-3 py-2 text-xs font-semibold ${
-                          priorityColors[item.priority] ||
-                          priorityColors.Normal
-                        }`}
-                      >
-                        {item.priority || "Normal"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* EDITING PROGRESS */}
-                  <div className="rounded-xl border border-slate-100 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Editing Progress
-                      </p>
-
-                      <p className="text-sm font-bold text-[#10264d]">
-                        {progress}%
-                      </p>
-                    </div>
-
-                    <div
-                      role="progressbar"
-                      aria-label="Editing progress"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={progress}
-                      className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
-                    >
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          progress === 100
-                            ? "bg-green-500"
-                            : "bg-blue-700"
-                        }`}
-                        style={{ width: `${progress}%` }}
+                      <StatusBadge
+                        value={item.editingStatus || "Not Started"}
                       />
                     </div>
-                  </div>
 
-                  {item.notes && (
-                    <Detail
-                      label="Editing Notes"
-                      value={item.notes}
-                    />
-                  )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Detail
+                        label="Shoot Date"
+                        value={item.shootDate || "Not specified"}
+                        icon={CalendarDays}
+                      />
 
-                  {/* ACTIONS */}
-                  <div className="mt-auto flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
-                    >
-                      <Pencil size={17} />
-                      Manage Editing
-                    </button>
+                      <Detail
+                        label="Assigned Editor"
+                        value={item.editor || "Not assigned"}
+                        icon={UserRound}
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => deleteRecord(item.id)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      <Trash2 size={17} />
-                      Delete Project
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                      <Detail
+                        label="Editing Deadline"
+                        value={item.deadline || "Not assigned"}
+                        icon={Clock3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-blue-50 p-4">
+                        <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                          <Images size={16} />
+                          Total Photos
+                        </p>
+
+                        <p className="mt-2 break-all text-2xl font-bold text-blue-800">
+                          {formatCount(item.totalPhotos)}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-indigo-50 p-4">
+                        <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                          <ImageIcon size={16} />
+                          Selected Photos
+                        </p>
+
+                        <p className="mt-2 break-all text-2xl font-bold text-indigo-800">
+                          {formatCount(item.selectedPhotos)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-slate-400">
+                          Selection Status
+                        </p>
+
+                        <StatusBadge
+                          value={item.selectionStatus || "Pending"}
+                        />
+                      </div>
+
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-slate-400">
+                          Client Approval
+                        </p>
+
+                        <StatusBadge
+                          value={item.approvalStatus || "Pending"}
+                        />
+                      </div>
+
+                      <div>
+                        <p className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
+                          <Flag size={15} />
+                          Priority
+                        </p>
+
+                        <StatusBadge
+                          value={item.priority || "Normal"}
+                          priority
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 bg-white p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-xs font-medium text-slate-500">
+                          Editing Progress
+                        </p>
+
+                        <p className="text-sm font-bold text-[#10264d]">
+                          {progress}%
+                        </p>
+                      </div>
+
+                      <div
+                        role="progressbar"
+                        aria-label="Editing progress"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                        className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            progress === 100
+                              ? "bg-green-500"
+                              : "bg-blue-700"
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {item.notes && (
+                      <Detail
+                        label="Editing Notes"
+                        value={item.notes}
+                      />
+                    )}
+
+                    <div className="mt-auto flex gap-3 border-t border-slate-200 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
+                      >
+                        <Pencil size={17} />
+                        Manage Editing
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteRecord(item.id)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      >
+                        <Trash2 size={17} />
+                        Delete Project
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* PREMIUM COMPACT MOBILE / TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:hidden">
+              {filtered.map((item) => {
+                const progress = getProgress(item.editingStatus);
+
+                return (
+                  <article
+                    key={item.id}
+                    className="flex min-w-0 flex-col rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
+                  >
+                    {/* CARD HEADER */}
+                    <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                          <Images size={18} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-bold text-[#10264d]">
+                            {item.customer}
+                          </h3>
+
+                          <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                            {item.event}
+                          </p>
+                        </div>
+                      </div>
+
+                      <StatusBadge
+                        value={item.editingStatus || "Not Started"}
+                      />
+                    </div>
+
+                    {/* TWO COLUMN DETAILS */}
+                    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
+                      <MobileDetail
+                        label="Shoot Date"
+                        value={formatDate(item.shootDate)}
+                        icon={CalendarDays}
+                      />
+
+                      <MobileDetail
+                        label="Editing Deadline"
+                        value={formatDate(item.deadline)}
+                        icon={Clock3}
+                      />
+
+                      <MobileDetail
+                        label="Assigned Editor"
+                        value={item.editor || "Not assigned"}
+                        icon={UserRound}
+                      />
+
+                      <MobileDetail
+                        label="Priority"
+                        value={item.priority || "Normal"}
+                        icon={Flag}
+                      />
+                    </div>
+
+                    {/* PHOTO COUNTS */}
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="min-w-0 rounded-xl bg-blue-50 p-3">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-[10px] font-medium text-slate-500">
+                            Total Photos
+                          </p>
+
+                          <Images
+                            size={14}
+                            className="shrink-0 text-blue-700"
+                          />
+                        </div>
+
+                        <p className="mt-1.5 break-all text-lg font-bold text-blue-800">
+                          {formatCount(item.totalPhotos)}
+                        </p>
+                      </div>
+
+                      <div className="min-w-0 rounded-xl bg-indigo-50 p-3">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-[10px] font-medium text-slate-500">
+                            Selected Photos
+                          </p>
+
+                          <ImageIcon
+                            size={14}
+                            className="shrink-0 text-indigo-700"
+                          />
+                        </div>
+
+                        <p className="mt-1.5 break-all text-lg font-bold text-indigo-800">
+                          {formatCount(item.selectedPhotos)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* STATUS DETAILS */}
+                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-[#f8faff] p-3">
+                      <div className="min-w-0">
+                        <p className="mb-2 text-[10px] font-medium text-slate-400">
+                          Selection Status
+                        </p>
+
+                        <StatusBadge
+                          value={item.selectionStatus || "Pending"}
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="mb-2 text-[10px] font-medium text-slate-400">
+                          Client Approval
+                        </p>
+
+                        <StatusBadge
+                          value={item.approvalStatus || "Pending"}
+                        />
+                      </div>
+                    </div>
+
+                    {/* PROGRESS */}
+                    <div className="mt-3 rounded-xl border border-slate-100 bg-white p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-slate-500">
+                          Editing Progress
+                        </p>
+
+                        <p className="text-xs font-bold text-[#10264d]">
+                          {progress}%
+                        </p>
+                      </div>
+
+                      <div
+                        role="progressbar"
+                        aria-label="Editing progress"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                        className="h-2 w-full overflow-hidden rounded-full bg-slate-100"
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            progress === 100
+                              ? "bg-green-500"
+                              : "bg-blue-700"
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* NOTES */}
+                    {item.notes && (
+                      <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                        <p className="text-[10px] font-medium text-slate-400">
+                          Editing Notes
+                        </p>
+
+                        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#52627b]">
+                          {item.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* COMPACT ACTIONS */}
+                    <div className="mt-auto grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-[#edf1f6] pt-3">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
+                        className="flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#10264d] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-blue-900"
+                      >
+                        <Pencil size={15} className="shrink-0" />
+                        <span className="truncate">
+                          Manage Editing
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteRecord(item.id)}
+                        title="Delete Project"
+                        aria-label={`Delete editing project for ${item.customer}`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
-      {/* CENTERED NEW / EDIT MODAL */}
+      {/* CREATE / EDIT MODAL */}
       {showForm && (
         <ModalShell
           title={
@@ -820,7 +1019,7 @@ export default function PhotoEditing() {
             editingId ? "Update Project" : "Save Project"
           }
         >
-          {/* CUSTOMER & EVENT */}
+          {/* PROJECT INFORMATION */}
           <section className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
             <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="rounded-xl bg-blue-50 p-2.5 text-blue-700">
@@ -966,7 +1165,7 @@ export default function PhotoEditing() {
             </div>
           </section>
 
-          {/* EDITING DETAILS */}
+          {/* EDITING WORKFLOW */}
           <section className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5">
             <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="rounded-xl bg-green-50 p-2.5 text-green-700">

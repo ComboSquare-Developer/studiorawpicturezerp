@@ -63,10 +63,10 @@ const statuses = [
 const backupStatuses = ["Pending", "Completed"];
 
 const statusColors = {
-  Scheduled: "bg-amber-100 text-amber-700",
-  "In Progress": "bg-blue-100 text-blue-700",
-  Completed: "bg-green-100 text-green-700",
-  Cancelled: "bg-red-100 text-red-700",
+  Scheduled: "border-amber-100 bg-amber-50 text-amber-700",
+  "In Progress": "border-blue-100 bg-blue-50 text-blue-700",
+  Completed: "border-green-100 bg-green-50 text-green-700",
+  Cancelled: "border-red-100 bg-red-50 text-red-700",
 };
 
 const inputClass =
@@ -79,6 +79,20 @@ const countNumber = (value) => {
 
 const formatCount = (value) =>
   countNumber(value).toLocaleString("en-IN");
+
+const formatDate = (value) => {
+  if (!value) return "—";
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 function CustomDropdown({ value, options, onChange }) {
   return (
@@ -110,6 +124,7 @@ function FormField({ label, required = false, children }) {
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
+
       {children}
     </div>
   );
@@ -118,7 +133,7 @@ function FormField({ label, required = false, children }) {
 function SectionHeading({ icon: Icon, title, description }) {
   return (
     <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91] sm:h-11 sm:w-11">
         <Icon size={20} />
       </div>
 
@@ -126,6 +141,7 @@ function SectionHeading({ icon: Icon, title, description }) {
         <h3 className="text-sm font-bold text-[#10264d]">
           {title}
         </h3>
+
         {description && (
           <p className="mt-1 text-xs text-slate-400">
             {description}
@@ -136,22 +152,22 @@ function SectionHeading({ icon: Icon, title, description }) {
   );
 }
 
-function Detail({ label, value, icon: Icon }) {
+function MobileDetail({ label, value, icon: Icon, full = false }) {
   return (
-    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
+    <div className={`min-w-0 ${full ? "col-span-2" : ""}`}>
+      <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
         {label}
       </p>
 
-      <div className="mt-1.5 flex min-w-0 items-start gap-2">
+      <div className="mt-1 flex min-w-0 items-start gap-1.5">
         {Icon && (
           <Icon
-            size={16}
-            className="mt-0.5 shrink-0 text-blue-600"
+            size={13}
+            className="mt-0.5 shrink-0 text-[#4972a8]"
           />
         )}
 
-        <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
+        <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
           {value || "—"}
         </p>
       </div>
@@ -162,16 +178,37 @@ function Detail({ label, value, icon: Icon }) {
 function StatusBadge({ value, backup = false }) {
   const color = backup
     ? value === "Completed"
-      ? "bg-green-100 text-green-700"
-      : "bg-orange-100 text-orange-700"
-    : statusColors[value] || "bg-slate-100 text-slate-700";
+      ? "border-green-100 bg-green-50 text-green-700"
+      : "border-orange-100 bg-orange-50 text-orange-700"
+    : statusColors[value] ||
+      "border-slate-100 bg-slate-50 text-slate-700";
 
   return (
     <span
-      className={`inline-flex w-fit items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${color}`}
+      className={`inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-xs ${color}`}
     >
       {value || "Pending"}
     </span>
+  );
+}
+
+function MediaCount({ title, value, icon: Icon, color, bg }) {
+  return (
+    <div className={`min-w-0 rounded-xl border border-slate-100 ${bg} p-3`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
+          {title}
+        </p>
+
+        <Icon size={15} className={`shrink-0 ${color}`} />
+      </div>
+
+      <p
+        className={`mt-1.5 break-all text-lg font-extrabold tracking-tight sm:text-xl ${color}`}
+      >
+        {formatCount(value)}
+      </p>
+    </div>
   );
 }
 
@@ -214,15 +251,15 @@ function ModalShell({
         aria-label={title}
         className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
       >
-        {/* Fixed Header */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
-              <Camera size={23} />
+        {/* FIXED HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
+              <Camera size={22} />
             </div>
 
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-[#10264d] sm:text-[23px]">
+              <h2 className="break-words text-lg font-bold text-[#10264d] sm:text-[23px]">
                 {title}
               </h2>
 
@@ -238,20 +275,20 @@ function ModalShell({
             aria-label="Close form"
             className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
           >
-            <X size={22} />
+            <X size={21} />
           </button>
         </div>
 
+        {/* SCROLLABLE FORM */}
         <form
           onSubmit={onSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {/* Scrollable Form Body */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-9 sm:py-7">
             {children}
           </div>
 
-          {/* Fixed Footer */}
+          {/* FIXED FOOTER */}
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
             <button
               type="button"
@@ -303,6 +340,7 @@ export default function PhotoShoot() {
       ...previous,
       [key]: value,
     }));
+
     setError("");
   };
 
@@ -318,6 +356,7 @@ export default function PhotoShoot() {
       ...createEmptyForm(),
       ...item,
     });
+
     setEditingId(item.id);
     setError("");
     setShowForm(true);
@@ -451,7 +490,7 @@ export default function PhotoShoot() {
     {
       title: "Backup Pending",
       value: shoots.filter(
-        (item) => item.backup === "Pending"
+        (item) => (item.backup || "Pending") === "Pending"
       ).length,
       icon: HardDrive,
       color: "text-orange-600",
@@ -463,7 +502,7 @@ export default function PhotoShoot() {
     <div
       className={
         compact
-          ? "flex flex-col gap-2"
+          ? "grid grid-cols-[minmax(0,1fr)_auto] gap-2"
           : "flex items-center justify-end gap-2"
       }
     >
@@ -471,38 +510,46 @@ export default function PhotoShoot() {
         type="button"
         onClick={() => openEdit(item)}
         title="Manage Shoot"
+        aria-label={`Manage shoot for ${item.customer}`}
         className={
           compact
-            ? "flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-4 py-3 text-sm font-semibold text-white"
+            ? "flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#112e60] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1a4384] sm:text-xs"
             : "rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
         }
       >
-        <Pencil size={17} />
-        {compact && "Manage Shoot"}
+        <Pencil size={compact ? 15 : 17} className="shrink-0" />
+
+        {compact && (
+          <span className="truncate">Manage Shoot</span>
+        )}
       </button>
 
       <button
         type="button"
         onClick={() => deleteShoot(item.id)}
         title="Delete Shoot"
+        aria-label={`Delete shoot for ${item.customer}`}
         className={
           compact
-            ? "flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
             : "rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
         }
       >
-        <Trash2 size={17} />
-        {compact && "Delete Shoot"}
+        <Trash2 size={compact ? 16 : 17} />
       </button>
     </div>
   );
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
+      {/* PAGE HEADER */}
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
+          <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
+            Photography Operations
+          </p>
+
+          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
             Photo Shoot & Data Collection
           </h1>
 
@@ -514,38 +561,40 @@ export default function PhotoShoot() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] lg:w-auto lg:px-6"
         >
           <Plus size={18} />
           New Shoot
         </button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* COMPACT 2 X 2 MOBILE STATISTICS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.title}
-              className="group min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white p-3.5 shadow-[0_3px_14px_rgba(16,38,77,0.035)] transition hover:shadow-md sm:p-5 lg:hover:-translate-y-0.5"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-500">
+                  <p className="text-[10px] font-semibold leading-4 text-slate-500 sm:text-sm">
                     {stat.title}
                   </p>
 
                   <h2
-                    className={`mt-3 break-words text-2xl font-bold tracking-tight ${stat.color}`}
+                    className={`mt-2 break-all text-xl font-extrabold tracking-tight sm:mt-3 sm:text-3xl ${stat.color}`}
                   >
                     {stat.value}
                   </h2>
                 </div>
 
-                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
-                  <Icon size={22} className={stat.color} />
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
+                >
+                  <Icon size={17} className={stat.color} />
                 </div>
               </div>
             </div>
@@ -553,16 +602,17 @@ export default function PhotoShoot() {
         })}
       </div>
 
-      {/* Shoot Records */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <div className="border-b border-slate-100 p-4 sm:p-6">
+      {/* SHOOT RECORDS */}
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm lg:rounded-[22px]">
+        {/* TOOLBAR */}
+        <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:px-6 lg:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#10264d]">
                 Shoot Records
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 View and manage photography shoot records.
               </p>
             </div>
@@ -577,7 +627,9 @@ export default function PhotoShoot() {
                 <input
                   type="search"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
                   placeholder="Search shoots..."
                   className={`${inputClass} pl-10`}
                 />
@@ -600,17 +652,18 @@ export default function PhotoShoot() {
               size={42}
               className="mx-auto mb-3 text-slate-300"
             />
+
             <p className="text-sm text-slate-400">
               No photo shoot records found
             </p>
           </div>
         ) : (
           <>
-            {/* Desktop Table */}
+            {/* DESKTOP TABLE */}
             <div className="hidden w-full overflow-x-auto lg:block">
               <table className="w-full min-w-[1050px] border-collapse text-left">
-                <thead className="bg-slate-50">
-                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <thead className="bg-[#f7f9fd]">
+                  <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
                     {[
                       "Customer / Event",
                       "Shoot Date",
@@ -628,16 +681,17 @@ export default function PhotoShoot() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#edf1f6]">
                   {filtered.map((item) => (
                     <tr
                       key={item.id}
-                      className="transition hover:bg-blue-50/40"
+                      className="transition hover:bg-[#f8faff]"
                     >
                       <td className="px-5 py-5">
                         <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">
                           {item.customer}
                         </p>
+
                         <p className="mt-1 text-xs text-slate-500">
                           {item.event}
                         </p>
@@ -657,6 +711,7 @@ export default function PhotoShoot() {
                         <p className="max-w-40 break-words text-sm font-medium text-[#10264d]">
                           {item.photographer || "Not assigned"}
                         </p>
+
                         <p className="mt-1 max-w-40 break-words text-xs text-slate-500">
                           {item.videographer || "No videographer"}
                         </p>
@@ -666,6 +721,7 @@ export default function PhotoShoot() {
                         <p className="whitespace-nowrap text-sm font-semibold text-[#10264d]">
                           {formatCount(item.totalPhotos)} Photos
                         </p>
+
                         <p className="mt-1 text-xs text-slate-500">
                           {formatCount(item.totalVideos)} Videos
                         </p>
@@ -693,21 +749,29 @@ export default function PhotoShoot() {
               </table>
             </div>
 
-            {/* Mobile / Tablet Cards */}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+            {/* PREMIUM COMPACT MOBILE / TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
               {filtered.map((item) => (
                 <article
                   key={item.id}
-                  className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                  className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
                 >
-                  <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
-                        {item.customer}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {item.event}
-                      </p>
+                  {/* CARD HEADER */}
+                  <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
+                        <Camera size={18} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-bold text-[#10264d]">
+                          {item.customer}
+                        </h3>
+
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                          {item.event}
+                        </p>
+                      </div>
                     </div>
 
                     <StatusBadge
@@ -715,85 +779,107 @@ export default function PhotoShoot() {
                     />
                   </div>
 
-                  <div className="mt-4 space-y-3">
-                    <Detail
+                  {/* TWO-COLUMN DETAILS */}
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
+                    <MobileDetail
                       label="Shoot Date"
-                      value={item.shootDate}
+                      value={formatDate(item.shootDate)}
                       icon={CalendarDays}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Location"
                       value={item.location || "Not specified"}
                       icon={MapPin}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Photographer"
                       value={item.photographer || "Not assigned"}
                       icon={UserRound}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Videographer"
                       value={item.videographer || "Not assigned"}
                       icon={UserRound}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Camera Model"
                       value={item.camera || "Not specified"}
                       icon={Camera}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Memory Card"
                       value={item.memoryCard || "Not specified"}
                       icon={HardDrive}
                     />
 
-                    <Detail
+                    <MobileDetail
                       label="Storage Location / Folder"
-                      value={item.storageLocation || "Not specified"}
+                      value={
+                        item.storageLocation || "Not specified"
+                      }
                       icon={FolderOpen}
+                      full
                     />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="min-w-0 rounded-xl bg-blue-50 p-4">
-                        <p className="text-xs text-slate-500">
-                          Total Photos
-                        </p>
-                        <p className="mt-2 break-all text-xl font-bold text-blue-800">
-                          {formatCount(item.totalPhotos)}
-                        </p>
-                      </div>
-
-                      <div className="min-w-0 rounded-xl bg-indigo-50 p-4">
-                        <p className="text-xs text-slate-500">
-                          Total Videos
-                        </p>
-                        <p className="mt-2 break-all text-xl font-bold text-indigo-800">
-                          {formatCount(item.totalVideos)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl bg-white p-4">
-                      <p className="mb-2 text-xs font-medium text-slate-500">
-                        Backup Status
-                      </p>
-                      <StatusBadge
-                        value={item.backup || "Pending"}
-                        backup
-                      />
-                    </div>
-
-                    {item.notes && (
-                      <Detail label="Shoot Notes" value={item.notes} />
-                    )}
                   </div>
 
-                  <div className="mt-5 border-t border-slate-200 pt-4">
+                  {/* MEDIA COUNTS */}
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <MediaCount
+                      title="Total Photos"
+                      value={item.totalPhotos}
+                      icon={Images}
+                      color="text-blue-800"
+                      bg="bg-blue-50/80"
+                    />
+
+                    <MediaCount
+                      title="Total Videos"
+                      value={item.totalVideos}
+                      icon={Video}
+                      color="text-indigo-800"
+                      bg="bg-indigo-50/80"
+                    />
+                  </div>
+
+                  {/* BACKUP STATUS */}
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#e6edf7] bg-[#f8faff] px-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <HardDrive
+                        size={15}
+                        className="shrink-0 text-[#4972a8]"
+                      />
+
+                      <p className="text-[11px] font-semibold text-[#52627b]">
+                        Backup Status
+                      </p>
+                    </div>
+
+                    <StatusBadge
+                      value={item.backup || "Pending"}
+                      backup
+                    />
+                  </div>
+
+                  {/* NOTES */}
+                  {item.notes && (
+                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                      <p className="text-[10px] font-medium text-slate-400">
+                        Shoot Notes
+                      </p>
+
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#52627b]">
+                        {item.notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* COMPACT ACTIONS */}
+                  <div className="mt-3 border-t border-[#edf1f6] pt-3">
                     {renderActions(item, true)}
                   </div>
                 </article>
@@ -801,19 +887,33 @@ export default function PhotoShoot() {
             </div>
           </>
         )}
+
+        <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
+          <p className="text-xs text-[#8290a5]">
+            Showing {filtered.length} of {shoots.length} shoots
+          </p>
+
+          <span className="text-xs text-[#8290a5]">
+            Studio Raw Picturez ERP
+          </span>
+        </div>
       </section>
 
-      {/* Create / Edit Popup */}
+      {/* CREATE / EDIT MODAL */}
       {showForm && (
         <ModalShell
-          title={editingId ? "Manage Photo Shoot" : "New Photo Shoot"}
+          title={
+            editingId ? "Manage Photo Shoot" : "New Photo Shoot"
+          }
           description="Enter shoot and media collection details"
           onClose={closeForm}
           onSubmit={saveShoot}
-          submitLabel={editingId ? "Update Shoot" : "Save Shoot"}
+          submitLabel={
+            editingId ? "Update Shoot" : "Save Shoot"
+          }
         >
           <div className="space-y-8">
-            {/* Section 1 */}
+            {/* SHOOT INFORMATION */}
             <section>
               <SectionHeading
                 icon={UserRound}
@@ -840,7 +940,9 @@ export default function PhotoShoot() {
                   <CustomDropdown
                     value={form.event}
                     options={events}
-                    onChange={(value) => update("event", value)}
+                    onChange={(value) =>
+                      update("event", value)
+                    }
                   />
                 </FormField>
 
@@ -870,7 +972,7 @@ export default function PhotoShoot() {
               </div>
             </section>
 
-            {/* Section 2 */}
+            {/* TEAM & EQUIPMENT */}
             <section>
               <SectionHeading
                 icon={Camera}
@@ -929,7 +1031,7 @@ export default function PhotoShoot() {
               </div>
             </section>
 
-            {/* Section 3 */}
+            {/* MEDIA & STORAGE */}
             <section>
               <SectionHeading
                 icon={Database}
@@ -944,13 +1046,17 @@ export default function PhotoShoot() {
                       size={17}
                       className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
+
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={form.totalPhotos}
                       onChange={(event) =>
-                        update("totalPhotos", event.target.value)
+                        update(
+                          "totalPhotos",
+                          event.target.value
+                        )
                       }
                       placeholder="Enter total photos"
                       className={`${inputClass} pr-11`}
@@ -964,13 +1070,17 @@ export default function PhotoShoot() {
                       size={17}
                       className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
+
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={form.totalVideos}
                       onChange={(event) =>
-                        update("totalVideos", event.target.value)
+                        update(
+                          "totalVideos",
+                          event.target.value
+                        )
                       }
                       placeholder="Enter total videos"
                       className={`${inputClass} pr-11`}
@@ -984,7 +1094,10 @@ export default function PhotoShoot() {
                       type="text"
                       value={form.storageLocation}
                       onChange={(event) =>
-                        update("storageLocation", event.target.value)
+                        update(
+                          "storageLocation",
+                          event.target.value
+                        )
                       }
                       placeholder="Enter storage location or folder path"
                       className={inputClass}
@@ -994,7 +1107,7 @@ export default function PhotoShoot() {
               </div>
             </section>
 
-            {/* Section 4 */}
+            {/* SHOOT TRACKING */}
             <section>
               <SectionHeading
                 icon={ClipboardList}
@@ -1007,7 +1120,9 @@ export default function PhotoShoot() {
                   <CustomDropdown
                     value={form.backup}
                     options={backupStatuses}
-                    onChange={(value) => update("backup", value)}
+                    onChange={(value) =>
+                      update("backup", value)
+                    }
                   />
                 </FormField>
 
@@ -1015,13 +1130,15 @@ export default function PhotoShoot() {
                   <CustomDropdown
                     value={form.status}
                     options={statuses}
-                    onChange={(value) => update("status", value)}
+                    onChange={(value) =>
+                      update("status", value)
+                    }
                   />
                 </FormField>
               </div>
             </section>
 
-            {/* Section 5 */}
+            {/* ADDITIONAL INFORMATION */}
             <section>
               <SectionHeading
                 icon={FolderOpen}
@@ -1042,6 +1159,7 @@ export default function PhotoShoot() {
               </FormField>
             </section>
 
+            {/* VALIDATION ERROR */}
             {error && (
               <div
                 role="alert"
@@ -1051,6 +1169,7 @@ export default function PhotoShoot() {
                   size={18}
                   className="mt-0.5 shrink-0"
                 />
+
                 <span className="break-words">{error}</span>
               </div>
             )}

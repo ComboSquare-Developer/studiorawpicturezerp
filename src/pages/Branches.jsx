@@ -1,9 +1,11 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Building2,
   Plus,
   Search,
+  Eye,
   Pencil,
   Trash2,
   X,
@@ -18,7 +20,7 @@ import {
   ChevronDown,
   CalendarDays,
   FileText,
-  RefreshCw,
+  Hash,
 } from "lucide-react";
 
 const BRANCH_KEY = "studioraw_branches";
@@ -40,13 +42,13 @@ const initialForm = {
 };
 
 const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-[#8ca0bd] focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 const primaryButton =
-  "flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384]";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900";
 
 const secondaryButton =
-  "flex items-center justify-center gap-2 rounded-xl border border-[#d9e3f2] bg-white px-5 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50";
 
 function readArray(key) {
   try {
@@ -70,10 +72,24 @@ function csvCell(value) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function FormField({ label, required = false, children }) {
   return (
     <div className="min-w-0">
-      <label className="mb-2 block text-[13px] font-semibold text-[#29416a]">
+      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
@@ -84,10 +100,11 @@ function FormField({ label, required = false, children }) {
 
 function SectionHeading({ icon: Icon, title }) {
   return (
-    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
         <Icon size={19} />
       </div>
+
       <h3 className="text-sm font-bold text-[#10264d]">
         {title}
       </h3>
@@ -110,13 +127,15 @@ function CustomDropdown({
   return (
     <div className="relative min-w-0">
       <select
-        value={value}
+        value={value ?? ""}
         onChange={(event) => onChange(event.target.value)}
         className={`${inputClass} appearance-none pr-10`}
       >
-        {items.some((item) => String(item.value) === String(value))
-          ? null
-          : <option value="">{placeholder}</option>}
+        {!items.some(
+          (item) => String(item.value) === String(value ?? "")
+        ) && (
+          <option value="">{placeholder}</option>
+        )}
 
         {items.map((item) => (
           <option key={String(item.value)} value={item.value}>
@@ -138,15 +157,15 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
         active
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-rose-50 text-rose-700"
       }`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${
-          active ? "bg-green-500" : "bg-red-500"
+          active ? "bg-emerald-500" : "bg-rose-500"
         }`}
       />
       {status || "Inactive"}
@@ -154,18 +173,220 @@ function StatusBadge({ status }) {
   );
 }
 
-function Detail({ label, value }) {
+function InfoBox({ icon: Icon, label, value, full = false }) {
   return (
-    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-        {value === undefined || value === null || value === ""
+    <div
+      className={`min-w-0 rounded-xl bg-[#f7f9fc] p-3.5 ${
+        full ? "col-span-2" : ""
+      }`}
+    >
+      <div className="flex items-center gap-2 text-slate-400">
+        {Icon && <Icon size={14} className="shrink-0" />}
+        <span className="truncate text-[11px] font-medium">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-2 whitespace-pre-wrap break-words text-[13px] font-bold leading-5 text-[#10264d]">
+        {value === undefined ||
+        value === null ||
+        value === ""
           ? "—"
           : value}
       </p>
     </div>
+  );
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  color = "blue",
+}) {
+  const colors = {
+    blue: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+    amber: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+    red: "bg-rose-50 text-rose-600 hover:bg-rose-100",
+  };
+
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${
+        colors[color]
+      }`}
+    >
+      <Icon size={16} />
+    </button>
+  );
+}
+
+function StatCard({ stat }) {
+  const Icon = stat.icon;
+
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">
+            {stat.label}
+          </p>
+
+          <h3 className={`mt-3 text-3xl font-extrabold ${stat.color}`}>
+            {stat.value}
+          </h3>
+        </div>
+
+        <div className={`rounded-xl p-3 ${stat.bg}`}>
+          <Icon size={22} className={stat.color} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BranchCard({
+  branch,
+  onView,
+  onEdit,
+  onDelete,
+  onStatusChange,
+}) {
+  return (
+    <article className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-5">
+      {/* CARD HEADER */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <Building2 size={21} />
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="break-words text-sm font-extrabold leading-5 text-[#10264d] sm:text-base">
+              {branch.name || "Unnamed Branch"}
+            </h3>
+
+            <p className="mt-1 break-all text-[11px] font-medium text-slate-400">
+              {branch.code || "No Code"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <ActionButton
+            icon={Eye}
+            label="View Branch"
+            onClick={() => onView(branch)}
+          />
+
+          <ActionButton
+            icon={Pencil}
+            label="Edit Branch"
+            color="amber"
+            onClick={() => onEdit(branch)}
+          />
+
+          <ActionButton
+            icon={Trash2}
+            label="Delete Branch"
+            color="red"
+            onClick={() => onDelete(branch)}
+          />
+        </div>
+      </div>
+
+      <div className="my-4 border-t border-slate-100" />
+
+      {/* STATUS */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-slate-500">
+          Branch Status
+        </span>
+
+        <StatusBadge status={branch.status} />
+      </div>
+
+      {/* DETAIL BOXES */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <InfoBox
+          icon={UserRound}
+          label="Branch Manager"
+          value={branch.manager || "Not assigned"}
+        />
+
+        <InfoBox
+          icon={Phone}
+          label="Phone Number"
+          value={branch.phone}
+        />
+
+        <InfoBox
+          icon={MapPin}
+          label="City"
+          value={branch.city}
+        />
+
+        <InfoBox
+          icon={MapPin}
+          label="State"
+          value={branch.state}
+        />
+
+        <InfoBox
+          icon={Hash}
+          label="Pincode"
+          value={branch.pincode}
+        />
+
+        <InfoBox
+          icon={CalendarDays}
+          label="Opening Date"
+          value={formatDate(branch.openingDate)}
+        />
+
+        <InfoBox
+          icon={Mail}
+          label="Email Address"
+          value={branch.email}
+          full
+        />
+
+        {branch.address && (
+          <InfoBox
+            icon={MapPin}
+            label="Full Address"
+            value={branch.address}
+            full
+          />
+        )}
+
+        {branch.notes && (
+          <InfoBox
+            icon={FileText}
+            label="Notes"
+            value={branch.notes}
+            full
+          />
+        )}
+      </div>
+
+      {/* QUICK STATUS */}
+      <div className="mt-auto border-t border-slate-100 pt-4">
+        <p className="mb-2 text-xs font-semibold text-slate-500">
+          Quick Status Update
+        </p>
+
+        <CustomDropdown
+          value={branch.status || "Inactive"}
+          options={["Active", "Inactive"]}
+          onChange={(value) => onStatusChange(branch.id, value)}
+        />
+      </div>
+    </article>
   );
 }
 
@@ -178,22 +399,6 @@ function BranchModal({
   saveBranch,
   error,
 }) {
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") closeForm();
-    };
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [closeForm]);
-
   const fields = [
     {
       label: "Branch Name",
@@ -271,182 +476,327 @@ function BranchModal({
     );
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152d]/65 p-2 backdrop-blur-[4px] sm:p-5"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) closeForm();
-      }}
-    >
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+      <div
+        className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+        onClick={closeForm}
+      />
+
       <div
         role="dialog"
         aria-modal="true"
         aria-label={editingId ? "Edit Branch" : "Add Branch"}
-        className="flex max-h-[96dvh] w-full max-w-[960px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
+        className="relative z-10 flex max-h-[94dvh] w-full max-w-[800px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
       >
-        {/* MODAL HEADER */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
-              <Building2 size={23} />
+        {/* HEADER */}
+        <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#10264d] text-white">
+                <Building2 size={22} />
+              </div>
+
+              <div>
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-600">
+                  Studio Raw / Branches
+                </p>
+
+                <h2 className="text-xl font-extrabold text-[#10264d]">
+                  {editingId ? "Edit Branch" : "Add New Branch"}
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Enter studio branch information
+                </p>
+              </div>
             </div>
 
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-[#10264d] sm:text-[23px]">
-                {editingId ? "Edit Branch" : "Add New Branch"}
-              </h2>
-              <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
-                Enter studio branch information
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={closeForm}
+              aria-label="Close"
+              className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 hover:bg-slate-100"
+            >
+              <X size={20} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={closeForm}
-            aria-label="Close branch form"
-            className="rounded-lg p-2 text-[#627895] hover:bg-slate-100"
-          >
-            <X size={22} />
-          </button>
         </div>
 
         <form
           onSubmit={saveBranch}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {/* SCROLLABLE BODY */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
-            <div className="space-y-8">
+          {/* SCROLLABLE CONTENT */}
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <SectionHeading
+                icon={Building2}
+                title="Branch Information"
+              />
 
-              {/* BASIC INFORMATION */}
-              <section>
-                <SectionHeading
-                  icon={Building2}
-                  title="Branch Information"
-                />
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                  {renderField("name")}
-                  {renderField("code")}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {renderField("name")}
+                {renderField("code")}
 
-                  <FormField label="Branch Manager">
-                    <CustomDropdown
-                      value={form.manager}
-                      options={managerOptions}
-                      onChange={(value) =>
-                        updateField("manager", value)
-                      }
-                      placeholder="Select Manager"
-                    />
-                  </FormField>
-
-                  <FormField label="Branch Status">
-                    <CustomDropdown
-                      value={form.status}
-                      options={["Active", "Inactive"]}
-                      onChange={(value) =>
-                        updateField("status", value)
-                      }
-                    />
-                  </FormField>
-                </div>
-              </section>
-
-              {/* CONTACT DETAILS */}
-              <section>
-                <SectionHeading
-                  icon={Phone}
-                  title="Contact Information"
-                />
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                  {renderField("phone")}
-                  {renderField("email")}
-                </div>
-              </section>
-
-              {/* LOCATION DETAILS */}
-              <section>
-                <SectionHeading
-                  icon={MapPin}
-                  title="Location Details"
-                />
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                  {renderField("city")}
-                  {renderField("state")}
-                  {renderField("pincode")}
-                  {renderField("openingDate")}
-                </div>
-
-                <div className="mt-5">
-                  <FormField label="Full Address">
-                    <textarea
-                      rows={3}
-                      value={form.address ?? ""}
-                      onChange={(event) =>
-                        updateField("address", event.target.value)
-                      }
-                      placeholder="Street, area, landmark..."
-                      className={`${inputClass} resize-y`}
-                    />
-                  </FormField>
-                </div>
-              </section>
-
-              {/* NOTES */}
-              <section>
-                <SectionHeading
-                  icon={FileText}
-                  title="Additional Information"
-                />
-                <FormField label="Notes">
-                  <textarea
-                    rows={4}
-                    value={form.notes ?? ""}
-                    onChange={(event) =>
-                      updateField("notes", event.target.value)
+                <FormField label="Branch Manager">
+                  <CustomDropdown
+                    value={form.manager}
+                    options={managerOptions}
+                    onChange={(value) =>
+                      updateField("manager", value)
                     }
-                    placeholder="Additional branch information..."
+                    placeholder="Select Manager"
+                  />
+                </FormField>
+
+                <FormField label="Branch Status">
+                  <CustomDropdown
+                    value={form.status}
+                    options={["Active", "Inactive"]}
+                    onChange={(value) =>
+                      updateField("status", value)
+                    }
+                  />
+                </FormField>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <SectionHeading
+                icon={Phone}
+                title="Contact Information"
+              />
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {renderField("phone")}
+                {renderField("email")}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <SectionHeading
+                icon={MapPin}
+                title="Location Details"
+              />
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {renderField("city")}
+                {renderField("state")}
+                {renderField("pincode")}
+                {renderField("openingDate")}
+              </div>
+
+              <div className="mt-5">
+                <FormField label="Full Address">
+                  <textarea
+                    rows={3}
+                    value={form.address ?? ""}
+                    onChange={(event) =>
+                      updateField("address", event.target.value)
+                    }
+                    placeholder="Street, area, landmark..."
                     className={`${inputClass} resize-y`}
                   />
                 </FormField>
-              </section>
+              </div>
+            </section>
 
-              {error && (
-                <p
-                  role="alert"
-                  className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-                >
-                  <AlertTriangle
-                    size={17}
-                    className="mt-0.5 shrink-0"
-                  />
-                  {error}
-                </p>
-              )}
-            </div>
+            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <SectionHeading
+                icon={FileText}
+                title="Additional Information"
+              />
+
+              <FormField label="Notes">
+                <textarea
+                  rows={3}
+                  value={form.notes ?? ""}
+                  onChange={(event) =>
+                    updateField("notes", event.target.value)
+                  }
+                  placeholder="Additional branch information..."
+                  className={`${inputClass} resize-y`}
+                />
+              </FormField>
+            </section>
+
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+              >
+                <AlertTriangle
+                  size={18}
+                  className="mt-0.5 shrink-0"
+                />
+                {error}
+              </div>
+            )}
           </div>
 
           {/* FIXED FOOTER */}
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-xl border border-[#d9e3f2] bg-[#f7f9fd] px-7 py-3.5 text-sm font-semibold text-[#18345f] hover:bg-slate-100"
-            >
-              Cancel
-            </button>
+          <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeForm}
+                className={secondaryButton}
+              >
+                Cancel
+              </button>
 
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3.5 text-sm font-semibold text-white hover:bg-[#1a4384]"
-            >
-              <Save size={18} />
-              {editingId ? "Update Branch" : "Save Branch"}
-            </button>
+              <button type="submit" className={primaryButton}>
+                <Save size={17} />
+                {editingId ? "Update Branch" : "Save Branch"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
+  );
+}
+
+function ViewBranchModal({ branch, onClose, onEdit }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+      <div
+        className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Branch Details"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-[620px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <Building2 size={21} />
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="break-words text-lg font-bold text-[#10264d]">
+                {branch.name || "Branch Details"}
+              </h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {branch.code || "No Code"}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+          <div className="mb-5">
+            <StatusBadge status={branch.status} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <InfoBox
+              icon={Building2}
+              label="Branch Name"
+              value={branch.name}
+              full
+            />
+
+            <InfoBox
+              icon={Hash}
+              label="Branch Code"
+              value={branch.code}
+            />
+
+            <InfoBox
+              icon={UserRound}
+              label="Manager"
+              value={branch.manager || "Not assigned"}
+            />
+
+            <InfoBox
+              icon={Phone}
+              label="Phone"
+              value={branch.phone}
+            />
+
+            <InfoBox
+              icon={Mail}
+              label="Email"
+              value={branch.email}
+            />
+
+            <InfoBox
+              icon={MapPin}
+              label="City"
+              value={branch.city}
+            />
+
+            <InfoBox
+              icon={MapPin}
+              label="State"
+              value={branch.state}
+            />
+
+            <InfoBox
+              icon={Hash}
+              label="Pincode"
+              value={branch.pincode}
+            />
+
+            <InfoBox
+              icon={CalendarDays}
+              label="Opening Date"
+              value={formatDate(branch.openingDate)}
+            />
+
+            <InfoBox
+              icon={MapPin}
+              label="Full Address"
+              value={branch.address}
+              full
+            />
+
+            <InfoBox
+              icon={FileText}
+              label="Notes"
+              value={branch.notes}
+              full
+            />
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 p-4 sm:flex-row sm:justify-end sm:p-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className={secondaryButton}
+          >
+            Close
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onEdit(branch)}
+            className={primaryButton}
+          >
+            <Pencil size={16} />
+            Edit Branch
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -462,6 +812,7 @@ export default function Branches() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
+  const [viewBranch, setViewBranch] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...initialForm });
   const [error, setError] = useState("");
@@ -479,17 +830,50 @@ export default function Branches() {
     };
 
     window.addEventListener("focus", refreshStaff);
+    window.addEventListener("storage", refreshStaff);
 
     return () => {
       window.removeEventListener("focus", refreshStaff);
+      window.removeEventListener("storage", refreshStaff);
     };
   }, []);
+
+  const closeForm = useCallback(() => {
+    setShowForm(false);
+    setEditingId(null);
+    setError("");
+  }, []);
+
+  useEffect(() => {
+    if (!showForm && !viewBranch) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") return;
+
+      if (showForm) {
+        closeForm();
+      } else {
+        setViewBranch(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showForm, viewBranch, closeForm]);
 
   const openAdd = () => {
     setStaff(readArray(STAFF_KEY));
     setEditingId(null);
     setForm({ ...initialForm });
     setError("");
+    setViewBranch(null);
     setShowForm(true);
   };
 
@@ -501,13 +885,8 @@ export default function Branches() {
       ...branch,
     });
     setError("");
+    setViewBranch(null);
     setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setError("");
   };
 
   const updateField = (field, value) => {
@@ -566,7 +945,7 @@ export default function Branches() {
   const deleteBranch = (branch) => {
     if (
       !window.confirm(
-        `Are you sure you want to delete ${branch.name}?`
+        `Are you sure you want to delete "${branch.name}"?`
       )
     ) {
       return;
@@ -576,7 +955,33 @@ export default function Branches() {
       previous.filter((item) => item.id !== branch.id)
     );
 
-    if (editingId === branch.id) closeForm();
+    if (viewBranch?.id === branch.id) {
+      setViewBranch(null);
+    }
+
+    if (editingId === branch.id) {
+      closeForm();
+    }
+  };
+
+  const updateStatus = (id, status) => {
+    setBranches((previous) =>
+      previous.map((branch) =>
+        branch.id === id
+          ? {
+              ...branch,
+              status,
+              updatedAt: new Date().toISOString(),
+            }
+          : branch
+      )
+    );
+
+    setViewBranch((previous) =>
+      previous?.id === id
+        ? { ...previous, status }
+        : previous
+    );
   };
 
   const filteredBranches = useMemo(() => {
@@ -589,6 +994,8 @@ export default function Branches() {
         branch.city,
         branch.manager,
         branch.phone,
+        branch.email,
+        branch.state,
       ].some((value) =>
         String(value || "").toLowerCase().includes(query)
       );
@@ -615,8 +1022,8 @@ export default function Branches() {
         (branch) => branch.status === "Active"
       ).length,
       icon: CheckCircle2,
-      color: "text-green-700",
-      bg: "bg-green-50",
+      color: "text-emerald-700",
+      bg: "bg-emerald-50",
     },
     {
       label: "Inactive Branches",
@@ -645,9 +1052,18 @@ export default function Branches() {
   const exportCSV = () => {
     const rows = [
       [
-        "Branch Name", "Code", "Manager", "Phone",
-        "Email", "Address", "City", "State",
-        "Pincode", "Opening Date", "Status",
+        "Branch Name",
+        "Code",
+        "Manager",
+        "Phone",
+        "Email",
+        "Address",
+        "City",
+        "State",
+        "Pincode",
+        "Opening Date",
+        "Status",
+        "Notes",
       ],
       ...filteredBranches.map((branch) => [
         branch.name,
@@ -661,6 +1077,7 @@ export default function Branches() {
         branch.pincode,
         branch.openingDate,
         branch.status,
+        branch.notes,
       ]),
     ];
 
@@ -677,10 +1094,12 @@ export default function Branches() {
 
     link.href = url;
     link.download = "studioraw-branches.csv";
+
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const managerOptions = [
@@ -698,16 +1117,20 @@ export default function Branches() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
-
+    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
       {/* PAGE HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
+      <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+            Studio Raw / Management
+          </p>
+
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Multi-Branch Management
           </h1>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Manage studio locations, branch managers and operations
+
+          <p className="mt-2 text-sm text-slate-500">
+            Manage studio locations, branch managers and operations.
           </p>
         </div>
 
@@ -722,289 +1145,120 @@ export default function Branches() {
       </div>
 
       {/* STATISTICS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-
-          return (
-            <div
-              key={stat.label}
-              className="group min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-500">
-                    {stat.label}
-                  </p>
-                  <h2 className={`mt-3 text-2xl font-bold ${stat.color}`}>
-                    {stat.value}
-                  </h2>
-                </div>
-                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
-                  <Icon size={22} className={stat.color} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} stat={stat} />
+        ))}
       </div>
 
       {/* BRANCH RECORDS */}
       <section className="min-w-0 rounded-2xl border border-slate-100 bg-white shadow-sm">
+        {/* TOOLBAR */}
         <div className="border-b border-slate-100 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#10264d]">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-[#10264d]">
+                <Building2 size={20} className="text-blue-600" />
                 Studio Branches
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Manage all your studio branch locations.
+
+              <p className="mt-1 text-xs text-slate-400">
+                Showing {filteredBranches.length} of {branches.length} branches
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={exportCSV}
-              className={`${secondaryButton} w-full sm:w-auto`}
-            >
-              <Download size={18} />
-              Export CSV
-            </button>
-          </div>
-
-          {/* FILTERS */}
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Search Branches">
-              <div className="relative">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative w-full sm:w-64">
                 <Search
                   size={18}
                   className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                 />
+
                 <input
                   type="search"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search branch, code, city or manager..."
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search branches..."
                   className={`${inputClass} pl-11`}
                 />
               </div>
-            </FormField>
 
-            <FormField label="Filter Status">
-              <CustomDropdown
-                value={statusFilter}
-                options={[
-                  { label: "All Status", value: "All" },
-                  { label: "Active", value: "Active" },
-                  { label: "Inactive", value: "Inactive" },
-                ]}
-                onChange={setStatusFilter}
-              />
-            </FormField>
+              <div className="w-full sm:w-44">
+                <CustomDropdown
+                  value={statusFilter}
+                  options={[
+                    { label: "All Status", value: "All" },
+                    { label: "Active", value: "Active" },
+                    { label: "Inactive", value: "Inactive" },
+                  ]}
+                  onChange={setStatusFilter}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={exportCSV}
+                className={secondaryButton}
+              >
+                <Download size={17} />
+                Export CSV
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* CARDS */}
         {filteredBranches.length === 0 ? (
-          <div className="px-4 py-16 text-center">
-            <Building2
-              size={42}
-              className="mx-auto mb-3 text-slate-300"
-            />
-            <p className="text-sm font-semibold text-slate-500">
-              No branches found.
-            </p>
-            <p className="mt-2 text-xs text-slate-400">
+          <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+            <div className="mb-4 rounded-2xl bg-slate-50 p-5">
+              <Building2 size={36} className="text-slate-300" />
+            </div>
+
+            <h3 className="font-bold text-[#10264d]">
+              No branches found
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-400">
               Add your first studio branch or change your filters.
             </p>
+
+            {branches.length === 0 && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className={`${primaryButton} mt-5`}
+              >
+                <Plus size={16} />
+                Add Branch
+              </button>
+            )}
           </div>
         ) : (
-          <>
-            {/* DESKTOP TABLE */}
-            <div className="hidden w-full overflow-x-auto lg:block">
-              <table className="w-full min-w-[1050px] border-collapse text-left">
-                <thead className="bg-slate-50">
-                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {[
-                      "Branch", "Manager", "Contact",
-                      "Location", "Opening Date", "Status", "Actions",
-                    ].map((heading) => (
-                      <th key={heading} className="px-5 py-4">
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {filteredBranches.map((branch) => (
-                    <tr
-                      key={branch.id}
-                      className="align-top transition hover:bg-blue-50/40"
-                    >
-                      <td className="px-5 py-5">
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#10264d]">
-                            <Building2 size={20} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-[#10264d]">
-                              {branch.name || "Unnamed Branch"}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {branch.code || "—"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <div className="flex items-center gap-2 text-sm text-[#10264d]">
-                          <UserRound size={16} className="shrink-0 text-blue-600" />
-                          {branch.manager || "Not assigned"}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <div className="space-y-2">
-                          <p className="flex items-center gap-2 text-xs text-slate-600">
-                            <Phone size={14} className="shrink-0" />
-                            {branch.phone || "—"}
-                          </p>
-                          <p className="flex items-center gap-2 break-all text-xs text-slate-600">
-                            <Mail size={14} className="shrink-0" />
-                            {branch.email || "—"}
-                          </p>
-                        </div>
-                      </td>
-
-                      <td className="max-w-[220px] px-5 py-5">
-                        <div className="flex items-start gap-2">
-                          <MapPin size={16} className="mt-0.5 shrink-0 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium text-[#10264d]">
-                              {branch.city || "—"}
-                            </p>
-                            <p className="mt-1 break-words text-xs text-slate-500">
-                              {branch.state || "—"}
-                              {branch.pincode ? ` - ${branch.pincode}` : ""}
-                            </p>
-                            {branch.address && (
-                              <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-500">
-                                {branch.address}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="whitespace-nowrap px-5 py-5 text-sm text-slate-600">
-                        {branch.openingDate || "—"}
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <StatusBadge status={branch.status} />
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            title="Edit Branch"
-                            aria-label={`Edit ${branch.name}`}
-                            onClick={() => openEdit(branch)}
-                            className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
-                          >
-                            <Pencil size={17} />
-                          </button>
-
-                          <button
-                            type="button"
-                            title="Delete Branch"
-                            aria-label={`Delete ${branch.name}`}
-                            onClick={() => deleteBranch(branch)}
-                            className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* MOBILE AND TABLET CARDS */}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-              {filteredBranches.map((branch) => (
-                <article
-                  key={branch.id}
-                  className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
-                >
-                  <div className="flex items-start gap-3 border-b border-slate-200 pb-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#10264d]">
-                      <Building2 size={21} />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-base font-bold text-[#10264d]">
-                        {branch.name || "Unnamed Branch"}
-                      </h3>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Code: {branch.code || "—"}
-                      </p>
-                      <div className="mt-3">
-                        <StatusBadge status={branch.status} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <Detail label="Branch Manager" value={branch.manager || "Not assigned"} />
-                    <Detail label="Phone Number" value={branch.phone} />
-                    <Detail label="Email Address" value={branch.email} />
-                    <Detail label="Full Address" value={branch.address} />
-                    <Detail label="City" value={branch.city} />
-                    <Detail label="State" value={branch.state} />
-                    <Detail label="Pincode" value={branch.pincode} />
-                    <Detail label="Opening Date" value={branch.openingDate} />
-                    <Detail label="Notes" value={branch.notes} />
-                  </div>
-
-                  <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(branch)}
-                      className={`${primaryButton} w-full`}
-                    >
-                      <Pencil size={17} />
-                      Edit Branch
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteBranch(branch)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 size={17} />
-                      Delete Branch
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 2xl:grid-cols-3">
+            {filteredBranches.map((branch) => (
+              <BranchCard
+                key={branch.id}
+                branch={branch}
+                onView={setViewBranch}
+                onEdit={openEdit}
+                onDelete={deleteBranch}
+                onStatusChange={updateStatus}
+              />
+            ))}
+          </div>
         )}
       </section>
 
-      {/* LOCAL STORAGE NOTICE */}
-      <p className="break-words text-xs leading-6 text-slate-400">
+      {/* FOOTER */}
+      <p className="mt-6 text-xs leading-6 text-slate-400">
         Branch details are saved locally in this browser.
-        Branch-wise booking and revenue reports will require
-        branch assignment in the related modules.
+        Branch-wise booking and revenue reports require branch
+        assignment in the related modules.
       </p>
 
-      {/* ADD / EDIT BRANCH MODAL */}
+      {/* ADD / EDIT MODAL */}
       {showForm && (
         <BranchModal
           form={form}
@@ -1014,6 +1268,15 @@ export default function Branches() {
           closeForm={closeForm}
           saveBranch={saveBranch}
           error={error}
+        />
+      )}
+
+      {/* VIEW MODAL */}
+      {viewBranch && !showForm && (
+        <ViewBranchModal
+          branch={viewBranch}
+          onClose={() => setViewBranch(null)}
+          onEdit={openEdit}
         />
       )}
     </div>

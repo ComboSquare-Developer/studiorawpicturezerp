@@ -21,6 +21,9 @@ import {
   CreditCard,
   UserRound,
   AlertCircle,
+  Eye,
+  FileText,
+  Tag,
 } from "lucide-react";
 
 const EXPENSE_KEY = "studioraw_expenses";
@@ -93,9 +96,11 @@ function money(value) {
 
 function formatDate(value) {
   if (!value) return "—";
-  const date = new Date(`${value}T00:00:00`);
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+
   return Number.isNaN(date.getTime())
-    ? value
+    ? String(value)
     : date.toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
@@ -108,6 +113,7 @@ function csvCell(value) {
   const safe = /^\s*[=+\-@\t\r]/.test(raw)
     ? `'${raw}`
     : raw;
+
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
@@ -165,6 +171,7 @@ function CustomDropdown({
         <span className="min-w-0 flex-1 truncate">
           {selected?.label || placeholder}
         </span>
+
         <ChevronDown
           size={18}
           className={`shrink-0 transition-transform ${
@@ -201,6 +208,7 @@ function CustomDropdown({
                 <span className="break-words">
                   {option.label}
                 </span>
+
                 {isSelected && <Check size={16} />}
               </button>
             );
@@ -216,35 +224,213 @@ function FormField({ label, children, required = false }) {
     <div className="w-full min-w-0">
       <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
       </label>
+
       {children}
     </div>
   );
 }
 
-function Detail({ label, value, icon: Icon }) {
+function DetailBox({
+  label,
+  value,
+  icon: Icon,
+  color = "text-[#10264d]",
+  full = false,
+}) {
   return (
-    <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-400">
-        {label}
-      </p>
-      <div className="flex items-start gap-2">
+    <div
+      className={`min-w-0 rounded-xl border border-slate-100 bg-[#f7f9fc] p-3 ${
+        full ? "col-span-2" : ""
+      }`}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
         {Icon && (
           <Icon
-            size={15}
-            className="mt-0.5 shrink-0 text-blue-600"
+            size={13}
+            className="shrink-0 text-slate-400"
           />
         )}
-        <p className="min-w-0 break-words text-sm font-semibold text-[#10264d]">
-          {value === undefined ||
-          value === null ||
-          value === ""
-            ? "—"
-            : value}
+
+        <p className="text-[11px] font-medium text-slate-500">
+          {label}
         </p>
       </div>
+
+      <p
+        className={`min-w-0 whitespace-pre-wrap break-words text-sm font-bold ${color}`}
+      >
+        {value === undefined ||
+        value === null ||
+        value === ""
+          ? "—"
+          : value}
+      </p>
     </div>
+  );
+}
+
+function Modal({
+  title,
+  subtitle,
+  onClose,
+  children,
+  width = "max-w-[720px]",
+}) {
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+      <div
+        className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`relative z-10 mx-auto flex max-h-[92dvh] w-full ${width} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl`}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
+              Studio Raw / Finance
+            </p>
+
+            <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
+              {title}
+            </h2>
+
+            <p className="mt-1 break-words text-sm text-slate-500">
+              {subtitle}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close modal"
+            className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function ExpenseCard({ item, onView, onEdit, onDelete }) {
+  return (
+    <article className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:border-blue-200 hover:shadow-md sm:p-5">
+      {/* CARD HEADER */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <Wallet size={21} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words text-sm font-extrabold text-[#10264d] sm:text-base">
+              {item.title}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-400">
+              {formatDate(item.date)}
+            </p>
+          </div>
+        </div>
+
+        {/* ICON ACTIONS */}
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            title="View Expense"
+            aria-label="View Expense"
+            onClick={() => onView(item)}
+            className="rounded-lg bg-emerald-50 p-2 text-emerald-700 transition hover:bg-emerald-100"
+          >
+            <Eye size={15} />
+          </button>
+
+          <button
+            type="button"
+            title="Edit Expense"
+            aria-label="Edit Expense"
+            onClick={() => onEdit(item)}
+            className="rounded-lg bg-blue-50 p-2 text-blue-700 transition hover:bg-blue-100"
+          >
+            <Pencil size={15} />
+          </button>
+
+          <button
+            type="button"
+            title="Delete Expense"
+            aria-label="Delete Expense"
+            onClick={() => onDelete(item)}
+            className="rounded-lg bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      </div>
+
+      {/* CATEGORY & AMOUNT */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+          <Tag size={12} />
+          <span className="break-words">
+            {item.category || "Other"}
+          </span>
+        </span>
+
+        <p className="break-words text-lg font-extrabold text-rose-600">
+          {money(item.amount)}
+        </p>
+      </div>
+
+      {/* TWO-COLUMN DETAILS */}
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <DetailBox
+          label="Expense Date"
+          value={formatDate(item.date)}
+          icon={CalendarDays}
+        />
+
+        <DetailBox
+          label="Payment Mode"
+          value={item.paymentMode || "—"}
+          icon={CreditCard}
+        />
+
+        <DetailBox
+          label="Paid To"
+          value={item.paidTo || "Not specified"}
+          icon={UserRound}
+        />
+
+        <DetailBox
+          label="Amount"
+          value={money(item.amount)}
+          icon={IndianRupee}
+          color="text-rose-600"
+        />
+
+        {item.notes && (
+          <DetailBox
+            label="Notes"
+            value={item.notes}
+            icon={FileText}
+            full
+          />
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -263,10 +449,17 @@ export default function Expenses() {
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [error, setError] = useState("");
+
+  const [viewId, setViewId] = useState(null);
+
+  const viewedExpense = expenses.find(
+    (item) => item.id === viewId
+  );
 
   useEffect(() => {
     localStorage.setItem(
@@ -290,7 +483,7 @@ export default function Expenses() {
   }, []);
 
   useEffect(() => {
-    if (!showForm) return;
+    if (!showForm && !viewId) return;
 
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -298,6 +491,7 @@ export default function Expenses() {
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setShowForm(false);
+        setViewId(null);
       }
     };
 
@@ -307,9 +501,10 @@ export default function Expenses() {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [showForm]);
+  }, [showForm, viewId]);
 
   const openAdd = () => {
+    setViewId(null);
     setEditingId(null);
     setForm({
       ...emptyForm,
@@ -320,6 +515,7 @@ export default function Expenses() {
   };
 
   const openEdit = (item) => {
+    setViewId(null);
     setEditingId(item.id);
     setForm({
       ...emptyForm,
@@ -341,6 +537,7 @@ export default function Expenses() {
       ...previous,
       [key]: value,
     }));
+
     if (error) setError("");
   };
 
@@ -389,6 +586,10 @@ export default function Expenses() {
     setExpenses((previous) =>
       previous.filter((record) => record.id !== item.id)
     );
+
+    if (viewId === item.id) {
+      setViewId(null);
+    }
   };
 
   const monthlyExpenses = useMemo(
@@ -527,9 +728,18 @@ export default function Expenses() {
       label: "Estimated Profit",
       value: profit,
       icon: IndianRupee,
-      color: profit >= 0 ? "text-blue-700" : "text-rose-600",
-      bg: profit >= 0 ? "bg-blue-50" : "bg-rose-50",
-      accent: profit >= 0 ? "bg-blue-600" : "bg-rose-500",
+      color:
+        profit >= 0
+          ? "text-blue-700"
+          : "text-rose-600",
+      bg:
+        profit >= 0
+          ? "bg-blue-50"
+          : "bg-rose-50",
+      accent:
+        profit >= 0
+          ? "bg-blue-600"
+          : "bg-rose-500",
     },
     {
       label: "Expense Entries",
@@ -544,7 +754,6 @@ export default function Expenses() {
 
   return (
     <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
-
       {/* HEADER */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -596,10 +805,12 @@ export default function Expenses() {
               key={item.label}
               className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className={`absolute left-0 top-0 h-1 w-full ${item.accent}`} />
+              <div
+                className={`absolute left-0 top-0 h-1 w-full ${item.accent}`}
+              />
 
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-500">
                     {item.label}
                   </p>
@@ -613,8 +824,13 @@ export default function Expenses() {
                   </h2>
                 </div>
 
-                <div className={`shrink-0 rounded-2xl p-3 ${item.bg}`}>
-                  <Icon size={23} className={item.color} />
+                <div
+                  className={`shrink-0 rounded-2xl p-3 ${item.bg}`}
+                >
+                  <Icon
+                    size={23}
+                    className={item.color}
+                  />
                 </div>
               </div>
 
@@ -629,7 +845,11 @@ export default function Expenses() {
       {/* CATEGORY BREAKDOWN */}
       <section className="mb-7 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-6 flex items-center gap-2">
-          <BarChart3 size={20} className="text-blue-600" />
+          <BarChart3
+            size={20}
+            className="text-blue-600"
+          />
+
           <h2 className="text-lg font-bold text-[#10264d]">
             Category-wise Expenses
           </h2>
@@ -641,6 +861,7 @@ export default function Expenses() {
               size={36}
               className="mx-auto mb-3 text-slate-300"
             />
+
             <p className="text-sm text-slate-400">
               No expenses recorded for this month.
             </p>
@@ -654,7 +875,10 @@ export default function Expenses() {
                   : 0;
 
               return (
-                <div key={item.category} className="min-w-0">
+                <div
+                  key={item.category}
+                  className="min-w-0"
+                >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="min-w-0 break-words text-sm font-semibold text-slate-700">
                       {item.category}
@@ -668,7 +892,9 @@ export default function Expenses() {
                   <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className="h-full rounded-full bg-[#10264d] transition-all"
-                      style={{ width: `${percentage}%` }}
+                      style={{
+                        width: `${percentage}%`,
+                      }}
                     />
                   </div>
 
@@ -688,12 +914,16 @@ export default function Expenses() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-lg font-bold text-[#10264d]">
-                <Receipt size={20} className="text-blue-600" />
+                <Receipt
+                  size={20}
+                  className="text-blue-600"
+                />
                 Expense Records
               </h2>
 
               <p className="mt-1 text-xs text-slate-400">
-                Showing {filteredExpenses.length} of {monthlyExpenses.length} records
+                Showing {filteredExpenses.length} of{" "}
+                {monthlyExpenses.length} records
               </p>
             </div>
 
@@ -718,13 +948,15 @@ export default function Expenses() {
               <div className="w-full sm:w-48">
                 <CustomDropdown
                   value={categoryFilter}
-                  options={["All", ...categories].map((category) => ({
-                    label:
-                      category === "All"
-                        ? "All Categories"
-                        : category,
-                    value: category,
-                  }))}
+                  options={["All", ...categories].map(
+                    (category) => ({
+                      label:
+                        category === "All"
+                          ? "All Categories"
+                          : category,
+                      value: category,
+                    })
+                  )}
                   onChange={setCategoryFilter}
                 />
               </div>
@@ -744,7 +976,10 @@ export default function Expenses() {
         {filteredExpenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
             <div className="mb-4 rounded-2xl bg-slate-50 p-5">
-              <Wallet size={36} className="text-slate-300" />
+              <Wallet
+                size={36}
+                className="text-slate-300"
+              />
             </div>
 
             <h3 className="font-bold text-[#10264d]">
@@ -765,409 +1000,319 @@ export default function Expenses() {
             </button>
           </div>
         ) : (
-          <>
-            {/* DESKTOP TABLE */}
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[950px] text-left">
-                <thead className="bg-[#f8faff]">
-                  <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    <th className="px-5 py-4">Expense</th>
-                    <th className="px-5 py-4">Category</th>
-                    <th className="px-5 py-4">Date</th>
-                    <th className="px-5 py-4">Payment Mode</th>
-                    <th className="px-5 py-4">Paid To</th>
-                    <th className="px-5 py-4">Amount</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {filteredExpenses.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition hover:bg-blue-50/30"
-                    >
-                      <td className="px-5 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                            <Wallet size={18} />
-                          </div>
-
-                          <div>
-                            <p className="text-sm font-bold text-[#10264d]">
-                              {item.title}
-                            </p>
-
-                            {item.notes && (
-                              <p className="mt-1 max-w-40 truncate text-xs text-slate-400">
-                                {item.notes}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
-                          {item.category}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-5 text-sm text-slate-600">
-                        {formatDate(item.date)}
-                      </td>
-
-                      <td className="px-5 py-5 text-sm text-slate-600">
-                        {item.paymentMode}
-                      </td>
-
-                      <td className="px-5 py-5 text-sm text-slate-600">
-                        {item.paidTo || "—"}
-                      </td>
-
-                      <td className="px-5 py-5 text-sm font-bold text-rose-600">
-                        {money(item.amount)}
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(item)}
-                            title="Edit Expense"
-                            className="rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
-                          >
-                            <Pencil size={16} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => deleteExpense(item)}
-                            title="Delete Expense"
-                            className="rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* MOBILE / TABLET CARDS */}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-              {filteredExpenses.map((item) => (
-                <article
-                  key={item.id}
-                  className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4"
-                >
-                  <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-4">
-                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                      <Wallet size={20} />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words font-bold text-[#10264d]">
-                        {item.title}
-                      </h3>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        {item.category}
-                      </p>
-
-                      <p className="mt-2 text-xl font-bold text-rose-600">
-                        {money(item.amount)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <Detail
-                      label="Expense Date"
-                      value={formatDate(item.date)}
-                      icon={CalendarDays}
-                    />
-
-                    <Detail
-                      label="Category"
-                      value={item.category}
-                    />
-
-                    <Detail
-                      label="Payment Mode"
-                      value={item.paymentMode}
-                      icon={CreditCard}
-                    />
-
-                    <Detail
-                      label="Paid To"
-                      value={item.paidTo}
-                      icon={UserRound}
-                    />
-
-                    {item.notes && (
-                      <Detail
-                        label="Notes"
-                        value={item.notes}
-                      />
-                    )}
-                  </div>
-
-                  <div className="mt-5 flex gap-2 border-t border-slate-200 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white"
-                    >
-                      <Pencil size={16} />
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteExpense(item)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:p-6">
+            {filteredExpenses.map((item) => (
+              <ExpenseCard
+                key={item.id}
+                item={item}
+                onView={(expense) =>
+                  setViewId(expense.id)
+                }
+                onEdit={openEdit}
+                onDelete={deleteExpense}
+              />
+            ))}
+          </div>
         )}
       </section>
 
-      {/* CENTER MODAL FORM */}
-      {showForm &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+      {/* VIEW EXPENSE MODAL */}
+      {viewedExpense && (
+        <Modal
+          title="Expense Details"
+          subtitle={viewedExpense.title}
+          onClose={() => setViewId(null)}
+          width="max-w-[620px]"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-7">
+            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
+                <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+                  <Wallet size={24} />
+                </div>
 
-            {/* BACKDROP */}
-            <div
-              className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
-              onClick={closeForm}
-            />
+                <div className="min-w-0">
+                  <h3 className="break-words text-lg font-extrabold text-[#10264d]">
+                    {viewedExpense.title}
+                  </h3>
 
-            {/* MODAL */}
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={
-                editingId ? "Edit Expense" : "Add Expense"
-              }
-              className="relative z-10 mx-auto flex max-h-[92dvh] w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
-            >
-              {/* MODAL HEADER */}
-              <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
-                      Studio Raw / Finance
-                    </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {viewedExpense.category}
+                  </p>
 
-                    <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
-                      {editingId
-                        ? "Edit Expense"
-                        : "Add Expense"}
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Enter studio expense details.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={closeForm}
-                    aria-label="Close expense form"
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
-                  >
-                    <X size={20} />
-                  </button>
+                  <p className="mt-3 text-2xl font-extrabold text-rose-600">
+                    {money(viewedExpense.amount)}
+                  </p>
                 </div>
               </div>
 
-              <form
-                onSubmit={saveExpense}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                {/* SCROLLABLE FORM */}
-                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <DetailBox
+                  label="Expense Date"
+                  value={formatDate(viewedExpense.date)}
+                  icon={CalendarDays}
+                />
 
-                  <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                    <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
-                      <Wallet
-                        size={18}
-                        className="text-blue-600"
-                      />
-                      Expense Information
-                    </h3>
+                <DetailBox
+                  label="Category"
+                  value={viewedExpense.category}
+                  icon={Tag}
+                />
 
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                      <div className="sm:col-span-2">
-                        <FormField
-                          label="Expense Title"
-                          required
-                        >
-                          <input
-                            type="text"
-                            required
-                            value={form.title}
-                            onChange={(event) =>
-                              updateField(
-                                "title",
-                                event.target.value
-                              )
-                            }
-                            placeholder="e.g. Studio electricity bill"
-                            className={inputClass}
-                          />
-                        </FormField>
-                      </div>
+                <DetailBox
+                  label="Payment Mode"
+                  value={viewedExpense.paymentMode}
+                  icon={CreditCard}
+                />
 
-                      <FormField label="Category">
-                        <CustomDropdown
-                          value={form.category}
-                          options={categories}
-                          onChange={(value) =>
-                            updateField("category", value)
-                          }
-                        />
-                      </FormField>
+                <DetailBox
+                  label="Paid To"
+                  value={
+                    viewedExpense.paidTo ||
+                    "Not specified"
+                  }
+                  icon={UserRound}
+                />
 
-                      <FormField
-                        label="Amount (₹)"
-                        required
-                      >
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          required
-                          value={form.amount}
-                          onChange={(event) =>
-                            updateField(
-                              "amount",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Enter amount"
-                          className={inputClass}
-                        />
-                      </FormField>
+                <DetailBox
+                  label="Amount"
+                  value={money(viewedExpense.amount)}
+                  icon={IndianRupee}
+                  color="text-rose-600"
+                />
 
-                      <FormField
-                        label="Expense Date"
-                        required
-                      >
-                        <input
-                          type="date"
-                          required
-                          value={form.date}
-                          onChange={(event) =>
-                            updateField(
-                              "date",
-                              event.target.value
-                            )
-                          }
-                          className={inputClass}
-                        />
-                      </FormField>
+                <DetailBox
+                  label="Last Updated"
+                  value={
+                    viewedExpense.updatedAt
+                      ? new Date(
+                          viewedExpense.updatedAt
+                        ).toLocaleString("en-IN")
+                      : "—"
+                  }
+                  icon={CalendarDays}
+                />
 
-                      <FormField label="Payment Mode">
-                        <CustomDropdown
-                          value={form.paymentMode}
-                          options={paymentModes}
-                          onChange={(value) =>
-                            updateField(
-                              "paymentMode",
-                              value
-                            )
-                          }
-                        />
-                      </FormField>
-
-                      <div className="sm:col-span-2">
-                        <FormField label="Paid To">
-                          <input
-                            type="text"
-                            value={form.paidTo}
-                            onChange={(event) =>
-                              updateField(
-                                "paidTo",
-                                event.target.value
-                              )
-                            }
-                            placeholder="Vendor / Staff / Supplier"
-                            className={inputClass}
-                          />
-                        </FormField>
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <FormField label="Notes">
-                          <textarea
-                            rows={4}
-                            value={form.notes}
-                            onChange={(event) =>
-                              updateField(
-                                "notes",
-                                event.target.value
-                              )
-                            }
-                            placeholder="Additional details..."
-                            className={`${inputClass} resize-y`}
-                          />
-                        </FormField>
-                      </div>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <div
-                      role="alert"
-                      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
-                    >
-                      <AlertCircle
-                        size={18}
-                        className="mt-0.5 shrink-0"
-                      />
-                      {error}
-                    </div>
-                  )}
-                </div>
-
-                {/* FIXED FOOTER */}
-                <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={closeForm}
-                      className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="submit"
-                      className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
-                    >
-                      <Save size={17} />
-                      {editingId
-                        ? "Update Expense"
-                        : "Save Expense"}
-                    </button>
-                  </div>
-                </div>
-              </form>
+                <DetailBox
+                  label="Notes"
+                  value={
+                    viewedExpense.notes ||
+                    "No additional notes"
+                  }
+                  icon={FileText}
+                  full
+                />
+              </div>
             </div>
-          </div>,
-          document.body
-        )}
+          </div>
+
+          <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setViewId(null)}
+                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openEdit(viewedExpense)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-900"
+              >
+                <Pencil size={16} />
+                Edit Expense
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ADD / EDIT EXPENSE MODAL */}
+      {showForm && (
+        <Modal
+          title={
+            editingId
+              ? "Edit Expense"
+              : "Add Expense"
+          }
+          subtitle="Enter studio expense details."
+          onClose={closeForm}
+        >
+          <form
+            onSubmit={saveExpense}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
+                  <Wallet
+                    size={18}
+                    className="text-blue-600"
+                  />
+                  Expense Information
+                </h3>
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <FormField
+                      label="Expense Title"
+                      required
+                    >
+                      <input
+                        type="text"
+                        required
+                        value={form.title}
+                        onChange={(event) =>
+                          updateField(
+                            "title",
+                            event.target.value
+                          )
+                        }
+                        placeholder="e.g. Studio electricity bill"
+                        className={inputClass}
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField label="Category">
+                    <CustomDropdown
+                      value={form.category}
+                      options={categories}
+                      onChange={(value) =>
+                        updateField("category", value)
+                      }
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Amount (₹)"
+                    required
+                  >
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      required
+                      value={form.amount}
+                      onChange={(event) =>
+                        updateField(
+                          "amount",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Enter amount"
+                      className={inputClass}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Expense Date"
+                    required
+                  >
+                    <input
+                      type="date"
+                      required
+                      value={form.date}
+                      onChange={(event) =>
+                        updateField(
+                          "date",
+                          event.target.value
+                        )
+                      }
+                      className={inputClass}
+                    />
+                  </FormField>
+
+                  <FormField label="Payment Mode">
+                    <CustomDropdown
+                      value={form.paymentMode}
+                      options={paymentModes}
+                      onChange={(value) =>
+                        updateField(
+                          "paymentMode",
+                          value
+                        )
+                      }
+                    />
+                  </FormField>
+
+                  <div className="sm:col-span-2">
+                    <FormField label="Paid To">
+                      <input
+                        type="text"
+                        value={form.paidTo}
+                        onChange={(event) =>
+                          updateField(
+                            "paidTo",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Vendor / Staff / Supplier"
+                        className={inputClass}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <FormField label="Notes">
+                      <textarea
+                        rows={4}
+                        value={form.notes}
+                        onChange={(event) =>
+                          updateField(
+                            "notes",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Additional details..."
+                        className={`${inputClass} resize-y`}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                >
+                  <AlertCircle
+                    size={18}
+                    className="mt-0.5 shrink-0"
+                  />
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* FIXED FOOTER */}
+            <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white hover:bg-blue-900"
+                >
+                  <Save size={17} />
+                  {editingId
+                    ? "Update Expense"
+                    : "Save Expense"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* FOOTER NOTE */}
       <p className="mt-6 text-xs leading-6 text-slate-400">

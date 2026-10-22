@@ -17,10 +17,12 @@ import {
   Camera,
   ClipboardList,
   Save,
-  Filter,
   Users,
   IndianRupee,
-  FileText,
+  Phone,
+  CalendarClock,
+  MessageSquareText,
+  ArrowUpRight,
 } from "lucide-react";
 
 const KEY = "studio_raw_enquiries";
@@ -101,16 +103,16 @@ const fieldClass =
   "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100 lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5";
 
 const formatMoney = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN")}`;
+  value === "" || value == null
+    ? "—"
+    : `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
 const formatDate = (value) => {
   if (!value) return "—";
 
   const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
 
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
+  if (Number.isNaN(date.getTime())) return String(value);
 
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -140,10 +142,6 @@ const getStageStyle = (stage) => {
   }
 };
 
-/* ==============================
-   CUSTOM DROPDOWN
-============================== */
-
 function CustomDropdown({
   value,
   options,
@@ -165,9 +163,7 @@ function CustomDropdown({
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
+      if (event.key === "Escape") setOpen(false);
     };
 
     document.addEventListener("pointerdown", handleOutside);
@@ -180,16 +176,13 @@ function CustomDropdown({
   }, []);
 
   return (
-    <div
-      ref={dropdownRef}
-      className="relative w-full min-w-0"
-    >
+    <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
         type="button"
         onClick={() => setOpen((previous) => !previous)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 ${
+        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce4ef] bg-white px-3 py-2.5 text-left text-xs font-semibold text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:text-sm ${
           compact
             ? "lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5"
             : ""
@@ -200,7 +193,7 @@ function CustomDropdown({
         </span>
 
         <ChevronDown
-          size={17}
+          size={16}
           className={`shrink-0 text-slate-500 transition-transform ${
             open ? "rotate-180" : ""
           }`}
@@ -225,7 +218,7 @@ function CustomDropdown({
                   onChange(option);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition sm:text-sm ${
                   selected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
@@ -235,9 +228,7 @@ function CustomDropdown({
                   {option}
                 </span>
 
-                {selected && (
-                  <Check size={16} className="shrink-0" />
-                )}
+                {selected && <Check size={15} />}
               </button>
             );
           })}
@@ -247,75 +238,58 @@ function CustomDropdown({
   );
 }
 
-/* ==============================
-   SUMMARY CARD
-============================== */
-
 function SummaryCard({ title, value, icon: Icon, color }) {
   return (
-    <div className="flex w-full min-w-0 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:rounded-[18px] lg:border-[#e5ebf3] lg:p-5 lg:shadow-[0_4px_18px_rgba(16,38,77,0.04)] lg:transition-all lg:hover:-translate-y-0.5 lg:hover:shadow-md">
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-slate-500 lg:text-[12px]">
+        <p className="text-xs font-medium text-slate-500 sm:text-sm">
           {title}
         </p>
 
-        <h3 className="mt-2 text-2xl font-bold text-[#10264d] lg:text-[27px]">
+        <h3 className="mt-2 text-2xl font-bold text-[#10264d]">
           {value}
         </h3>
       </div>
 
-      <div
-        className={`shrink-0 rounded-xl p-3 ${
-          color || "bg-blue-50 text-blue-700"
-        }`}
-      >
-        <Icon size={21} />
+      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
+        <Icon size={20} />
       </div>
     </div>
   );
 }
 
-/* ==============================
-   MOBILE DETAIL ROW
-============================== */
-
-function DetailRow({ label, value }) {
+function CompactDetail({ label, value, icon: Icon, full = false }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
+    <div
+      className={`min-w-0 rounded-xl bg-[#f7f9fd] px-3 py-3 ${
+        full ? "col-span-2" : ""
+      }`}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5 text-[#8b99ae]">
+        {Icon && <Icon size={13} className="shrink-0" />}
+        <span className="text-[10px] font-medium sm:text-[11px]">
+          {label}
+        </span>
+      </div>
 
-      <p className="break-words text-sm font-semibold text-[#10264d]">
+      <p className="break-words text-xs font-semibold leading-5 text-[#10264d] sm:text-[13px]">
         {value === "" || value == null ? "—" : value}
       </p>
     </div>
   );
 }
 
-/* ==============================
-   FORM FIELD
-============================== */
-
 function FormField({ label, required = false, children }) {
   return (
     <div className="w-full min-w-0">
-      <label className="mb-2 block text-sm font-medium text-slate-700 lg:mb-1.5 lg:text-[12px] lg:font-semibold lg:text-[#344767]">
+      <label className="mb-2 block text-sm font-medium text-slate-700 lg:mb-1.5 lg:text-xs lg:font-semibold lg:text-[#344767]">
         {label}
-
-        {required && (
-          <span className="ml-1 text-red-500">*</span>
-        )}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
-
       {children}
     </div>
   );
 }
-
-/* ==============================
-   FORM SECTION TITLE
-============================== */
 
 function FormSectionTitle({ icon: Icon, title }) {
   return (
@@ -323,7 +297,6 @@ function FormSectionTitle({ icon: Icon, title }) {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
         <Icon size={17} />
       </div>
-
       <h4 className="text-[13px] font-bold text-[#10264d]">
         {title}
       </h4>
@@ -331,19 +304,12 @@ function FormSectionTitle({ icon: Icon, title }) {
   );
 }
 
-/* ==============================
-   MAIN ENQUIRIES PAGE
-============================== */
-
 export default function Enquiries() {
   const [enquiries, setEnquiries] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY);
-
       if (!saved) return demoEnquiries;
-
       const parsed = JSON.parse(saved);
-
       return Array.isArray(parsed) ? parsed : demoEnquiries;
     } catch {
       return demoEnquiries;
@@ -365,7 +331,6 @@ export default function Enquiries() {
     localStorage.setItem(KEY, JSON.stringify(enquiries));
   }, [enquiries]);
 
-  /* Lock background scroll while modal is open */
   useEffect(() => {
     if (!showForm) return;
 
@@ -390,7 +355,7 @@ export default function Enquiries() {
         )
       ).filter((element) => element.getClientRects().length > 0);
 
-      if (focusable.length === 0) return;
+      if (!focusable.length) return;
 
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -417,15 +382,15 @@ export default function Enquiries() {
   }, [showForm]);
 
   const filtered = enquiries.filter((item) => {
+    const query = search.toLowerCase().trim();
+
     const matchesSearch = [
       item.customer,
       item.phone,
       item.service,
       item.id,
     ].some((value) =>
-      String(value || "")
-        .toLowerCase()
-        .includes(search.toLowerCase().trim())
+      String(value || "").toLowerCase().includes(query)
     );
 
     const matchesStage =
@@ -436,11 +401,8 @@ export default function Enquiries() {
 
   const openForm = (item = null) => {
     previousFocusRef.current = document.activeElement;
-
     setEditing(item?.id || null);
-    setForm(
-      item ? { ...emptyForm, ...item } : { ...emptyForm }
-    );
+    setForm(item ? { ...emptyForm, ...item } : { ...emptyForm });
     setError("");
     setShowForm(true);
   };
@@ -472,26 +434,17 @@ export default function Enquiries() {
       return;
     }
 
-    const updatedForm = {
-      ...form,
-      customer,
-      phone,
-    };
+    const updatedForm = { ...form, customer, phone };
 
     if (editing) {
       setEnquiries((previous) =>
         previous.map((item) =>
-          item.id === editing
-            ? { ...item, ...updatedForm }
-            : item
+          item.id === editing ? { ...item, ...updatedForm } : item
         )
       );
     } else {
       setEnquiries((previous) => [
-        {
-          ...updatedForm,
-          id: `ENQ-${Date.now()}`,
-        },
+        { ...updatedForm, id: `ENQ-${Date.now()}` },
         ...previous,
       ]);
     }
@@ -500,15 +453,10 @@ export default function Enquiries() {
   };
 
   const remove = (id) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this enquiry?"
-      )
-    ) {
+    if (window.confirm("Are you sure you want to delete this enquiry?")) {
       setEnquiries((previous) =>
         previous.filter((item) => item.id !== id)
       );
-
       if (editing === id) closeForm();
     }
   };
@@ -536,9 +484,7 @@ export default function Enquiries() {
     },
     {
       title: "Follow-ups",
-      value: enquiries.filter(
-        (item) => item.stage === "Follow-up"
-      ).length,
+      value: enquiries.filter((item) => item.stage === "Follow-up").length,
       icon: CalendarDays,
       color: "bg-amber-50 text-amber-700",
     },
@@ -553,20 +499,19 @@ export default function Enquiries() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
-
-      {/* PAGE HEADER */}
-      <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
             Customer Relationship Management
           </p>
 
-          <h2 className="break-words text-xl font-bold text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold lg:tracking-[-0.035em]">
+          <h2 className="text-xl font-bold text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
             Enquiries & Leads
           </h2>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500 lg:text-[#8491a5]">
+          <p className="mt-1 text-sm text-slate-500">
             Track customer enquiries, follow-ups and conversions.
           </p>
         </div>
@@ -574,42 +519,38 @@ export default function Enquiries() {
         <button
           type="button"
           onClick={() => openForm()}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4274] lg:w-auto lg:rounded-xl lg:px-6 lg:shadow-[0_8px_20px_rgba(16,38,77,0.16)] lg:hover:-translate-y-0.5"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4274] lg:w-auto"
         >
           <Plus size={18} />
           Add Enquiry
         </button>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div className="flex w-full min-w-0 flex-col gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-4 lg:gap-5">
+      {/* SUMMARY */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
         {counts.map((item) => (
           <SummaryCard key={item.title} {...item} />
         ))}
       </div>
 
-      {/* ENQUIRIES LIST */}
-      <section className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm lg:rounded-[22px] lg:border-[#e5ebf3] lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)]">
-
-        {/* TOOLBAR */}
-        <div className="flex w-full min-w-0 flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:gap-5 lg:border-[#edf1f6] lg:px-6 lg:py-5">
-          <div className="min-w-0">
+      {/* LIST */}
+      <section className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+          <div>
             <h3 className="text-lg font-bold text-[#10264d]">
               Enquiries List
             </h3>
-
-            <p className="mt-1 hidden text-xs text-slate-400 lg:block">
+            <p className="mt-1 text-xs text-slate-400">
               {filtered.length} enquiries found
             </p>
           </div>
 
-          <div className="flex w-full min-w-0 flex-col gap-4 lg:w-auto lg:flex-row lg:items-end lg:gap-3">
-            <div className="relative w-full min-w-0 lg:w-[260px] xl:w-[320px]">
+          <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
+            <div className="relative min-w-0 lg:w-[280px]">
               <Search
                 size={18}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
-
               <input
                 type="search"
                 value={search}
@@ -619,11 +560,7 @@ export default function Enquiries() {
               />
             </div>
 
-            <div className="w-full min-w-0 lg:w-[190px]">
-              <p className="mb-2 text-xs font-medium text-slate-500 lg:hidden">
-                Filter by Stage
-              </p>
-
+            <div className="min-w-0 sm:w-[190px]">
               <CustomDropdown
                 value={stageFilter}
                 options={["All", ...stages]}
@@ -634,99 +571,139 @@ export default function Enquiries() {
           </div>
         </div>
 
-        {/* MOBILE ENQUIRY CARDS */}
-        <div className="flex w-full min-w-0 flex-col gap-4 p-3 sm:p-5 lg:hidden">
+        {/* MOBILE COMPACT CARDS */}
+        <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
           {filtered.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-400">
+            <div className="col-span-full py-12 text-center text-sm text-slate-400">
               No enquiries found.
-            </p>
+            </div>
           ) : (
             filtered.map((item) => (
-              <div
+              <article
                 key={item.id}
-                className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5"
+                className="min-w-0 rounded-2xl border border-[#e3eaf3] bg-white p-4 shadow-[0_4px_16px_rgba(16,38,77,0.045)]"
               >
-                <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                  <div className="min-w-0">
-                    <h4 className="break-words text-base font-bold text-[#10264d]">
-                      {item.customer}
-                    </h4>
+                {/* CARD HEADER */}
+                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
+                      <UserRound size={20} />
+                    </div>
 
-                    <p className="mt-1 break-all text-xs font-medium text-blue-700">
-                      {item.id}
-                    </p>
+                    <div className="min-w-0">
+                      <h4 className="truncate text-sm font-bold text-[#10264d]">
+                        {item.customer}
+                      </h4>
+
+                      <p className="mt-1 truncate text-[10px] font-semibold text-[#4972a8]">
+                        {item.id}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => openForm(item)}
-                      className="rounded-xl bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
-                      aria-label="Edit enquiry"
+                      className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+                      aria-label={`Edit ${item.customer}`}
                     >
-                      <Pencil size={17} />
+                      <Pencil size={15} />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => remove(item.id)}
-                      className="rounded-xl bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
-                      aria-label="Delete enquiry"
+                      className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                      aria-label={`Delete ${item.customer}`}
                     >
-                      <Trash2 size={17} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-4 flex min-w-0 flex-col gap-3">
-                  <DetailRow label="Phone" value={item.phone} />
-                  <DetailRow label="Service" value={item.service} />
-                  <DetailRow
-                    label="Budget"
-                    value={formatMoney(item.budget)}
+                {/* HIGHLIGHT */}
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span
+                    className={`inline-flex min-w-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${getStageStyle(
+                      item.stage || "New"
+                    )}`}
+                  >
+                    {item.stage || "New"}
+                  </span>
+
+                  <span className="text-sm font-bold text-[#10264d]">
+                    {formatMoney(item.budget)}
+                  </span>
+                </div>
+
+                {/* 2 COLUMN DETAILS */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <CompactDetail
+                    label="Phone"
+                    value={item.phone}
+                    icon={Phone}
                   />
-                  <DetailRow
+
+                  <CompactDetail
                     label="Event Date"
-                    value={item.eventDate}
+                    value={formatDate(item.eventDate)}
+                    icon={CalendarDays}
                   />
-                  <DetailRow
+
+                  <CompactDetail
+                    label="Service"
+                    value={item.service}
+                    icon={Camera}
+                  />
+
+                  <CompactDetail
                     label="Lead Source"
                     value={item.source}
+                    icon={ArrowUpRight}
                   />
-                  <DetailRow
+
+                  <CompactDetail
                     label="Assigned Staff"
                     value={item.owner}
-                  />
-                  <DetailRow
-                    label="Next Follow-up"
-                    value={item.nextFollowUp}
-                  />
-                  <DetailRow
-                    label="Notes / Requirements"
-                    value={item.notes}
+                    icon={UserRound}
                   />
 
-                  <div className="w-full min-w-0 pt-1">
-                    <p className="mb-2 text-xs font-medium text-slate-500">
-                      Lead Stage
-                    </p>
+                  <CompactDetail
+                    label="Follow-up"
+                    value={formatDate(item.nextFollowUp)}
+                    icon={CalendarClock}
+                  />
 
-                    <CustomDropdown
-                      value={item.stage || "New"}
-                      options={stages}
-                      onChange={(stage) =>
-                        changeStage(item.id, stage)
-                      }
+                  {item.notes && (
+                    <CompactDetail
+                      label="Notes / Requirements"
+                      value={item.notes}
+                      icon={MessageSquareText}
+                      full
                     />
-                  </div>
+                  )}
                 </div>
-              </div>
+
+                {/* STAGE */}
+                <div className="mt-3 border-t border-[#edf1f6] pt-3">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-500">
+                    Update Lead Stage
+                  </p>
+
+                  <CustomDropdown
+                    value={item.stage || "New"}
+                    options={stages}
+                    onChange={(stage) => changeStage(item.id, stage)}
+                  />
+                </div>
+              </article>
             ))
           )}
         </div>
 
         {/* DESKTOP TABLE */}
-        <div className="hidden w-full min-w-0 overflow-x-auto lg:block">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[1050px] border-collapse text-left">
             <thead className="bg-[#f7f9fd]">
               <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
@@ -771,7 +748,6 @@ export default function Enquiries() {
                           <p className="font-semibold text-[#10264d]">
                             {item.customer}
                           </p>
-
                           <p className="mt-1 text-xs text-slate-400">
                             {item.phone}
                           </p>
@@ -796,24 +772,22 @@ export default function Enquiries() {
                     </td>
 
                     <td className="min-w-[160px] px-5 py-4">
-                      <div className="relative">
-                        <span
-                          className={`mb-1 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getStageStyle(
-                            item.stage || "New"
-                          )}`}
-                        >
-                          {item.stage || "New"}
-                        </span>
+                      <span
+                        className={`mb-1 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getStageStyle(
+                          item.stage || "New"
+                        )}`}
+                      >
+                        {item.stage || "New"}
+                      </span>
 
-                        <CustomDropdown
-                          value={item.stage || "New"}
-                          options={stages}
-                          onChange={(stage) =>
-                            changeStage(item.id, stage)
-                          }
-                          compact
-                        />
-                      </div>
+                      <CustomDropdown
+                        value={item.stage || "New"}
+                        options={stages}
+                        onChange={(stage) =>
+                          changeStage(item.id, stage)
+                        }
+                        compact
+                      />
                     </td>
 
                     <td className="px-5 py-4">
@@ -821,8 +795,8 @@ export default function Enquiries() {
                         <button
                           type="button"
                           onClick={() => openForm(item)}
+                          className="rounded-lg p-2 text-[#376aa7] hover:bg-blue-50"
                           aria-label={`Edit ${item.customer}`}
-                          className="rounded-lg p-2 text-[#376aa7] transition hover:bg-blue-50"
                         >
                           <Pencil size={17} />
                         </button>
@@ -830,8 +804,8 @@ export default function Enquiries() {
                         <button
                           type="button"
                           onClick={() => remove(item.id)}
+                          className="rounded-lg p-2 text-red-500 hover:bg-red-50"
                           aria-label={`Delete ${item.customer}`}
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
                         >
                           <Trash2 size={17} />
                         </button>
@@ -844,19 +818,17 @@ export default function Enquiries() {
           </table>
         </div>
 
-        {/* LIST FOOTER */}
         <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
           <p className="text-xs text-[#8290a5]">
             Showing {filtered.length} of {enquiries.length} enquiries
           </p>
-
           <span className="text-xs text-[#8290a5]">
             Studio Raw Picturez CRM
           </span>
         </div>
       </section>
 
-      {/* CENTERED ADD / EDIT MODAL */}
+      {/* ADD / EDIT MODAL */}
       {showForm &&
         createPortal(
           <div
@@ -872,29 +844,21 @@ export default function Enquiries() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="enquiry-modal-title"
-              className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)] lg:max-w-[800px] lg:rounded-[18px]"
+              className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)] lg:max-w-[800px]"
             >
-              {/* MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7 lg:px-8 lg:py-5">
+              <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7 lg:px-8">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                    {editing ? (
-                      <Pencil size={19} />
-                    ) : (
-                      <Plus size={21} />
-                    )}
+                    {editing ? <Pencil size={19} /> : <Plus size={21} />}
                   </div>
 
                   <div className="min-w-0">
                     <h3
                       id="enquiry-modal-title"
-                      className="text-lg font-bold text-[#10264d] lg:text-[19px]"
+                      className="text-lg font-bold text-[#10264d]"
                     >
-                      {editing
-                        ? "Edit Enquiry"
-                        : "Add New Enquiry"}
+                      {editing ? "Edit Enquiry" : "Add New Enquiry"}
                     </h3>
-
                     <p className="mt-1 text-xs text-[#8491a5]">
                       {editing
                         ? "Update customer enquiry information"
@@ -907,23 +871,19 @@ export default function Enquiries() {
                   type="button"
                   onClick={closeForm}
                   aria-label="Close enquiry popup"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-[#10264d]"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* FORM */}
               <form
                 id="enquiry-form"
                 onSubmit={save}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                {/* SCROLLABLE FORM BODY */}
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 lg:space-y-5 lg:px-8 lg:py-6">
-
-                  {/* CUSTOMER INFORMATION */}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5 lg:gap-y-4">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 lg:px-8">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Users}
                       title="Customer Information"
@@ -935,10 +895,7 @@ export default function Enquiries() {
                         type="text"
                         value={form.customer}
                         onChange={(event) =>
-                          updateField(
-                            "customer",
-                            event.target.value
-                          )
+                          updateField("customer", event.target.value)
                         }
                         placeholder="Enter customer name"
                         className={fieldClass}
@@ -988,8 +945,7 @@ export default function Enquiries() {
                     </FormField>
                   </div>
 
-                  {/* EVENT DETAILS */}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5 lg:gap-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Camera}
                       title="Event Details"
@@ -1011,10 +967,7 @@ export default function Enquiries() {
                         type="date"
                         value={form.eventDate}
                         onChange={(event) =>
-                          updateField(
-                            "eventDate",
-                            event.target.value
-                          )
+                          updateField("eventDate", event.target.value)
                         }
                         className={fieldClass}
                       />
@@ -1038,18 +991,14 @@ export default function Enquiries() {
                         type="date"
                         value={form.nextFollowUp}
                         onChange={(event) =>
-                          updateField(
-                            "nextFollowUp",
-                            event.target.value
-                          )
+                          updateField("nextFollowUp", event.target.value)
                         }
                         className={fieldClass}
                       />
                     </FormField>
                   </div>
 
-                  {/* LEAD MANAGEMENT */}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5 lg:gap-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={ClipboardList}
                       title="Lead Management"
@@ -1074,10 +1023,7 @@ export default function Enquiries() {
                           rows={3}
                           value={form.notes}
                           onChange={(event) =>
-                            updateField(
-                              "notes",
-                              event.target.value
-                            )
+                            updateField("notes", event.target.value)
                           }
                           placeholder="Enter enquiry requirements or special notes..."
                           className={`${fieldClass} h-auto resize-y lg:h-auto lg:min-h-[85px]`}
@@ -1086,35 +1032,31 @@ export default function Enquiries() {
                     </div>
                   </div>
 
-                  {/* ERROR */}
                   {error && (
                     <div
                       role="alert"
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
                     >
                       {error}
                     </div>
                   )}
                 </div>
 
-                {/* FIXED MODAL FOOTER */}
                 <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7 lg:px-8">
                   <button
                     type="button"
                     onClick={closeForm}
-                    className="w-full rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] transition hover:bg-[#eef3f9] sm:w-auto"
+                    className="rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] hover:bg-[#eef3f9]"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1b467e] sm:w-auto"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e]"
                   >
                     <Save size={17} />
-                    {editing
-                      ? "Update Enquiry"
-                      : "Save Enquiry"}
+                    {editing ? "Update Enquiry" : "Save Enquiry"}
                   </button>
                 </div>
               </form>

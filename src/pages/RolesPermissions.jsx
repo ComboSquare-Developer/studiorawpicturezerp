@@ -173,7 +173,7 @@ function FormField({ label, required = false, children }) {
 function SectionHeading({ icon: Icon, title, description }) {
   return (
     <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91] sm:h-11 sm:w-11">
         <Icon size={20} />
       </div>
 
@@ -229,11 +229,11 @@ function ModalShell({
         aria-label={title}
         className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
       >
-        {/* Fixed Modal Header */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
-              <ShieldCheck size={23} />
+        {/* FIXED MODAL HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
+              <ShieldCheck size={22} />
             </div>
 
             <div className="min-w-0">
@@ -253,7 +253,7 @@ function ModalShell({
             aria-label="Close role form"
             className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
           >
-            <X size={22} />
+            <X size={21} />
           </button>
         </div>
 
@@ -261,12 +261,12 @@ function ModalShell({
           onSubmit={onSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {/* Scrollable Modal Content */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fafcff] px-5 py-6 sm:px-9 sm:py-7">
+          {/* SCROLLABLE MODAL BODY */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fafcff] px-4 py-5 sm:px-9 sm:py-7">
             {children}
           </div>
 
-          {/* Fixed Modal Footer */}
+          {/* FIXED MODAL FOOTER */}
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
             <button
               type="button"
@@ -295,22 +295,24 @@ function StatCard({ stat }) {
   const Icon = stat.icon;
 
   return (
-    <div className="group min-w-0 rounded-2xl border border-[#e8edf5] bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="group min-w-0 rounded-2xl border border-[#e8edf5] bg-white p-3.5 shadow-sm transition duration-300 hover:shadow-lg sm:p-6 lg:hover:-translate-y-1">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[#72819a]">
+          <p className="text-[10px] font-medium leading-4 text-[#72819a] sm:text-sm sm:leading-5">
             {stat.label}
           </p>
 
           <h3
-            className={`mt-3 text-3xl font-bold ${stat.color}`}
+            className={`mt-2 break-all text-xl font-bold sm:mt-3 sm:text-3xl ${stat.color}`}
           >
             {stat.value}
           </h3>
         </div>
 
-        <div className={`rounded-xl p-3 ${stat.bg}`}>
-          <Icon size={22} className={stat.color} />
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 sm:rounded-xl ${stat.bg}`}
+        >
+          <Icon size={17} className={stat.color} />
         </div>
       </div>
     </div>
@@ -331,42 +333,42 @@ function RoleCard({
     : [];
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-[#e4eaf3] bg-white p-5 shadow-sm transition duration-300 hover:border-blue-200 hover:shadow-lg sm:p-6">
-      {/* Role Header */}
-      <div className="flex min-w-0 items-start gap-4">
+    <article className="flex min-w-0 flex-col rounded-2xl border border-[#e4eaf3] bg-white p-3.5 shadow-sm transition duration-300 hover:border-blue-200 hover:shadow-lg sm:p-6">
+      {/* ROLE HEADER */}
+      <div className="flex min-w-0 items-start gap-2.5 sm:gap-4">
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 sm:rounded-2xl ${
             isAdmin
               ? "bg-[#112e60] text-white"
               : "bg-[#eef4ff] text-[#174b91]"
           }`}
         >
           {isAdmin ? (
-            <Crown size={23} />
+            <Crown size={19} />
           ) : (
-            <ShieldCheck size={23} />
+            <ShieldCheck size={19} />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="break-words text-lg font-bold text-[#10264d]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <h3 className="break-words text-sm font-bold text-[#10264d] sm:text-lg">
               {role.name}
             </h3>
 
             {isAdmin && (
-              <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+              <span className="rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700 sm:px-2.5 sm:text-[11px]">
                 Protected
               </span>
             )}
           </div>
 
-          <p className="mt-2 min-h-[40px] break-words text-sm leading-5 text-[#8190a7]">
+          <p className="mt-1 break-words text-[11px] leading-5 text-[#8190a7] sm:mt-2 sm:min-h-[40px] sm:text-sm">
             {role.description || "No description"}
           </p>
 
           <span
-            className={`mt-3 inline-flex rounded-lg px-3 py-1.5 text-xs font-semibold ${
+            className={`mt-2 inline-flex rounded-lg px-2.5 py-1 text-[10px] font-semibold sm:mt-3 sm:px-3 sm:py-1.5 sm:text-xs ${
               role.system
                 ? "bg-blue-50 text-blue-700"
                 : "bg-violet-50 text-violet-700"
@@ -377,36 +379,36 @@ function RoleCard({
         </div>
       </div>
 
-      {/* Counts */}
-      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
-        <div className="min-w-0 rounded-xl bg-[#f7f9fc] p-4">
-          <p className="text-xs text-[#8190a7]">
+      {/* TWO-COLUMN COUNTS */}
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 sm:mt-5 sm:gap-3 sm:pt-5">
+        <div className="min-w-0 rounded-xl bg-[#f7f9fc] p-3 sm:p-4">
+          <p className="text-[10px] text-[#8190a7] sm:text-xs">
             Module Access
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-[#10264d]">
+          <p className="mt-1.5 text-xl font-bold text-[#10264d] sm:mt-2 sm:text-2xl">
             {permissions.length}
           </p>
         </div>
 
-        <div className="min-w-0 rounded-xl bg-[#f7f9fc] p-4">
-          <p className="text-xs text-[#8190a7]">
+        <div className="min-w-0 rounded-xl bg-[#f7f9fc] p-3 sm:p-4">
+          <p className="text-[10px] text-[#8190a7] sm:text-xs">
             Assigned Staff
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-[#10264d]">
+          <p className="mt-1.5 text-xl font-bold text-[#10264d] sm:mt-2 sm:text-2xl">
             {assignedCount}
           </p>
         </div>
       </div>
 
-      {/* Allowed Modules */}
-      <div className="mt-5 min-w-0 flex-1">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8190a7]">
+      {/* ALLOWED MODULES */}
+      <div className="mt-3 min-w-0 flex-1 sm:mt-5">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[#8190a7] sm:mb-3 sm:text-xs">
           Allowed Modules
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {permissions.slice(0, 5).map((permission) => {
             const module = modules.find(
               (item) => item.key === permission
@@ -415,7 +417,7 @@ function RoleCard({
             return (
               <span
                 key={permission}
-                className="max-w-full break-words rounded-lg bg-[#edf4ff] px-3 py-2 text-xs font-medium text-[#174b91]"
+                className="max-w-full break-words rounded-lg bg-[#edf4ff] px-2 py-1.5 text-[10px] font-medium text-[#174b91] sm:px-3 sm:py-2 sm:text-xs"
               >
                 {module?.label || permission}
               </span>
@@ -423,29 +425,29 @@ function RoleCard({
           })}
 
           {permissions.length > 5 && (
-            <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+            <span className="rounded-lg bg-slate-100 px-2 py-1.5 text-[10px] font-semibold text-slate-600 sm:px-3 sm:py-2 sm:text-xs">
               +{permissions.length - 5} more
             </span>
           )}
 
           {permissions.length === 0 && (
-            <p className="text-sm text-slate-400">
+            <p className="text-xs text-slate-400 sm:text-sm">
               No module permissions assigned.
             </p>
           )}
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row">
+      {/* COMPACT MOBILE ACTIONS */}
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-slate-100 pt-3 sm:mt-6 sm:flex sm:gap-3 sm:pt-5">
         <button
           type="button"
           disabled={isAdmin}
           onClick={() => onEdit(role)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1a4384] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#112e60] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1a4384] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-1 sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm"
         >
-          <Pencil size={17} />
-          Edit Role
+          <Pencil size={15} className="shrink-0" />
+          <span className="truncate">Edit Role</span>
         </button>
 
         <button
@@ -457,10 +459,11 @@ function RoleCard({
               ? "Default roles cannot be deleted"
               : "Delete role"
           }
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+          aria-label={`Delete ${role.name} role`}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-30 sm:h-auto sm:w-auto sm:flex-1 sm:gap-2 sm:rounded-xl sm:bg-white sm:px-4 sm:py-3 sm:text-sm"
         >
-          <Trash2 size={17} />
-          Delete Role
+          <Trash2 size={16} className="shrink-0" />
+          <span className="hidden sm:inline">Delete Role</span>
         </button>
       </div>
     </article>
@@ -567,6 +570,8 @@ export default function RolesPermissions() {
           : [...previous.permissions, key],
       };
     });
+
+    setError("");
   };
 
   const selectAll = () => {
@@ -710,12 +715,12 @@ export default function RolesPermissions() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
-      {/* Page Header */}
+    <div className="min-h-screen w-full min-w-0 space-y-5 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-6 lg:px-8">
+      {/* PAGE HEADER */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white shadow-sm">
-            <ShieldCheck size={24} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl">
+            <ShieldCheck size={22} />
           </div>
 
           <div className="min-w-0">
@@ -723,7 +728,7 @@ export default function RolesPermissions() {
               Roles & Permissions
             </h1>
 
-            <p className="mt-1 text-sm leading-6 text-[#8190a7]">
+            <p className="mt-1 text-xs leading-5 text-[#8190a7] sm:text-sm sm:leading-6">
               Manage studio user roles and module access
             </p>
           </div>
@@ -739,22 +744,22 @@ export default function RolesPermissions() {
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* COMPACT 2x2 MOBILE STATISTICS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </div>
 
-      {/* Role Management */}
+      {/* ROLE MANAGEMENT */}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e7edf6] bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <h2 className="text-lg font-bold text-[#10264d]">
               Role Management
             </h2>
 
-            <p className="mt-1 text-sm text-[#8190a7]">
+            <p className="mt-1 text-xs text-[#8190a7] sm:text-sm">
               Configure roles and control module permissions
             </p>
           </div>
@@ -787,7 +792,7 @@ export default function RolesPermissions() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 p-4 md:grid-cols-2 xl:grid-cols-3 sm:p-6">
+          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-5 sm:p-6 xl:grid-cols-3">
             {filteredRoles.map((role) => (
               <RoleCard
                 key={role.id}
@@ -801,7 +806,7 @@ export default function RolesPermissions() {
         )}
       </section>
 
-      {/* Center Popup */}
+      {/* CREATE / EDIT ROLE MODAL */}
       {showForm && (
         <ModalShell
           title={editingId ? "Edit Role" : "Add New Role"}
@@ -811,7 +816,7 @@ export default function RolesPermissions() {
           submitLabel={editingId ? "Update Role" : "Save Role"}
         >
           <div className="space-y-8">
-            {/* Role Information */}
+            {/* ROLE INFORMATION */}
             <section>
               <SectionHeading
                 icon={ShieldCheck}
@@ -848,7 +853,7 @@ export default function RolesPermissions() {
               </div>
             </section>
 
-            {/* Module Permissions */}
+            {/* MODULE PERMISSIONS */}
             <section>
               <SectionHeading
                 icon={Settings2}
@@ -856,9 +861,9 @@ export default function RolesPermissions() {
                 description="Select which modules this role can access"
               />
 
-              <div className="rounded-2xl border border-[#dbe4f0] bg-white p-4 sm:p-6">
-                {/* Permission Toolbar */}
-                <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="rounded-2xl border border-[#dbe4f0] bg-white p-3.5 sm:p-6">
+                {/* PERMISSION TOOLBAR */}
+                <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pb-5">
                   <div>
                     <p className="text-sm font-bold text-[#10264d]">
                       Access Permissions
@@ -870,11 +875,11 @@ export default function RolesPermissions() {
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="grid grid-cols-2 gap-2 sm:flex">
                     <button
                       type="button"
                       onClick={selectAll}
-                      className="rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                      className="rounded-xl bg-blue-50 px-3 py-2.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 sm:px-4"
                     >
                       Select All
                     </button>
@@ -882,15 +887,15 @@ export default function RolesPermissions() {
                     <button
                       type="button"
                       onClick={clearAll}
-                      className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200"
+                      className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 sm:px-4"
                     >
                       Clear All
                     </button>
                   </div>
                 </div>
 
-                {/* Permission Progress */}
-                <div className="mb-6 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                {/* PERMISSION PROGRESS */}
+                <div className="mb-5 h-2 overflow-hidden rounded-full bg-slate-100 sm:mb-6 sm:h-2.5">
                   <div
                     className="h-full rounded-full bg-[#112e60] transition-all duration-300"
                     style={{
@@ -903,8 +908,8 @@ export default function RolesPermissions() {
                   />
                 </div>
 
-                {/* Permission Checkboxes */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {/* COMPACT TWO-COLUMN PERMISSION CHECKBOXES */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {modules.map((module) => {
                     const checked =
                       form.permissions.includes(module.key);
@@ -912,7 +917,7 @@ export default function RolesPermissions() {
                     return (
                       <label
                         key={module.key}
-                        className={`flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+                        className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl border p-2.5 transition sm:gap-3 sm:p-4 ${
                           checked
                             ? "border-blue-200 bg-blue-50"
                             : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
@@ -928,16 +933,16 @@ export default function RolesPermissions() {
                         />
 
                         <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                          className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border sm:h-5 sm:w-5 ${
                             checked
                               ? "border-blue-700 bg-blue-700 text-white"
                               : "border-slate-300 bg-white"
                           }`}
                         >
-                          {checked && <Check size={14} />}
+                          {checked && <Check size={13} />}
                         </span>
 
-                        <span className="min-w-0 break-words text-sm font-medium text-[#29416a]">
+                        <span className="min-w-0 break-words text-[11px] font-medium leading-4 text-[#29416a] sm:text-sm sm:leading-5">
                           {module.label}
                         </span>
                       </label>
@@ -947,20 +952,21 @@ export default function RolesPermissions() {
               </div>
             </section>
 
-            {/* Notice */}
-            <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
+            {/* NOTICE */}
+            <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3.5 sm:p-4">
               <AlertCircle
                 size={18}
                 className="mt-0.5 shrink-0 text-amber-700"
               />
 
-              <p className="min-w-0 break-words text-xs leading-6 text-amber-900">
+              <p className="min-w-0 break-words text-[11px] leading-5 text-amber-900 sm:text-xs sm:leading-6">
                 Permissions are saved in browser localStorage
                 for this frontend demo. They do not enforce
                 secure login or backend authorization.
               </p>
             </div>
 
+            {/* VALIDATION ERROR */}
             {error && (
               <div
                 role="alert"

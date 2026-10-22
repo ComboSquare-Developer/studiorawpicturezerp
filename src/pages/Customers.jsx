@@ -14,14 +14,16 @@ import {
   UserCheck,
   UserX,
   UserRound,
-  Phone,
-  Mail,
-  MapPin,
-  CalendarDays,
   ShieldCheck,
   Save,
   ContactRound,
   FileText,
+  Phone,
+  Mail,
+  MapPin,
+  CalendarDays,
+  Languages,
+  MessageSquare,
 } from "lucide-react";
 
 const STORAGE_KEY = "studio_raw_customers";
@@ -144,16 +146,13 @@ function CustomDropdown({
   }, []);
 
   return (
-    <div
-      ref={dropdownRef}
-      className="relative w-full min-w-0"
-    >
+    <div ref={dropdownRef} className="relative w-full min-w-0">
       <button
         type="button"
         onClick={() => setOpen((previous) => !previous)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 ${
+        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce4ef] bg-white px-3 py-2.5 text-left text-xs font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:text-sm ${
           compact
             ? "lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5"
             : ""
@@ -164,7 +163,7 @@ function CustomDropdown({
         </span>
 
         <ChevronDown
-          size={17}
+          size={16}
           className={`shrink-0 text-slate-500 transition-transform ${
             open ? "rotate-180" : ""
           }`}
@@ -189,7 +188,7 @@ function CustomDropdown({
                   onChange(option);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition sm:text-sm ${
                   selected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
@@ -200,7 +199,7 @@ function CustomDropdown({
                 </span>
 
                 {selected && (
-                  <Check size={16} className="shrink-0" />
+                  <Check size={15} className="shrink-0" />
                 )}
               </button>
             );
@@ -211,7 +210,41 @@ function CustomDropdown({
   );
 }
 
-/* DETAIL ROW */
+/* COMPACT MOBILE DETAIL */
+
+function MobileDetail({
+  icon: Icon,
+  label,
+  value,
+  full = false,
+}) {
+  return (
+    <div
+      className={`min-w-0 rounded-xl border border-[#edf1f6] bg-[#f8fafd] p-3 ${
+        full ? "col-span-2" : ""
+      }`}
+    >
+      <div className="mb-1.5 flex items-center gap-1.5">
+        {Icon && (
+          <Icon
+            size={13}
+            className="shrink-0 text-[#7890af]"
+          />
+        )}
+
+        <p className="min-w-0 text-[10px] font-medium text-[#8491a5] sm:text-xs">
+          {label}
+        </p>
+      </div>
+
+      <p className="min-w-0 break-words text-xs font-semibold leading-5 text-[#10264d] sm:text-sm">
+        {value === "" || value == null ? "—" : value}
+      </p>
+    </div>
+  );
+}
+
+/* MODAL DETAIL */
 
 function DetailRow({ label, value }) {
   return (
@@ -270,9 +303,9 @@ function SummaryCard({
   color,
 }) {
   return (
-    <div className="flex w-full min-w-0 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:rounded-[18px] lg:border-[#e5ebf3] lg:p-5 lg:shadow-[0_4px_18px_rgba(16,38,77,0.04)] lg:transition-all lg:hover:-translate-y-0.5 lg:hover:shadow-md">
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:rounded-[18px] lg:border-[#e5ebf3] lg:p-5 lg:shadow-[0_4px_18px_rgba(16,38,77,0.04)] lg:transition-all lg:hover:-translate-y-0.5 lg:hover:shadow-md">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-slate-500 lg:text-[12px]">
+        <p className="text-xs font-medium text-slate-500 lg:text-[12px]">
           {title}
         </p>
 
@@ -282,11 +315,11 @@ function SummaryCard({
       </div>
 
       <div
-        className={`shrink-0 rounded-xl p-3 ${
+        className={`shrink-0 rounded-xl p-2.5 lg:p-3 ${
           color || "bg-blue-50 text-blue-700"
         }`}
       >
-        <Icon size={21} />
+        <Icon size={20} />
       </div>
     </div>
   );
@@ -337,7 +370,6 @@ export default function Customers() {
 
   const modalOpen = showForm || Boolean(viewingId);
 
-  /* LOCK PAGE SCROLL WHEN MODAL OPENS */
   useEffect(() => {
     if (!modalOpen) return;
 
@@ -365,7 +397,9 @@ export default function Customers() {
         modalRef.current.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((element) => element.getClientRects().length > 0);
+      ).filter(
+        (element) => element.getClientRects().length > 0
+      );
 
       if (focusable.length === 0) return;
 
@@ -434,12 +468,10 @@ export default function Customers() {
 
     setEditing(customer.id);
     setViewingId(null);
-
     setForm({
       ...emptyForm,
       ...customer,
     });
-
     setError("");
     setShowForm(true);
   };
@@ -461,11 +493,6 @@ export default function Customers() {
 
   const closeView = () => {
     setViewingId(null);
-  };
-
-  const closeModal = () => {
-    closeForm();
-    closeView();
   };
 
   const updateField = (key, value) => {
@@ -591,7 +618,7 @@ export default function Customers() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
 
       {/* PAGE HEADING */}
       <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -620,9 +647,14 @@ export default function Customers() {
       </div>
 
       {/* SUMMARY CARDS */}
-      <div className="flex w-full min-w-0 flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5">
-        {counts.map((item) => (
-          <SummaryCard key={item.title} {...item} />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+        {counts.map((item, index) => (
+          <div
+            key={item.title}
+            className={index === 0 ? "col-span-2 lg:col-span-1" : ""}
+          >
+            <SummaryCard {...item} />
+          </div>
         ))}
       </div>
 
@@ -636,16 +668,16 @@ export default function Customers() {
               Customers List
             </h3>
 
-            <p className="mt-1 hidden text-xs text-slate-400 lg:block">
+            <p className="mt-1 text-xs text-slate-400">
               {filtered.length} customers found
             </p>
           </div>
 
-          <div className="flex w-full min-w-0 flex-col gap-4 lg:w-auto lg:flex-row lg:items-end lg:gap-3">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row lg:w-auto lg:items-end">
             <div className="relative w-full min-w-0 lg:w-[270px] xl:w-[330px]">
               <Search
                 size={18}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
 
               <input
@@ -657,7 +689,7 @@ export default function Customers() {
               />
             </div>
 
-            <div className="w-full min-w-0 lg:w-[175px]">
+            <div className="w-full min-w-0 sm:w-[180px] lg:w-[175px]">
               <p className="mb-2 text-xs font-medium text-slate-500 lg:hidden">
                 Filter by Status
               </p>
@@ -672,120 +704,156 @@ export default function Customers() {
           </div>
         </div>
 
-        {/* MOBILE CUSTOMER CARDS */}
-        <div className="flex w-full min-w-0 flex-col gap-4 p-3 sm:p-5 lg:hidden">
+        {/* COMPACT MOBILE CUSTOMER CARDS */}
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
           {filtered.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-400">
-              No customers found.
-            </p>
+            <div className="col-span-full py-12 text-center">
+              <Users
+                size={32}
+                className="mx-auto mb-3 text-slate-300"
+              />
+              <p className="text-sm font-medium text-slate-500">
+                No customers found.
+              </p>
+            </div>
           ) : (
             filtered.map((customer) => (
-              <div
+              <article
                 key={customer.id}
-                className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5"
+                className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white p-3.5 shadow-[0_3px_14px_rgba(16,38,77,0.035)] sm:p-4"
               >
-                <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                  <div className="min-w-0">
-                    <h4 className="break-words text-base font-bold text-[#10264d]">
-                      {customer.name}
-                    </h4>
+                {/* CARD HEADER */}
+                <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
+                      <UserRound size={19} />
+                    </div>
 
-                    <p className="mt-1 break-all text-xs font-medium text-blue-700">
-                      {customer.id}
-                    </p>
+                    <div className="min-w-0">
+                      <h4 className="truncate text-sm font-bold text-[#10264d]">
+                        {customer.name || "Unnamed Customer"}
+                      </h4>
+
+                      <p className="mt-0.5 truncate text-[11px] font-medium text-[#4972a8]">
+                        {customer.id}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       onClick={() => openView(customer)}
-                      className="rounded-xl bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition hover:bg-blue-100"
                       aria-label="View customer"
                     >
-                      <Eye size={17} />
+                      <Eye size={15} />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => openEdit(customer)}
-                      className="rounded-xl bg-amber-50 p-2 text-amber-700 hover:bg-amber-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 transition hover:bg-amber-100"
                       aria-label="Edit customer"
                     >
-                      <Pencil size={17} />
+                      <Pencil size={15} />
                     </button>
 
                     <button
                       type="button"
                       onClick={() => deleteCustomer(customer.id)}
-                      className="rounded-xl bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
                       aria-label="Delete customer"
                     >
-                      <Trash2 size={17} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3">
-                  <DetailRow
-                    label="Mobile Number"
+                {/* CUSTOMER STATUS */}
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Customer Status
+                  </span>
+
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                      customer.status === "Inactive"
+                        ? "bg-rose-50 text-rose-700"
+                        : "bg-emerald-50 text-emerald-700"
+                    }`}
+                  >
+                    {customer.status || "Active"}
+                  </span>
+                </div>
+
+                {/* 2 COLUMN DETAILS */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <MobileDetail
+                    icon={Phone}
+                    label="Phone"
                     value={customer.phone}
                   />
 
-                  <DetailRow
-                    label="Email Address"
+                  <MobileDetail
+                    icon={Mail}
+                    label="Email"
                     value={customer.email}
                   />
 
-                  <DetailRow
-                    label="Location / Address"
+                  <MobileDetail
+                    icon={MapPin}
+                    label="Location"
                     value={customer.address}
                   />
 
-                  <DetailRow
+                  <MobileDetail
+                    icon={Users}
                     label="Lead Source"
                     value={customer.source}
                   />
 
-                  <DetailRow
-                    label="Preferred Language"
+                  <MobileDetail
+                    icon={Languages}
+                    label="Language"
                     value={customer.language}
                   />
 
-                  <DetailRow
-                    label="Created Date"
-                    value={customer.createdAt}
+                  <MobileDetail
+                    icon={CalendarDays}
+                    label="Joined Date"
+                    value={formatDate(customer.createdAt)}
                   />
 
-                  <DetailRow
-                    label="Communication Consent"
+                  <MobileDetail
+                    icon={ShieldCheck}
+                    label="Consent"
                     value={customer.consent ? "Yes" : "No"}
                   />
 
-                  <DetailRow
+                  <MobileDetail
+                    icon={MessageSquare}
                     label="Notes"
                     value={customer.notes}
                   />
-
-                  <div className="w-full min-w-0 pt-1">
-                    <p className="mb-2 text-xs font-medium text-slate-500">
-                      Customer Status
-                    </p>
-
-                    <CustomDropdown
-                      value={customer.status || "Active"}
-                      options={statuses}
-                      onChange={(status) =>
-                        changeStatus(customer.id, status)
-                      }
-                    />
-                  </div>
                 </div>
-              </div>
+
+                {/* STATUS DROPDOWN */}
+                <div className="mt-3 border-t border-[#edf1f6] pt-3">
+                  <CustomDropdown
+                    value={customer.status || "Active"}
+                    options={statuses}
+                    onChange={(status) =>
+                      changeStatus(customer.id, status)
+                    }
+                  />
+                </div>
+              </article>
             ))
           )}
         </div>
 
-        {/* DESKTOP TABLE */}
+        {/* DESKTOP TABLE - EXISTING DESIGN */}
         <div className="hidden w-full min-w-0 overflow-x-auto lg:block">
           <table className="w-full min-w-[950px] border-collapse text-left">
             <thead className="bg-[#f7f9fd]">
@@ -993,7 +1061,6 @@ export default function Customers() {
                 onSubmit={saveCustomer}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                {/* SCROLLABLE FORM BODY */}
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 lg:space-y-5 lg:px-8 lg:py-6">
 
                   {/* BASIC INFORMATION */}
@@ -1152,7 +1219,6 @@ export default function Customers() {
                     </div>
                   </div>
 
-                  {/* VALIDATION ERROR */}
                   {error && (
                     <div
                       role="alert"

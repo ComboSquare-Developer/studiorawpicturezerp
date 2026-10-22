@@ -20,6 +20,10 @@ import {
   UserRound,
   ChevronDown,
   Check,
+  Eye,
+  ShieldAlert,
+  FileText,
+  Send,
 } from "lucide-react";
 
 const KEY = "studioraw_followups";
@@ -41,14 +45,8 @@ const createEmptyForm = () => ({
 });
 
 const eventOptions = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Pre-Wedding",
-  "Baby Shoot",
-  "Portrait",
-  "Corporate",
-  "Other",
+  "Wedding", "Engagement", "Birthday", "Pre-Wedding",
+  "Baby Shoot", "Portrait", "Corporate", "Other",
 ];
 
 const typeOptions = [
@@ -64,25 +62,13 @@ const typeOptions = [
 ];
 
 const methodOptions = [
-  "Phone Call",
-  "WhatsApp",
-  "Email",
-  "SMS",
-  "In Person",
+  "Phone Call", "WhatsApp", "Email", "SMS", "In Person",
 ];
 
-const priorityOptions = [
-  "Low",
-  "Normal",
-  "High",
-  "Urgent",
-];
+const priorityOptions = ["Low", "Normal", "High", "Urgent"];
 
 const statusOptions = [
-  "Pending",
-  "In Progress",
-  "Completed",
-  "Cancelled",
+  "Pending", "In Progress", "Completed", "Cancelled",
 ];
 
 const ratingOptions = [
@@ -95,17 +81,17 @@ const ratingOptions = [
 ];
 
 const statusColors = {
-  Pending: "bg-amber-100 text-amber-700",
-  "In Progress": "bg-blue-100 text-blue-700",
-  Completed: "bg-green-100 text-green-700",
-  Cancelled: "bg-red-100 text-red-700",
+  Pending: "bg-amber-50 text-amber-700 ring-amber-200",
+  "In Progress": "bg-blue-50 text-blue-700 ring-blue-200",
+  Completed: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  Cancelled: "bg-rose-50 text-rose-700 ring-rose-200",
 };
 
 const priorityColors = {
-  Low: "bg-slate-100 text-slate-600",
-  Normal: "bg-blue-100 text-blue-700",
-  High: "bg-orange-100 text-orange-700",
-  Urgent: "bg-red-100 text-red-700",
+  Low: "bg-slate-100 text-slate-600 ring-slate-200",
+  Normal: "bg-blue-50 text-blue-700 ring-blue-200",
+  High: "bg-orange-50 text-orange-700 ring-orange-200",
+  Urgent: "bg-red-50 text-red-700 ring-red-200",
 };
 
 const inputClass =
@@ -151,7 +137,21 @@ function createId() {
   );
 }
 
-function CustomDropdown({ value, options, onChange }) {
+function getFollowupId(item, index) {
+  if (item.followupId) return item.followupId;
+
+  const id = String(item.id || "");
+  if (id.startsWith("FOLLOW-")) return id;
+
+  return `FU-${String(index + 1).padStart(5, "0")}`;
+}
+
+function CustomDropdown({
+  value,
+  options,
+  onChange,
+  compact = false,
+}) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -195,14 +195,16 @@ function CustomDropdown({ value, options, onChange }) {
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((previous) => !previous)}
-        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium`}
+        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium ${
+          compact ? "!px-3 !py-2.5" : ""
+        }`}
       >
-        <span className="min-w-0 flex-1 break-words">
+        <span className="min-w-0 flex-1 truncate">
           {selected?.label ?? "Select"}
         </span>
 
         <ChevronDown
-          size={18}
+          size={17}
           className={`shrink-0 transition-transform ${
             open ? "rotate-180" : ""
           }`}
@@ -212,7 +214,7 @@ function CustomDropdown({ value, options, onChange }) {
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
         >
           {normalizedOptions.map((option) => {
             const isSelected =
@@ -228,7 +230,7 @@ function CustomDropdown({ value, options, onChange }) {
                   onChange(option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
+                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                   isSelected
                     ? "bg-blue-50 font-semibold text-blue-700"
                     : "text-slate-700 hover:bg-slate-50"
@@ -255,70 +257,78 @@ function FormField({ label, children, required = false }) {
     <div className="w-full min-w-0">
       <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
       </label>
       {children}
     </div>
   );
 }
 
-function Detail({ label, value, icon: Icon }) {
+function InfoBox({ label, value, icon: Icon, children }) {
   return (
-    <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-400">
-        {label}
-      </p>
-
-      <div className="flex min-w-0 items-start gap-2">
+    <div className="min-w-0 rounded-xl border border-slate-100 bg-[#f7f9fc] p-3">
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
         {Icon && (
-          <Icon
-            size={15}
-            className="mt-0.5 shrink-0 text-blue-600"
-          />
+          <Icon size={12} className="shrink-0 text-blue-500" />
         )}
-
-        <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-          {value || "—"}
-        </p>
+        <span>{label}</span>
       </div>
+
+      {children || (
+        <p className="whitespace-pre-wrap break-words text-xs font-bold leading-relaxed text-[#10264d]">
+          {value === 0 ? 0 : value || "—"}
+        </p>
+      )}
     </div>
   );
 }
 
 function StatusBadge({ status }) {
+  const display = status || "Pending";
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-        statusColors[status] || statusColors.Pending
+      className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+        statusColors[display] || statusColors.Pending
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {status || "Pending"}
+      {display}
     </span>
   );
 }
 
 function PriorityBadge({ priority }) {
+  const display = priority || "Normal";
+
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold ${
-        priorityColors[priority] || priorityColors.Normal
+      className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+        priorityColors[display] || priorityColors.Normal
       }`}
     >
-      {priority || "Normal"} Priority
+      {display} Priority
     </span>
   );
 }
 
-function RatingStars({ rating }) {
-  if (!(Number(rating) > 0)) return null;
+function RatingStars({ rating, small = false }) {
+  if (!(Number(rating) > 0)) {
+    return (
+      <span className="text-xs font-semibold text-slate-400">
+        Not rated
+      </span>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-0.5">
       {Array.from({ length: 5 }, (_, index) => (
         <Star
           key={index}
-          size={16}
+          size={small ? 12 : 16}
           className={
             index < Number(rating)
               ? "fill-amber-400 text-amber-400"
@@ -327,10 +337,230 @@ function RatingStars({ rating }) {
         />
       ))}
 
-      <span className="ml-1 text-xs font-semibold text-slate-600">
+      <span className="ml-1 text-[11px] font-semibold text-slate-600">
         {rating}/5
       </span>
     </div>
+  );
+}
+
+function FollowupCard({
+  item,
+  displayId,
+  today,
+  onView,
+  onEdit,
+  onDelete,
+  onComplete,
+  onWhatsApp,
+  onStatusChange,
+}) {
+  const active =
+    item.status !== "Completed" &&
+    item.status !== "Cancelled";
+
+  const overdue =
+    Boolean(item.followupDate) &&
+    item.followupDate < today &&
+    active;
+
+  const dueToday =
+    item.followupDate === today && active;
+
+  return (
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-blue-100 hover:shadow-md sm:p-4">
+
+      {/* CARD HEADER */}
+      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <UserRound size={19} />
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-bold text-[#10264d]">
+              {item.customer}
+            </h3>
+
+            <p className="mt-0.5 truncate text-[10px] font-medium text-blue-600">
+              {displayId}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            title="View Follow-up"
+            aria-label="View Follow-up"
+            onClick={() => onView(item)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition hover:bg-blue-100"
+          >
+            <Eye size={15} />
+          </button>
+
+          <button
+            type="button"
+            title="Edit Follow-up"
+            aria-label="Edit Follow-up"
+            onClick={() => onEdit(item)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 transition hover:bg-amber-100"
+          >
+            <Pencil size={15} />
+          </button>
+
+          <button
+            type="button"
+            title="Delete Follow-up"
+            aria-label="Delete Follow-up"
+            onClick={() => onDelete(item.id)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      </div>
+
+      {/* STATUS */}
+      <div className="flex flex-wrap items-center justify-between gap-2 py-3">
+        <p className="text-[11px] font-medium text-slate-400">
+          Follow-up Status
+        </p>
+
+        <StatusBadge status={item.status} />
+      </div>
+
+      {/* PRIORITY / DATE ALERT */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <PriorityBadge priority={item.priority} />
+
+        {overdue && (
+          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+            Overdue
+          </span>
+        )}
+
+        {dueToday && (
+          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+            Due Today
+          </span>
+        )}
+      </div>
+
+      {/* DETAILS GRID */}
+      <div className="grid grid-cols-2 gap-2">
+        <InfoBox
+          label="Phone"
+          value={item.phone || "No phone"}
+          icon={Phone}
+        />
+
+        <InfoBox
+          label="Event"
+          value={item.event}
+          icon={CalendarDays}
+        />
+
+        <InfoBox
+          label="Follow-up Type"
+          value={item.type}
+          icon={HeartHandshake}
+        />
+
+        <InfoBox
+          label="Contact Method"
+          value={item.method}
+          icon={MessageCircle}
+        />
+
+        <InfoBox
+          label="Follow-up Date"
+          value={formatDate(item.followupDate)}
+          icon={CalendarDays}
+        />
+
+        <InfoBox
+          label="Assigned Staff"
+          value={item.assignedTo || "Not assigned"}
+          icon={UserRound}
+        />
+
+        <InfoBox label="Customer Rating" icon={Star}>
+          <RatingStars rating={item.rating} small />
+        </InfoBox>
+
+        <InfoBox
+          label="Priority"
+          value={item.priority || "Normal"}
+          icon={ShieldAlert}
+        />
+
+        {item.email && (
+          <div className="col-span-2">
+            <InfoBox
+              label="Email Address"
+              value={item.email}
+              icon={Mail}
+            />
+          </div>
+        )}
+
+        {item.feedback && (
+          <div className="col-span-2">
+            <InfoBox
+              label="Customer Feedback"
+              value={item.feedback}
+              icon={MessageCircle}
+            />
+          </div>
+        )}
+
+        {item.notes && (
+          <div className="col-span-2">
+            <InfoBox
+              label="Follow-up Notes"
+              value={item.notes}
+              icon={FileText}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* QUICK STATUS */}
+      <div className="mt-3 border-t border-slate-100 pt-3">
+        <CustomDropdown
+          compact
+          value={item.status || "Pending"}
+          options={statusOptions}
+          onChange={(status) => onStatusChange(item.id, status)}
+        />
+      </div>
+
+      {/* QUICK ACTIONS */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {item.status !== "Completed" && (
+          <button
+            type="button"
+            onClick={() => onComplete(item.id)}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          >
+            <CheckCircle2 size={15} />
+            Mark Completed
+          </button>
+        )}
+
+        {item.phone && (
+          <button
+            type="button"
+            onClick={() => onWhatsApp(item)}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-100"
+          >
+            <MessageCircle size={15} />
+            WhatsApp
+          </button>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -340,6 +570,7 @@ export default function FollowUp() {
 
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [viewItem, setViewItem] = useState(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -350,7 +581,7 @@ export default function FollowUp() {
   }, [records]);
 
   useEffect(() => {
-    if (!showForm) return;
+    if (!showForm && !viewItem) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -358,6 +589,7 @@ export default function FollowUp() {
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setShowForm(false);
+        setViewItem(null);
       }
     };
 
@@ -367,7 +599,7 @@ export default function FollowUp() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [showForm]);
+  }, [showForm, viewItem]);
 
   const update = (key, value) => {
     setForm((previous) => ({
@@ -385,6 +617,7 @@ export default function FollowUp() {
     });
 
     setEditingId(null);
+    setViewItem(null);
     setError("");
     setShowForm(true);
   };
@@ -396,6 +629,7 @@ export default function FollowUp() {
     });
 
     setEditingId(item.id);
+    setViewItem(null);
     setError("");
     setShowForm(true);
   };
@@ -460,19 +694,20 @@ export default function FollowUp() {
       previous.filter((item) => item.id !== id)
     );
 
-    if (editingId === id) {
-      closeForm();
-    }
+    if (editingId === id) closeForm();
+    if (viewItem?.id === id) setViewItem(null);
+  };
+
+  const updateStatus = (id, status) => {
+    setRecords((previous) =>
+      previous.map((item) =>
+        item.id === id ? { ...item, status } : item
+      )
+    );
   };
 
   const markComplete = (id) => {
-    setRecords((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? { ...item, status: "Completed" }
-          : item
-      )
-    );
+    updateStatus(id, "Completed");
   };
 
   const openWhatsApp = (item) => {
@@ -510,6 +745,7 @@ export default function FollowUp() {
         item.event,
         item.type,
         item.assignedTo,
+        item.method,
       ].some((value) =>
         String(value || "").toLowerCase().includes(query)
       );
@@ -565,6 +801,10 @@ export default function FollowUp() {
       accent: "bg-emerald-500",
     },
   ];
+
+  const selectedView = viewItem
+    ? records.find((item) => item.id === viewItem.id)
+    : null;
 
   return (
     <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
@@ -634,7 +874,7 @@ export default function FollowUp() {
       </div>
 
       {/* RECORDS SECTION */}
-      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-4 sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -704,335 +944,29 @@ export default function FollowUp() {
             </button>
           </div>
         ) : (
-          <>
-            {/* DESKTOP TABLE */}
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[1100px] text-left">
-                <thead className="bg-[#f8faff]">
-                  <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    <th className="px-5 py-4">Customer</th>
-                    <th className="px-5 py-4">Follow-up Type</th>
-                    <th className="px-5 py-4">Date</th>
-                    <th className="px-5 py-4">Priority</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4">Assigned To</th>
-                    <th className="px-5 py-4">Rating</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((item) => {
-                    const overdue =
-                      item.followupDate &&
-                      item.followupDate < today &&
-                      item.status !== "Completed" &&
-                      item.status !== "Cancelled";
-
-                    const dueToday =
-                      item.followupDate === today &&
-                      item.status !== "Completed" &&
-                      item.status !== "Cancelled";
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="transition hover:bg-blue-50/30"
-                      >
-                        <td className="px-5 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                              <UserRound size={19} />
-                            </div>
-
-                            <div>
-                              <p className="text-sm font-bold text-[#10264d]">
-                                {item.customer}
-                              </p>
-
-                              <p className="mt-1 text-xs text-slate-400">
-                                {item.event}
-                              </p>
-
-                              {item.phone && (
-                                <p className="mt-1 text-xs text-slate-400">
-                                  {item.phone}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <p className="text-sm font-medium text-slate-700">
-                            {item.type}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-400">
-                            {item.method}
-                          </p>
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <p className="text-sm text-slate-600">
-                            {formatDate(item.followupDate)}
-                          </p>
-
-                          {overdue && (
-                            <span className="mt-1 inline-block text-xs font-semibold text-red-600">
-                              Overdue
-                            </span>
-                          )}
-
-                          {dueToday && (
-                            <span className="mt-1 inline-block text-xs font-semibold text-amber-600">
-                              Due Today
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <PriorityBadge priority={item.priority} />
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <StatusBadge status={item.status} />
-                        </td>
-
-                        <td className="px-5 py-5 text-sm text-slate-600">
-                          {item.assignedTo || "Unassigned"}
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <RatingStars rating={item.rating} />
-                          {!Number(item.rating) && (
-                            <span className="text-xs text-slate-400">
-                              Not rated
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-5">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              title="Manage Follow-up"
-                              onClick={() => openEdit(item)}
-                              className="rounded-lg bg-blue-50 p-2.5 text-blue-700 hover:bg-blue-100"
-                            >
-                              <Pencil size={16} />
-                            </button>
-
-                            {item.status !== "Completed" && (
-                              <button
-                                type="button"
-                                title="Mark Completed"
-                                onClick={() => markComplete(item.id)}
-                                className="rounded-lg bg-green-50 p-2.5 text-green-700 hover:bg-green-100"
-                              >
-                                <CheckCircle2 size={16} />
-                              </button>
-                            )}
-
-                            {item.phone && (
-                              <button
-                                type="button"
-                                title="Open WhatsApp"
-                                onClick={() => openWhatsApp(item)}
-                                className="rounded-lg bg-emerald-50 p-2.5 text-emerald-700 hover:bg-emerald-100"
-                              >
-                                <MessageCircle size={16} />
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              title="Delete Follow-up"
-                              onClick={() => deleteRecord(item.id)}
-                              className="rounded-lg bg-red-50 p-2.5 text-red-600 hover:bg-red-100"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* MOBILE / TABLET CARDS */}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-              {filtered.map((item) => {
-                const overdue =
-                  item.followupDate &&
-                  item.followupDate < today &&
-                  item.status !== "Completed" &&
-                  item.status !== "Cancelled";
-
-                const dueToday =
-                  item.followupDate === today &&
-                  item.status !== "Completed" &&
-                  item.status !== "Cancelled";
-
-                return (
-                  <article
-                    key={item.id}
-                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:shadow-md"
-                  >
-                    <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-4">
-                      <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                        <UserRound size={20} />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <h3 className="break-words font-bold text-[#10264d]">
-                          {item.customer}
-                        </h3>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          {item.event}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mb-5 flex flex-wrap gap-2">
-                      <StatusBadge status={item.status} />
-                      <PriorityBadge priority={item.priority} />
-
-                      {overdue && (
-                        <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700">
-                          Overdue
-                        </span>
-                      )}
-
-                      {dueToday && (
-                        <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
-                          Due Today
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <Detail
-                        label="Follow-up Type"
-                        value={item.type}
-                        icon={HeartHandshake}
-                      />
-
-                      <Detail
-                        label="Phone Number"
-                        value={item.phone || "No phone"}
-                        icon={Phone}
-                      />
-
-                      {item.email && (
-                        <Detail
-                          label="Email Address"
-                          value={item.email}
-                          icon={Mail}
-                        />
-                      )}
-
-                      <Detail
-                        label="Follow-up Date"
-                        value={formatDate(item.followupDate)}
-                        icon={CalendarDays}
-                      />
-
-                      <Detail
-                        label="Assigned Staff"
-                        value={item.assignedTo || "Not assigned"}
-                        icon={UserRound}
-                      />
-
-                      <Detail
-                        label="Contact Method"
-                        value={item.method}
-                        icon={MessageCircle}
-                      />
-
-                      {item.feedback && (
-                        <div className="rounded-xl bg-white p-4">
-                          <p className="text-xs font-semibold text-slate-500">
-                            Customer Feedback
-                          </p>
-
-                          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
-                            {item.feedback}
-                          </p>
-                        </div>
-                      )}
-
-                      {Number(item.rating) > 0 && (
-                        <div className="rounded-xl bg-white p-4">
-                          <p className="mb-3 text-xs font-semibold text-slate-500">
-                            Customer Rating
-                          </p>
-
-                          <RatingStars rating={item.rating} />
-                        </div>
-                      )}
-
-                      {item.notes && (
-                        <Detail
-                          label="Follow-up Notes"
-                          value={item.notes}
-                        />
-                      )}
-                    </div>
-
-                    <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(item)}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-3 text-sm font-semibold text-white"
-                      >
-                        <Pencil size={16} />
-                        Manage Follow-up
-                      </button>
-
-                      {item.status !== "Completed" && (
-                        <button
-                          type="button"
-                          onClick={() => markComplete(item.id)}
-                          className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700"
-                        >
-                          <CheckCircle2 size={16} />
-                          Mark Completed
-                        </button>
-                      )}
-
-                      {item.phone && (
-                        <button
-                          type="button"
-                          onClick={() => openWhatsApp(item)}
-                          className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-semibold text-green-700"
-                        >
-                          <MessageCircle size={16} />
-                          Open WhatsApp
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => deleteRecord(item.id)}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
-                      >
-                        <Trash2 size={16} />
-                        Delete Follow-up
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </>
+          <div className="grid grid-cols-1 items-start gap-4 p-3 sm:grid-cols-2 sm:p-5 2xl:grid-cols-3">
+            {filtered.map((item) => (
+              <FollowupCard
+                key={item.id}
+                item={item}
+                displayId={getFollowupId(
+                  item,
+                  records.findIndex((record) => record.id === item.id)
+                )}
+                today={today}
+                onView={setViewItem}
+                onEdit={openEdit}
+                onDelete={deleteRecord}
+                onComplete={markComplete}
+                onWhatsApp={openWhatsApp}
+                onStatusChange={updateStatus}
+              />
+            ))}
+          </div>
         )}
       </section>
 
-      {/* CENTER MODAL */}
+      {/* CENTER CREATE / EDIT POPUP */}
       {showForm &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
@@ -1050,7 +984,7 @@ export default function FollowUp() {
               aria-label={
                 editingId ? "Manage Follow-up" : "New Follow-up"
               }
-              className="relative z-10 mx-auto flex max-h-[92dvh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
+              className="relative z-10 mx-auto flex max-h-[94dvh] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[#f8faff] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
             >
               {/* MODAL HEADER */}
               <div className="shrink-0 border-b border-slate-200 bg-white px-5 py-5 sm:px-7">
@@ -1087,7 +1021,7 @@ export default function FollowUp() {
                 className="flex min-h-0 flex-1 flex-col"
               >
                 {/* SCROLLABLE CONTENT */}
-                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-7">
 
                   {/* CUSTOMER INFORMATION */}
                   <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -1100,10 +1034,7 @@ export default function FollowUp() {
                     </h3>
 
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                      <FormField
-                        label="Customer Name"
-                        required
-                      >
+                      <FormField label="Customer Name" required>
                         <input
                           type="text"
                           required
@@ -1188,10 +1119,7 @@ export default function FollowUp() {
                         />
                       </FormField>
 
-                      <FormField
-                        label="Follow-up Date"
-                        required
-                      >
+                      <FormField label="Follow-up Date" required>
                         <input
                           type="date"
                           required
@@ -1334,6 +1262,154 @@ export default function FollowUp() {
           </div>,
           document.body
         )}
+
+      {/* CENTER VIEW POPUP */}
+      {selectedView &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+            <div
+              className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
+              onClick={() => setViewItem(null)}
+            />
+
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Follow-up Details"
+              className="relative z-10 flex max-h-[90dvh] w-full max-w-[620px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl"
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-5 sm:px-6">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                    Follow-up Details
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-extrabold text-[#10264d]">
+                    {selectedView.customer}
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewItem(null)}
+                  className="rounded-xl bg-slate-100 p-2.5 text-slate-500 hover:bg-slate-200"
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={selectedView.status} />
+                  <PriorityBadge priority={selectedView.priority} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <InfoBox
+                    label="Customer"
+                    value={selectedView.customer}
+                    icon={UserRound}
+                  />
+                  <InfoBox
+                    label="Phone"
+                    value={selectedView.phone || "No phone"}
+                    icon={Phone}
+                  />
+                  <InfoBox
+                    label="Event"
+                    value={selectedView.event}
+                    icon={CalendarDays}
+                  />
+                  <InfoBox
+                    label="Follow-up Type"
+                    value={selectedView.type}
+                    icon={HeartHandshake}
+                  />
+                  <InfoBox
+                    label="Contact Method"
+                    value={selectedView.method}
+                    icon={MessageCircle}
+                  />
+                  <InfoBox
+                    label="Follow-up Date"
+                    value={formatDate(selectedView.followupDate)}
+                    icon={CalendarDays}
+                  />
+                  <InfoBox
+                    label="Assigned Staff"
+                    value={selectedView.assignedTo || "Not assigned"}
+                    icon={UserRound}
+                  />
+                  <InfoBox label="Customer Rating" icon={Star}>
+                    <RatingStars rating={selectedView.rating} />
+                  </InfoBox>
+
+                  {selectedView.email && (
+                    <div className="col-span-2">
+                      <InfoBox
+                        label="Email Address"
+                        value={selectedView.email}
+                        icon={Mail}
+                      />
+                    </div>
+                  )}
+
+                  {selectedView.feedback && (
+                    <div className="col-span-2">
+                      <InfoBox
+                        label="Customer Feedback"
+                        value={selectedView.feedback}
+                        icon={MessageCircle}
+                      />
+                    </div>
+                  )}
+
+                  {selectedView.notes && (
+                    <div className="col-span-2">
+                      <InfoBox
+                        label="Follow-up Notes"
+                        value={selectedView.notes}
+                        icon={FileText}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
+                {selectedView.phone && (
+                  <button
+                    type="button"
+                    onClick={() => openWhatsApp(selectedView)}
+                    className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700"
+                  >
+                    <MessageCircle size={15} />
+                    WhatsApp
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setViewItem(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openEdit(selectedView)}
+                  className="flex items-center gap-2 rounded-xl bg-[#10264d] px-4 py-2.5 text-sm font-semibold text-white"
+                >
+                  <Pencil size={15} />
+                  Edit Follow-up
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
+

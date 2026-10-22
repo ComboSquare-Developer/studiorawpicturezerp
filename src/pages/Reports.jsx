@@ -15,7 +15,6 @@ import {
   Download,
   RefreshCw,
   AlertTriangle,
-  ChevronDown,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
@@ -123,17 +122,17 @@ function ProgressItem({
 }) {
   return (
     <div className="min-w-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="min-w-0 break-words text-sm font-medium text-[#52627d]">
+      <div className="mb-2.5 flex items-center justify-between gap-2 sm:mb-3">
+        <p className="min-w-0 break-words text-xs font-medium text-[#52627d] sm:text-sm">
           {label}
         </p>
 
-        <p className="shrink-0 text-sm font-bold text-[#10264d]">
+        <p className="shrink-0 text-xs font-bold text-[#10264d] sm:text-sm">
           {money(value)}
         </p>
       </div>
 
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#edf2f8]">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[#edf2f8] sm:h-2.5">
         <div
           className={`h-full rounded-full transition-all duration-500 ${color}`}
           style={{
@@ -152,35 +151,33 @@ function StatCard({ stat }) {
   const Icon = stat.icon;
 
   return (
-    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-[#e8edf5] bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6">
+    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-[#e8edf5] bg-white p-3.5 shadow-sm transition-all duration-300 hover:shadow-lg sm:p-6 lg:hover:-translate-y-1">
       <div
-        className={`absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-50 ${stat.bg}`}
+        className={`absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-40 sm:-right-8 sm:-top-8 sm:h-28 sm:w-28 ${stat.bg}`}
       />
 
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-[#72819a]">
+          <p className="text-[10px] font-medium leading-4 text-[#72819a] sm:text-[13px] sm:leading-5">
             {stat.label}
           </p>
 
           <h3
-            className={`mt-4 break-words text-2xl font-bold tracking-tight sm:text-[27px] ${stat.color}`}
+            className={`mt-2 break-all text-lg font-bold tracking-tight sm:mt-4 sm:text-[27px] ${stat.color}`}
           >
             {stat.value}
           </h3>
         </div>
 
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${stat.bg}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 sm:rounded-2xl ${stat.bg}`}
         >
-          <Icon size={22} className={stat.color} />
+          <Icon size={17} className={stat.color} />
         </div>
       </div>
 
-      <div className="relative mt-5 h-1 w-12 rounded-full bg-[#e9eef7] transition-all group-hover:w-20">
-        <div
-          className={`h-full w-full rounded-full ${stat.bar}`}
-        />
+      <div className="relative mt-3 h-1 w-9 rounded-full bg-[#e9eef7] transition-all group-hover:w-16 sm:mt-5 sm:w-12 sm:group-hover:w-20">
+        <div className={`h-full w-full rounded-full ${stat.bar}`} />
       </div>
     </div>
   );
@@ -188,18 +185,18 @@ function StatCard({ stat }) {
 
 function SectionTitle({ icon: Icon, title, subtitle }) {
   return (
-    <div className="mb-6 flex min-w-0 items-start gap-3">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#174b91]">
-        <Icon size={20} />
+    <div className="mb-4 flex min-w-0 items-start gap-2.5 sm:mb-6 sm:gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#174b91] sm:h-11 sm:w-11">
+        <Icon size={19} />
       </div>
 
       <div className="min-w-0">
-        <h2 className="break-words text-base font-bold text-[#10264d] sm:text-lg">
+        <h2 className="break-words text-sm font-bold text-[#10264d] sm:text-lg">
           {title}
         </h2>
 
         {subtitle && (
-          <p className="mt-1 text-xs leading-5 text-[#8794a8] sm:text-sm">
+          <p className="mt-1 text-[11px] leading-5 text-[#8794a8] sm:text-sm">
             {subtitle}
           </p>
         )}
@@ -211,6 +208,7 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
 export default function Reports() {
   const [month, setMonth] = useState(currentMonth);
   const [refreshKey, setRefreshKey] = useState(0);
+
   const [lastUpdated, setLastUpdated] = useState(() =>
     new Date().toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -230,10 +228,7 @@ export default function Reports() {
 
   useEffect(() => {
     const handleStorage = (event) => {
-      if (
-        !event.key ||
-        Object.values(KEYS).includes(event.key)
-      ) {
+      if (!event.key || Object.values(KEYS).includes(event.key)) {
         setRefreshKey((previous) => previous + 1);
       }
     };
@@ -271,9 +266,7 @@ export default function Reports() {
     );
 
     const monthlyAttendance = data.attendance.filter((item) =>
-      getDate(item, ["date", "attendanceDate"]).startsWith(
-        month
-      )
+      getDate(item, ["date", "attendanceDate"]).startsWith(month)
     );
 
     const income = monthlyPayments.reduce(
@@ -311,8 +304,7 @@ export default function Reports() {
         const category = item.category || "Other";
 
         result[category] =
-          (result[category] || 0) +
-          safeNumber(item.amount);
+          (result[category] || 0) + safeNumber(item.amount);
 
         return result;
       },
@@ -578,12 +570,12 @@ export default function Reports() {
   };
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+    <div className="min-h-screen w-full min-w-0 space-y-5 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-6 lg:px-8">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white shadow-sm">
-            <BarChart3 size={24} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl">
+            <BarChart3 size={22} />
           </div>
 
           <div className="min-w-0">
@@ -591,13 +583,13 @@ export default function Reports() {
               Reports & Analytics
             </h1>
 
-            <p className="mt-1 text-sm leading-6 text-[#8190a7]">
+            <p className="mt-1 text-xs leading-5 text-[#8190a7] sm:text-sm">
               Studio performance and business overview
             </p>
           </div>
         </div>
 
-        {/* Report Actions */}
+        {/* RESPONSIVE REPORT ACTIONS */}
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end xl:w-auto">
           <div className="w-full sm:w-56">
             <label className="mb-2 block text-xs font-semibold text-[#52627d]">
@@ -612,35 +604,37 @@ export default function Reports() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={refreshReports}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dbe4f0] bg-white px-5 py-3 text-sm font-semibold text-[#10264d] transition hover:bg-slate-50 sm:w-auto"
-          >
-            <RefreshCw size={17} />
-            Refresh
-          </button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+            <button
+              type="button"
+              onClick={refreshReports}
+              className="flex min-w-0 items-center justify-center gap-2 rounded-xl border border-[#dbe4f0] bg-white px-3 py-3 text-xs font-semibold text-[#10264d] transition hover:bg-slate-50 sm:px-5 sm:text-sm"
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
 
-          <button
-            type="button"
-            onClick={exportCSV}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
-          >
-            <Download size={17} />
-            Export Report
-          </button>
+            <button
+              type="button"
+              onClick={exportCSV}
+              className="flex min-w-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-3 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:px-5 sm:text-sm"
+            >
+              <Download size={16} />
+              Export Report
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Reporting Period */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#e7edf6] bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      {/* REPORTING PERIOD */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#e7edf6] bg-white px-4 py-3.5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-blue-50 p-2.5 text-blue-700">
             <CalendarDays size={19} />
           </div>
 
           <div>
-            <p className="text-xs font-medium text-slate-400">
+            <p className="text-[11px] font-medium text-slate-400 sm:text-xs">
               Reporting Period
             </p>
 
@@ -650,37 +644,37 @@ export default function Reports() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500 sm:text-xs">
           <CheckCircle2 size={15} className="text-green-600" />
           Last refreshed at {lastUpdated}
         </div>
       </div>
 
-      {/* Financial Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* FINANCIAL SUMMARY - MOBILE 2 COLUMNS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.slice(0, 4).map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </div>
 
-      {/* Additional Statistics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* ADDITIONAL STATISTICS - MOBILE 2 COLUMNS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {stats.slice(4).map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </div>
 
-      {/* Financial Overview + Expense Breakdown */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {/* Financial Overview */}
-        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-5 shadow-sm sm:p-7">
+      {/* FINANCIAL OVERVIEW + EXPENSE BREAKDOWN */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
+        {/* FINANCIAL OVERVIEW */}
+        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
           <SectionTitle
             icon={BarChart3}
             title="Financial Overview"
             subtitle="Revenue, expenses and estimated profit comparison"
           />
 
-          <div className="space-y-7">
+          <div className="space-y-5 sm:space-y-7">
             {financialItems.map((item) => (
               <ProgressItem
                 key={item.label}
@@ -692,56 +686,56 @@ export default function Reports() {
             ))}
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-              <div className="flex items-center gap-2 text-xs font-medium text-blue-700">
-                <IndianRupee size={15} />
+          {/* TWO COLUMN BILLING CARDS */}
+          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-8 sm:gap-3">
+            <div className="min-w-0 rounded-xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-700 sm:gap-2 sm:text-xs">
+                <IndianRupee size={14} className="shrink-0" />
                 Total Billing
               </div>
 
-              <p className="mt-3 break-words text-xl font-bold text-[#10264d]">
+              <p className="mt-2 break-all text-base font-bold text-[#10264d] sm:mt-3 sm:text-xl">
                 {money(report.totalBilling)}
               </p>
             </div>
 
-            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-              <div className="flex items-center gap-2 text-xs font-medium text-amber-700">
-                <Clock3 size={15} />
+            <div className="min-w-0 rounded-xl border border-amber-100 bg-amber-50/60 p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-amber-700 sm:gap-2 sm:text-xs">
+                <Clock3 size={14} className="shrink-0" />
                 Pending Balance
               </div>
 
-              <p className="mt-3 break-words text-xl font-bold text-[#10264d]">
+              <p className="mt-2 break-all text-base font-bold text-[#10264d] sm:mt-3 sm:text-xl">
                 {money(report.pendingBalance)}
               </p>
             </div>
           </div>
 
-          <div className="mt-5 flex items-start gap-3 rounded-xl bg-[#f7f9fc] p-4">
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-[#f7f9fc] p-3 sm:mt-5 sm:gap-3 sm:p-4">
             {report.profit >= 0 ? (
               <ArrowUpRight
-                size={20}
+                size={19}
                 className="shrink-0 text-emerald-600"
               />
             ) : (
               <ArrowDownRight
-                size={20}
+                size={19}
                 className="shrink-0 text-red-600"
               />
             )}
 
-            <p className="text-xs leading-6 text-slate-500">
+            <p className="text-[11px] leading-5 text-slate-500 sm:text-xs sm:leading-6">
               Estimated profit for {formatMonth(month)} is{" "}
               <span className="font-bold text-[#10264d]">
                 {money(report.profit)}
               </span>
-              . This is based on recorded payment and expense
-              values.
+              . This is based on recorded payment and expense values.
             </p>
           </div>
         </section>
 
-        {/* Expense Breakdown */}
-        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-5 shadow-sm sm:p-7">
+        {/* EXPENSE BREAKDOWN */}
+        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
           <SectionTitle
             icon={PieChart}
             title="Expense Category Breakdown"
@@ -749,7 +743,7 @@ export default function Reports() {
           />
 
           {categories.length === 0 ? (
-            <div className="flex min-h-[250px] flex-col items-center justify-center text-center">
+            <div className="flex min-h-[190px] flex-col items-center justify-center text-center sm:min-h-[250px]">
               <div className="mb-4 rounded-2xl bg-slate-50 p-5">
                 <PieChart size={35} className="text-slate-300" />
               </div>
@@ -763,7 +757,7 @@ export default function Reports() {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {categories.map(([category, amount]) => (
                 <ProgressItem
                   key={category}
@@ -782,35 +776,35 @@ export default function Reports() {
         </section>
       </div>
 
-      {/* Operational Summary */}
-      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-5 shadow-sm sm:p-7">
+      {/* OPERATIONAL SUMMARY */}
+      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
         <SectionTitle
           icon={Activity}
           title="Operational Summary"
           subtitle="Business activity and resource overview"
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
           {operations.map((item) => {
             const Icon = item.icon;
 
             return (
               <div
                 key={item.label}
-                className="group flex min-w-0 items-center justify-between gap-4 rounded-xl border border-[#edf1f7] bg-[#f9fbfe] p-5 transition hover:border-blue-200 hover:bg-blue-50/50"
+                className="group flex min-w-0 flex-col justify-between gap-3 rounded-xl border border-[#edf1f7] bg-[#f9fbfe] p-3 transition hover:border-blue-200 hover:bg-blue-50/50 sm:flex-row sm:items-center sm:p-5"
               >
                 <div className="min-w-0">
-                  <p className="break-words text-xs font-medium leading-5 text-[#72819a]">
+                  <p className="break-words text-[10px] font-medium leading-4 text-[#72819a] sm:text-xs sm:leading-5">
                     {item.label}
                   </p>
 
-                  <p className="mt-3 text-2xl font-bold text-[#10264d]">
+                  <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
                     {item.value}
                   </p>
                 </div>
 
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
-                  <Icon size={20} />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 shadow-sm sm:h-11 sm:w-11 sm:rounded-xl">
+                  <Icon size={18} />
                 </div>
               </div>
             );
@@ -818,55 +812,55 @@ export default function Reports() {
         </div>
       </section>
 
-      {/* Report Data Summary */}
-      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-5 shadow-sm sm:p-7">
+      {/* MONTHLY REPORT SUMMARY */}
+      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
         <SectionTitle
           icon={FileSpreadsheet}
           title="Monthly Report Summary"
           subtitle="Summary of records used for financial reporting"
         />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl bg-blue-50 p-5">
-            <p className="text-xs font-medium text-blue-700">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4">
+          <div className="min-w-0 rounded-xl bg-blue-50 p-3.5 sm:p-5">
+            <p className="text-[11px] font-medium text-blue-700 sm:text-xs">
               Payment Records
             </p>
 
-            <p className="mt-3 text-2xl font-bold text-[#10264d]">
+            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
               {report.paymentCount}
             </p>
           </div>
 
-          <div className="rounded-xl bg-red-50 p-5">
-            <p className="text-xs font-medium text-red-700">
+          <div className="min-w-0 rounded-xl bg-red-50 p-3.5 sm:p-5">
+            <p className="text-[11px] font-medium text-red-700 sm:text-xs">
               Expense Records
             </p>
 
-            <p className="mt-3 text-2xl font-bold text-[#10264d]">
+            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
               {report.expenseCount}
             </p>
           </div>
 
-          <div className="rounded-xl bg-indigo-50 p-5">
-            <p className="text-xs font-medium text-indigo-700">
+          <div className="col-span-2 min-w-0 rounded-xl bg-indigo-50 p-3.5 sm:col-span-1 sm:p-5">
+            <p className="text-[11px] font-medium text-indigo-700 sm:text-xs">
               Monthly Bookings
             </p>
 
-            <p className="mt-3 text-2xl font-bold text-[#10264d]">
+            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
               {report.bookings}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Notice */}
-      <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 sm:p-5">
+      {/* REPORT NOTICE */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 p-3.5 sm:gap-3 sm:p-5">
         <AlertTriangle
-          size={20}
+          size={19}
           className="mt-0.5 shrink-0 text-amber-700"
         />
 
-        <p className="min-w-0 break-words text-xs leading-6 text-amber-900">
+        <p className="min-w-0 break-words text-[11px] leading-5 text-amber-900 sm:text-xs sm:leading-6">
           These reports use data saved in this browser. Revenue
           includes the received or advance amount recorded in
           Payments. Additional payments are included in the
@@ -882,4 +876,3 @@ export default function Reports() {
     </div>
   );
 }
-

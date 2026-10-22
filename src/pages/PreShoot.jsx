@@ -61,12 +61,7 @@ const eventOptions = [
   "Other",
 ];
 
-const filterOptions = [
-  "All",
-  "Ready",
-  "In Progress",
-  "Pending",
-];
+const filterOptions = ["All", "Ready", "In Progress", "Pending"];
 
 const inputClass =
   "block w-full min-w-0 rounded-xl border border-[#dbe4f0] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
@@ -95,9 +90,42 @@ const getStatus = (item) => {
 };
 
 const statusStyle = {
-  Ready: "bg-green-100 text-green-700",
-  "In Progress": "bg-blue-100 text-blue-700",
-  Pending: "bg-amber-100 text-amber-700",
+  Ready: "border-emerald-100 bg-emerald-50 text-emerald-700",
+  "In Progress": "border-blue-100 bg-blue-50 text-blue-700",
+  Pending: "border-amber-100 bg-amber-50 text-amber-700",
+};
+
+const formatDate = (value) => {
+  if (!value) return "—";
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (value) => {
+  if (!value) return "—";
+
+  const [hours, minutes] = String(value).split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return String(value);
+  }
+
+  return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString(
+    "en-IN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }
+  );
 };
 
 function CustomDropdown({ value, options, onChange }) {
@@ -138,7 +166,7 @@ function FormField({ label, required = false, children }) {
 function SectionHeading({ icon: Icon, title, description }) {
   return (
     <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91]">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91] sm:h-11 sm:w-11">
         <Icon size={20} />
       </div>
 
@@ -157,33 +185,10 @@ function SectionHeading({ icon: Icon, title, description }) {
   );
 }
 
-function Detail({ label, value, icon: Icon }) {
-  return (
-    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">
-        {label}
-      </p>
-
-      <div className="mt-1.5 flex min-w-0 items-start gap-2">
-        {Icon && (
-          <Icon
-            size={16}
-            className="mt-0.5 shrink-0 text-blue-600"
-          />
-        )}
-
-        <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-semibold text-[#10264d]">
-          {value || "—"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function StatusBadge({ status }) {
   return (
     <span
-      className={`inline-flex w-fit items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${
+      className={`inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-xs ${
         statusStyle[status] || statusStyle.Pending
       }`}
     >
@@ -192,15 +197,52 @@ function StatusBadge({ status }) {
   );
 }
 
-function ProgressBar({ progress, completed }) {
+function MobileDetail({ label, value, icon: Icon, span = false }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-slate-500">
+    <div className={`min-w-0 ${span ? "col-span-2" : ""}`}>
+      <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
+        {label}
+      </p>
+
+      <div className="mt-1 flex min-w-0 items-start gap-1.5">
+        {Icon && (
+          <Icon
+            size={13}
+            className="mt-0.5 shrink-0 text-[#4972a8]"
+          />
+        )}
+
+        <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
+          {value || "—"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({ progress, completed, compact = false }) {
+  return (
+    <div
+      className={
+        compact
+          ? "rounded-xl border border-[#e6edf7] bg-[#f7faff] p-3"
+          : "rounded-xl border border-slate-100 bg-white p-4"
+      }
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p
+          className={`font-medium text-slate-500 ${
+            compact ? "text-[11px]" : "text-xs"
+          }`}
+        >
           Preparation Progress
         </p>
 
-        <p className="text-sm font-bold text-[#10264d]">
+        <p
+          className={`font-bold text-[#10264d] ${
+            compact ? "text-xs" : "text-sm"
+          }`}
+        >
           {progress}%
         </p>
       </div>
@@ -211,17 +253,23 @@ function ProgressBar({ progress, completed }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={progress}
-        className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
+        className={`w-full overflow-hidden rounded-full bg-[#e4ebf5] ${
+          compact ? "h-1.5" : "h-2.5"
+        }`}
       >
         <div
-          className={`h-full rounded-full transition-all ${
-            progress === 100 ? "bg-green-500" : "bg-blue-700"
+          className={`h-full rounded-full transition-all duration-300 ${
+            progress === 100 ? "bg-emerald-500" : "bg-blue-700"
           }`}
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <p className="mt-3 text-xs text-slate-400">
+      <p
+        className={`mt-2 text-slate-400 ${
+          compact ? "text-[10px]" : "text-xs"
+        }`}
+      >
         {completed} of {checklistItems.length} tasks completed
       </p>
     </div>
@@ -265,11 +313,11 @@ function ModalShell({
         aria-label={title}
         className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
       >
-        {/* Fixed Header */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#e5ebf3] bg-white px-5 py-5 sm:px-9 sm:py-7">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#112e60] text-white">
-              <ClipboardCheck size={23} />
+        {/* MODAL HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-7">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
+              <ClipboardCheck size={22} />
             </div>
 
             <div className="min-w-0">
@@ -289,20 +337,20 @@ function ModalShell({
             aria-label="Close preparation form"
             className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
           >
-            <X size={22} />
+            <X size={21} />
           </button>
         </div>
 
+        {/* FORM */}
         <form
           onSubmit={onSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {/* Scrollable Body */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-9 sm:py-7">
             {children}
           </div>
 
-          {/* Fixed Footer */}
+          {/* MODAL FOOTER */}
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
             <button
               type="button"
@@ -330,9 +378,7 @@ function ModalShell({
 export default function PreShoot() {
   const [shoots, setShoots] = useState(() => {
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(STORAGE_KEY)
-      );
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       return Array.isArray(saved) ? saved : [];
     } catch {
       return [];
@@ -348,10 +394,7 @@ export default function PreShoot() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(shoots)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(shoots));
   }, [shoots]);
 
   const update = (key, value) => {
@@ -512,11 +555,15 @@ export default function PreShoot() {
   ];
 
   return (
-    <div className="min-h-screen w-full min-w-0 space-y-6 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
+      {/* PAGE HEADER */}
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
+          <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
+            Photography Operations
+          </p>
+
+          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
             Pre-Shoot Preparation
           </h1>
 
@@ -528,38 +575,40 @@ export default function PreShoot() {
         <button
           type="button"
           onClick={openCreate}
-          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:w-auto"
+          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] lg:w-auto lg:px-6"
         >
           <Plus size={18} />
           New Preparation
         </button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* COMPACT SUMMARY CARDS */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
             <div
               key={stat.label}
-              className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white p-3.5 shadow-[0_3px_14px_rgba(16,38,77,0.035)] transition hover:shadow-md sm:p-5 lg:hover:-translate-y-0.5"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold leading-4 text-slate-500 sm:text-sm">
                     {stat.label}
                   </p>
 
                   <h2
-                    className={`mt-3 text-3xl font-bold ${stat.color}`}
+                    className={`mt-2 text-xl font-extrabold sm:mt-3 sm:text-3xl ${stat.color}`}
                   >
                     {stat.value}
                   </h2>
                 </div>
 
-                <div className={`shrink-0 rounded-xl p-3 ${stat.bg}`}>
-                  <Icon size={22} className={stat.color} />
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
+                >
+                  <Icon size={17} className={stat.color} />
                 </div>
               </div>
             </div>
@@ -567,16 +616,17 @@ export default function PreShoot() {
         })}
       </div>
 
-      {/* Preparation List */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <div className="border-b border-slate-100 p-4 sm:p-6">
+      {/* PREPARATION LIST */}
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm lg:rounded-[22px]">
+        {/* TOOLBAR */}
+        <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:px-6 lg:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#10264d]">
                 Shoot Preparation List
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 Track and manage pre-shoot preparations.
               </p>
             </div>
@@ -621,11 +671,11 @@ export default function PreShoot() {
           </div>
         ) : (
           <>
-            {/* Desktop Table */}
+            {/* DESKTOP TABLE */}
             <div className="hidden w-full overflow-x-auto lg:block">
               <table className="w-full min-w-[1000px] border-collapse text-left">
-                <thead className="bg-slate-50">
-                  <tr className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <thead className="bg-[#f7f9fd]">
+                  <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
                     {[
                       "Customer / Event",
                       "Shoot Date",
@@ -642,7 +692,7 @@ export default function PreShoot() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#edf1f6]">
                   {filtered.map((item) => {
                     const progress = getProgress(item);
                     const status = getStatus(item);
@@ -650,13 +700,12 @@ export default function PreShoot() {
                     return (
                       <tr
                         key={item.id}
-                        className="transition hover:bg-blue-50/40"
+                        className="transition hover:bg-[#f8faff]"
                       >
                         <td className="px-5 py-5">
                           <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">
                             {item.customer}
                           </p>
-
                           <p className="mt-1 text-xs text-slate-500">
                             {item.event}
                           </p>
@@ -666,7 +715,6 @@ export default function PreShoot() {
                           <p className="whitespace-nowrap text-sm text-[#10264d]">
                             {item.shootDate || "—"}
                           </p>
-
                           <p className="mt-1 text-xs text-slate-500">
                             {item.shootTime || "—"}
                           </p>
@@ -691,7 +739,6 @@ export default function PreShoot() {
                                 {getCompletedTasks(item)}/
                                 {checklistItems.length}
                               </span>
-
                               <span className="text-xs font-bold text-[#10264d]">
                                 {progress}%
                               </span>
@@ -720,6 +767,7 @@ export default function PreShoot() {
                               type="button"
                               onClick={() => openEdit(item)}
                               title="Manage Preparation"
+                              aria-label="Manage preparation"
                               className="rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
                             >
                               <Pencil size={17} />
@@ -729,6 +777,7 @@ export default function PreShoot() {
                               type="button"
                               onClick={() => deleteShoot(item.id)}
                               title="Delete Preparation"
+                              aria-label="Delete preparation"
                               className="rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
                             >
                               <Trash2 size={17} />
@@ -742,8 +791,8 @@ export default function PreShoot() {
               </table>
             </div>
 
-            {/* Mobile / Tablet Cards */}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
+            {/* PREMIUM COMPACT MOBILE / TABLET CARDS */}
+            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
               {filtered.map((item) => {
                 const progress = getProgress(item);
                 const status = getStatus(item);
@@ -752,89 +801,110 @@ export default function PreShoot() {
                 return (
                   <article
                     key={item.id}
-                    className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                    className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                      <div className="min-w-0">
-                        <h3 className="break-words text-base font-bold text-[#10264d]">
-                          {item.customer}
-                        </h3>
+                    {/* CARD HEADER */}
+                    <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
+                          <UserRound size={18} />
+                        </div>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          {item.event}
-                        </p>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-bold text-[#10264d]">
+                            {item.customer}
+                          </h3>
+                          <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                            {item.event}
+                          </p>
+                        </div>
                       </div>
 
                       <StatusBadge status={status} />
                     </div>
 
-                    <div className="mt-4 space-y-3">
-                      <Detail
+                    {/* TWO-COLUMN DETAILS */}
+                    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
+                      <MobileDetail
                         label="Shoot Date"
-                        value={item.shootDate}
+                        value={formatDate(item.shootDate)}
                         icon={CalendarDays}
                       />
 
-                      <Detail
+                      <MobileDetail
                         label="Shoot Time"
-                        value={item.shootTime}
+                        value={formatTime(item.shootTime)}
                         icon={Clock3}
                       />
 
-                      <Detail
+                      <MobileDetail
                         label="Location"
                         value={item.location || "Not assigned"}
                         icon={MapPin}
                       />
 
-                      <Detail
+                      <MobileDetail
                         label="Photographer"
                         value={item.photographer || "Not assigned"}
                         icon={UserRound}
                       />
 
-                      <Detail
+                      <MobileDetail
                         label="Team Members"
                         value={item.team || "Not assigned"}
                         icon={Users}
                       />
 
-                      <Detail
-                        label="Required Equipment"
+                      <MobileDetail
+                        label="Equipment"
                         value={item.equipment || "Not specified"}
                         icon={Camera}
                       />
+                    </div>
 
-                      {item.notes && (
-                        <Detail
-                          label="Additional Notes"
-                          value={item.notes}
-                        />
-                      )}
+                    {/* NOTES */}
+                    {item.notes && (
+                      <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
+                        <p className="text-[10px] font-medium text-slate-400">
+                          Additional Notes
+                        </p>
 
+                        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#52627b]">
+                          {item.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* COMPACT PROGRESS */}
+                    <div className="mt-3">
                       <ProgressBar
                         progress={progress}
                         completed={completed}
+                        compact
                       />
                     </div>
 
-                    <div className="mt-5 flex flex-col gap-2 border-t border-slate-200 pt-4">
+                    {/* SIDE-BY-SIDE ACTIONS */}
+                    <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-[#edf1f6] pt-3">
                       <button
                         type="button"
                         onClick={() => openEdit(item)}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-4 py-3 text-sm font-semibold text-white"
+                        className="flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#112e60] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1a4384] sm:text-xs"
                       >
-                        <Pencil size={17} />
-                        Manage Preparation
+                        <Pencil size={15} className="shrink-0" />
+                        <span className="truncate">
+                          Manage Preparation
+                        </span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => deleteShoot(item.id)}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600"
+                        aria-label={`Delete preparation for ${item.customer}`}
+                        title="Delete Preparation"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
                       >
-                        <Trash2 size={17} />
-                        Delete Preparation
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </article>
@@ -843,9 +913,18 @@ export default function PreShoot() {
             </div>
           </>
         )}
+
+        <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
+          <p className="text-xs text-[#8290a5]">
+            Showing {filtered.length} of {shoots.length} preparations
+          </p>
+          <span className="text-xs text-[#8290a5]">
+            Studio Raw Picturez ERP
+          </span>
+        </div>
       </section>
 
-      {/* Center Popup Modal */}
+      {/* CREATE / EDIT PREPARATION MODAL */}
       {showForm && (
         <ModalShell
           title={
@@ -863,7 +942,7 @@ export default function PreShoot() {
           }
         >
           <div className="space-y-8">
-            {/* Shoot Information */}
+            {/* SHOOT INFORMATION */}
             <section>
               <SectionHeading
                 icon={CalendarDays}
@@ -934,7 +1013,7 @@ export default function PreShoot() {
               </div>
             </section>
 
-            {/* Team and Equipment */}
+            {/* TEAM AND EQUIPMENT */}
             <section>
               <SectionHeading
                 icon={Users}
@@ -983,7 +1062,7 @@ export default function PreShoot() {
               </div>
             </section>
 
-            {/* Preparation Checklist */}
+            {/* PREPARATION CHECKLIST */}
             <section>
               <SectionHeading
                 icon={ClipboardCheck}
@@ -1016,7 +1095,7 @@ export default function PreShoot() {
                     return (
                       <label
                         key={task}
-                        className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                        className={`flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition sm:p-4 ${
                           checked
                             ? "border-blue-200 bg-blue-50"
                             : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/50"
@@ -1057,7 +1136,7 @@ export default function PreShoot() {
               </div>
             </section>
 
-            {/* Additional Notes */}
+            {/* ADDITIONAL NOTES */}
             <section>
               <SectionHeading
                 icon={ClipboardList}

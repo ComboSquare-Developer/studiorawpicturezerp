@@ -17,10 +17,8 @@ import {
   Check,
   Clock3,
   CheckCircle2,
-  AlertCircle,
   CalendarCheck2,
   Save,
-  Phone,
 } from "lucide-react";
 
 const STORAGE_KEY = "studioraw_bookings";
@@ -72,9 +70,13 @@ const dateKey = (date) =>
 const formatDate = (value) => {
   if (!value) return "—";
 
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  const date = new Date(
+    `${String(value).slice(0, 10)}T00:00:00`
+  );
 
-  if (Number.isNaN(date.getTime())) return String(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
 
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -86,9 +88,14 @@ const formatDate = (value) => {
 const formatTime = (value) => {
   if (!value) return "—";
 
-  const [hours, minutes] = String(value).split(":").map(Number);
+  const [hours, minutes] = String(value)
+    .split(":")
+    .map(Number);
 
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes)
+  ) {
     return String(value);
   }
 
@@ -108,7 +115,7 @@ const formatTime = (value) => {
 const inputClass =
   "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100 lg:h-[46px] lg:rounded-[10px] lg:px-3.5 lg:py-2.5";
 
-/* DROPDOWN */
+/* CUSTOM DROPDOWN */
 
 function CustomDropdown({
   value,
@@ -131,23 +138,44 @@ function CustomDropdown({
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
     };
 
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener(
+      "pointerdown",
+      handleOutside
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
 
     return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener(
+        "pointerdown",
+        handleOutside
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
     };
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative w-full min-w-0">
+    <div
+      ref={dropdownRef}
+      className="relative w-full min-w-0"
+    >
       <button
         type="button"
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={() =>
+          setOpen((previous) => !previous)
+        }
         aria-expanded={open}
         aria-haspopup="listbox"
         className={`flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100 ${
@@ -196,7 +224,12 @@ function CustomDropdown({
                   {option}
                 </span>
 
-                {selected && <Check size={16} className="shrink-0" />}
+                {selected && (
+                  <Check
+                    size={16}
+                    className="shrink-0"
+                  />
+                )}
               </button>
             );
           })}
@@ -206,37 +239,42 @@ function CustomDropdown({
   );
 }
 
-/* SMALL COMPONENTS */
+/* FORM FIELD */
 
-function Detail({ label, value }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-xs font-medium text-slate-400">{label}</p>
-      <p className="break-words text-sm font-semibold text-[#10264d]">
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
-
-function FormField({ label, required = false, children }) {
+function FormField({
+  label,
+  required = false,
+  children,
+}) {
   return (
     <div className="w-full min-w-0">
       <label className="mb-2 block text-sm font-medium text-slate-700 lg:mb-1.5 lg:text-[12px] lg:font-semibold lg:text-[#344767]">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+
+        {required && (
+          <span className="ml-1 text-red-500">
+            *
+          </span>
+        )}
       </label>
+
       {children}
     </div>
   );
 }
 
-function FormSectionTitle({ icon: Icon, title }) {
+/* FORM SECTION */
+
+function FormSectionTitle({
+  icon: Icon,
+  title,
+}) {
   return (
     <div className="col-span-full flex items-center gap-2.5 border-b border-[#edf1f6] pb-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
         <Icon size={17} />
       </div>
+
       <h4 className="text-[13px] font-bold text-[#10264d]">
         {title}
       </h4>
@@ -244,11 +282,14 @@ function FormSectionTitle({ icon: Icon, title }) {
   );
 }
 
+/* STATUS BADGE */
+
 function StatusBadge({ status }) {
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-        statusStyle[status] || "border-slate-200 bg-slate-50 text-slate-600"
+        statusStyle[status] ||
+        "border-slate-200 bg-slate-50 text-slate-600"
       }`}
     >
       {status || "—"}
@@ -256,44 +297,100 @@ function StatusBadge({ status }) {
   );
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
+/* STAT CARD */
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:rounded-[18px] lg:border-[#e5ebf3] lg:shadow-[0_4px_18px_rgba(16,38,77,0.04)] lg:transition-all lg:hover:-translate-y-0.5 lg:hover:shadow-md">
       <div className="min-w-0">
         <p className="text-sm font-medium text-slate-500 lg:text-xs">
           {title}
         </p>
+
         <h2 className="mt-2 text-3xl font-bold text-[#10264d]">
           {value}
         </h2>
       </div>
 
-      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
+      <div
+        className={`shrink-0 rounded-xl p-3 ${color}`}
+      >
         <Icon size={21} />
       </div>
     </div>
   );
 }
 
-/* MAIN */
+/* MOBILE COMPACT DETAIL */
+
+function MobileDetail({
+  label,
+  value,
+  fullWidth = false,
+}) {
+  return (
+    <div
+      className={`min-w-0 ${
+        fullWidth ? "col-span-2" : ""
+      }`}
+    >
+      <p className="text-[11px] font-medium text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
+        {value === "" ||
+        value === null ||
+        value === undefined
+          ? "—"
+          : value}
+      </p>
+    </div>
+  );
+}
+
+/* MAIN PAGE */
 
 export default function BookingCalendar() {
-  const [bookings, setBookings] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
-  });
+  const [bookings, setBookings] = useState(
+    () => {
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(STORAGE_KEY)
+        );
 
-  const [month, setMonth] = useState(
-    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        return Array.isArray(saved)
+          ? saved
+          : [];
+      } catch {
+        return [];
+      }
+    }
   );
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [month, setMonth] = useState(
+    () =>
+      new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        1
+      )
+  );
+
+  const [showForm, setShowForm] =
+    useState(false);
+
+  const [editingId, setEditingId] =
+    useState(null);
+
+  const [form, setForm] = useState({
+    ...emptyForm,
+  });
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -304,14 +401,20 @@ export default function BookingCalendar() {
   const previousFocusRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(bookings)
+    );
   }, [bookings]);
 
-  /* MODAL SCROLL LOCK & KEYBOARD */
+  /* MODAL SCROLL LOCK */
+
   useEffect(() => {
     if (!showForm) return;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow =
+      document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     firstInputRef.current?.focus();
@@ -324,43 +427,72 @@ export default function BookingCalendar() {
         return;
       }
 
-      if (event.key !== "Tab" || !modalRef.current) return;
+      if (
+        event.key !== "Tab" ||
+        !modalRef.current
+      ) {
+        return;
+      }
 
       const focusable = Array.from(
         modalRef.current.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((element) => element.getClientRects().length > 0);
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0
+      );
 
       if (!focusable.length) return;
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const last =
+        focusable[focusable.length - 1];
 
-      if (event.shiftKey && document.activeElement === first) {
+      if (
+        event.shiftKey &&
+        document.activeElement === first
+      ) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (
+        !event.shiftKey &&
+        document.activeElement === last
+      ) {
         event.preventDefault();
         first.focus();
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow =
+        previousOverflow;
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+
       previousFocusRef.current?.focus?.();
     };
   }, [showForm]);
 
   const update = (key, value) => {
-    setForm((previous) => ({ ...previous, [key]: value }));
+    setForm((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
   };
 
   const openBooking = (date = "") => {
-    previousFocusRef.current = document.activeElement;
+    previousFocusRef.current =
+      document.activeElement;
+
     setEditingId(null);
     setForm({ ...emptyForm, date });
     setError("");
@@ -368,9 +500,16 @@ export default function BookingCalendar() {
   };
 
   const editBooking = (booking) => {
-    previousFocusRef.current = document.activeElement;
+    previousFocusRef.current =
+      document.activeElement;
+
     setEditingId(booking.id);
-    setForm({ ...emptyForm, ...booking });
+
+    setForm({
+      ...emptyForm,
+      ...booking,
+    });
+
     setError("");
     setShowForm(true);
   };
@@ -385,16 +524,28 @@ export default function BookingCalendar() {
   const saveBooking = (event) => {
     event.preventDefault();
 
-    const customer = String(form.customer || "").trim();
-    const phone = String(form.phone || "").trim();
+    const customer = String(
+      form.customer || ""
+    ).trim();
 
-    if (!customer || !/^\d{10}$/.test(phone)) {
-      setError("Enter customer name and valid 10-digit phone number.");
+    const phone = String(
+      form.phone || ""
+    ).trim();
+
+    if (
+      !customer ||
+      !/^\d{10}$/.test(phone)
+    ) {
+      setError(
+        "Enter customer name and valid 10-digit phone number."
+      );
       return;
     }
 
     if (!form.date || !form.time) {
-      setError("Please select booking date and time.");
+      setError(
+        "Please select booking date and time."
+      );
       return;
     }
 
@@ -402,7 +553,12 @@ export default function BookingCalendar() {
       setBookings((previous) =>
         previous.map((booking) =>
           booking.id === editingId
-            ? { ...booking, ...form, customer, phone }
+            ? {
+                ...booking,
+                ...form,
+                customer,
+                phone,
+              }
             : booking
         )
       );
@@ -416,34 +572,49 @@ export default function BookingCalendar() {
         phone,
       };
 
-      setBookings((previous) => [booking, ...previous]);
+      setBookings((previous) => [
+        booking,
+        ...previous,
+      ]);
     }
 
     closeForm();
   };
 
   const deleteBooking = (id) => {
-    if (!window.confirm("Are you sure you want to delete this booking?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this booking?"
+      )
+    ) {
       return;
     }
 
     setBookings((previous) =>
-      previous.filter((booking) => booking.id !== id)
+      previous.filter(
+        (booking) => booking.id !== id
+      )
     );
 
-    if (editingId === id) closeForm();
+    if (editingId === id) {
+      closeForm();
+    }
   };
 
   const changeStatus = (id, status) => {
     setBookings((previous) =>
       previous.map((booking) =>
-        booking.id === id ? { ...booking, status } : booking
+        booking.id === id
+          ? { ...booking, status }
+          : booking
       )
     );
   };
 
   const filtered = useMemo(() => {
-    const query = search.toLowerCase().trim();
+    const query = search
+      .toLowerCase()
+      .trim();
 
     return bookings.filter((booking) => {
       const matchesSearch = [
@@ -452,11 +623,16 @@ export default function BookingCalendar() {
         booking.event,
         booking.photographer,
       ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
+        String(value || "")
+          .toLowerCase()
+          .includes(query)
       );
 
-      return matchesSearch &&
-        (filter === "All" || booking.status === filter);
+      return (
+        matchesSearch &&
+        (filter === "All" ||
+          booking.status === filter)
+      );
     });
   }, [bookings, search, filter]);
 
@@ -465,13 +641,18 @@ export default function BookingCalendar() {
       bookings
         .filter(
           (booking) =>
-            String(booking.date || "") >= dateKey(new Date()) &&
+            String(booking.date || "") >=
+              dateKey(new Date()) &&
             booking.status !== "Cancelled"
         )
         .sort(
           (a, b) =>
-            String(a.date || "").localeCompare(String(b.date || "")) ||
-            String(a.time || "").localeCompare(String(b.time || ""))
+            String(a.date || "").localeCompare(
+              String(b.date || "")
+            ) ||
+            String(a.time || "").localeCompare(
+              String(b.time || "")
+            )
         )
         .slice(0, 6),
     [bookings]
@@ -491,7 +672,10 @@ export default function BookingCalendar() {
 
   const cells = [
     ...Array(firstDay.getDay()).fill(null),
-    ...Array.from({ length: totalDays }, (_, index) => index + 1),
+    ...Array.from(
+      { length: totalDays },
+      (_, index) => index + 1
+    ),
   ];
 
   const changeMonth = (offset) => {
@@ -514,19 +698,25 @@ export default function BookingCalendar() {
     },
     {
       title: "Confirmed",
-      value: bookings.filter((b) => b.status === "Confirmed").length,
+      value: bookings.filter(
+        (b) => b.status === "Confirmed"
+      ).length,
       icon: CalendarCheck2,
       color: "bg-indigo-50 text-indigo-700",
     },
     {
       title: "Pending",
-      value: bookings.filter((b) => b.status === "Pending").length,
+      value: bookings.filter(
+        (b) => b.status === "Pending"
+      ).length,
       icon: Clock3,
       color: "bg-amber-50 text-amber-700",
     },
     {
       title: "Completed",
-      value: bookings.filter((b) => b.status === "Completed").length,
+      value: bookings.filter(
+        (b) => b.status === "Completed"
+      ).length,
       icon: CheckCircle2,
       color: "bg-emerald-50 text-emerald-700",
     },
@@ -536,6 +726,7 @@ export default function BookingCalendar() {
     <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
 
       {/* PAGE HEADER */}
+
       <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
@@ -547,7 +738,8 @@ export default function BookingCalendar() {
           </h1>
 
           <p className="mt-1 text-sm leading-6 text-slate-500 lg:text-[#8491a5]">
-            Manage photography bookings, schedules and assignments.
+            Manage photography bookings,
+            schedules and assignments.
           </p>
         </div>
 
@@ -562,36 +754,49 @@ export default function BookingCalendar() {
       </div>
 
       {/* STATS */}
+
       <div className="flex min-w-0 flex-col gap-4 lg:grid lg:grid-cols-4 lg:gap-5">
         {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
+          <StatCard
+            key={stat.title}
+            {...stat}
+          />
         ))}
       </div>
 
       {/* CALENDAR + UPCOMING */}
+
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(310px,1fr)]">
 
         {/* CALENDAR */}
+
         <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:p-5 lg:rounded-[22px] lg:border-[#e5ebf3] lg:p-6 lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)]">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-base font-bold text-[#10264d] sm:text-lg">
                 <CalendarDays size={20} />
-                {month.toLocaleString("en-IN", {
-                  month: "long",
-                  year: "numeric",
-                })}
+
+                {month.toLocaleString(
+                  "en-IN",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
               </h2>
 
               <p className="mt-1 hidden text-xs text-slate-400 lg:block">
-                Select a date to schedule a new booking
+                Select a date to schedule a
+                new booking
               </p>
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:justify-end">
               <button
                 type="button"
-                onClick={() => changeMonth(-1)}
+                onClick={() =>
+                  changeMonth(-1)
+                }
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 transition hover:bg-slate-100"
                 aria-label="Previous month"
               >
@@ -600,7 +805,15 @@ export default function BookingCalendar() {
 
               <button
                 type="button"
-                onClick={() => setMonth(new Date())}
+                onClick={() =>
+                  setMonth(
+                    new Date(
+                      new Date().getFullYear(),
+                      new Date().getMonth(),
+                      1
+                    )
+                  )
+                }
                 className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-[#10264d] sm:flex-none"
               >
                 Today
@@ -608,7 +821,9 @@ export default function BookingCalendar() {
 
               <button
                 type="button"
-                onClick={() => changeMonth(1)}
+                onClick={() =>
+                  changeMonth(1)
+                }
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 transition hover:bg-slate-100"
                 aria-label="Next month"
               >
@@ -618,20 +833,30 @@ export default function BookingCalendar() {
           </div>
 
           <div className="grid w-full min-w-0 grid-cols-7 gap-1 text-center sm:gap-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-              (day) => (
-                <div
-                  key={day}
-                  className="min-w-0 py-2 text-[9px] font-semibold text-slate-500 sm:text-xs lg:py-3"
-                >
-                  {day}
-                </div>
-              )
-            )}
+            {[
+              "Sun",
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+            ].map((day) => (
+              <div
+                key={day}
+                className="min-w-0 py-2 text-[9px] font-semibold text-slate-500 sm:text-xs lg:py-3"
+              >
+                {day}
+              </div>
+            ))}
 
             {cells.map((day, index) => {
               if (!day) {
-                return <div key={`empty-${index}`} />;
+                return (
+                  <div
+                    key={`empty-${index}`}
+                  />
+                );
               }
 
               const date = dateKey(
@@ -642,17 +867,22 @@ export default function BookingCalendar() {
                 )
               );
 
-              const dayBookings = bookings.filter(
-                (booking) => booking.date === date
-              );
+              const dayBookings =
+                bookings.filter(
+                  (booking) =>
+                    booking.date === date
+                );
 
-              const isToday = date === dateKey(new Date());
+              const isToday =
+                date === dateKey(new Date());
 
               return (
                 <button
                   key={date}
                   type="button"
-                  onClick={() => openBooking(date)}
+                  onClick={() =>
+                    openBooking(date)
+                  }
                   aria-label={`Add booking for ${date}`}
                   className={`flex min-h-12 min-w-0 flex-col items-center rounded-lg border p-1 text-center transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-20 sm:items-start sm:rounded-xl sm:p-2 sm:text-left lg:min-h-[86px] lg:border-[#edf1f6] ${
                     isToday
@@ -677,18 +907,24 @@ export default function BookingCalendar() {
                       </span>
 
                       <div className="hidden w-full min-w-0 sm:block">
-                        {dayBookings.slice(0, 2).map((booking) => (
-                          <div
-                            key={booking.id}
-                            className="mt-1 w-full truncate rounded bg-[#eaf1fc] px-1 py-1 text-[10px] font-medium text-[#315f9a]"
-                          >
-                            {booking.customer}
-                          </div>
-                        ))}
+                        {dayBookings
+                          .slice(0, 2)
+                          .map((booking) => (
+                            <div
+                              key={booking.id}
+                              className="mt-1 w-full truncate rounded bg-[#eaf1fc] px-1 py-1 text-[10px] font-medium text-[#315f9a]"
+                            >
+                              {booking.customer}
+                            </div>
+                          ))}
 
-                        {dayBookings.length > 2 && (
+                        {dayBookings.length >
+                          2 && (
                           <span className="text-[10px] text-slate-500">
-                            +{dayBookings.length - 2} more
+                            +
+                            {dayBookings.length -
+                              2}{" "}
+                            more
                           </span>
                         )}
                       </div>
@@ -701,6 +937,7 @@ export default function BookingCalendar() {
         </section>
 
         {/* UPCOMING SHOOTS */}
+
         <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5 lg:rounded-[22px] lg:border-[#e5ebf3] lg:p-6 lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)]">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
@@ -709,7 +946,8 @@ export default function BookingCalendar() {
               </h2>
 
               <p className="mt-1 text-xs text-slate-400">
-                Your next scheduled photography events
+                Your next scheduled
+                photography events
               </p>
             </div>
 
@@ -720,7 +958,11 @@ export default function BookingCalendar() {
 
           {upcoming.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CalendarDays size={30} className="text-slate-300" />
+              <CalendarDays
+                size={30}
+                className="text-slate-300"
+              />
+
               <p className="mt-3 text-sm text-slate-400">
                 No upcoming shoots
               </p>
@@ -743,31 +985,43 @@ export default function BookingCalendar() {
                       </p>
                     </div>
 
-                    <StatusBadge status={booking.status} />
+                    <StatusBadge
+                      status={booking.status}
+                    />
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1.5">
-                      <CalendarDays size={13} />
-                      {formatDate(booking.date)}
+                      <CalendarDays
+                        size={13}
+                      />
+                      {formatDate(
+                        booking.date
+                      )}
                     </span>
 
                     <span className="flex items-center gap-1.5">
                       <Clock3 size={13} />
-                      {formatTime(booking.time)}
+                      {formatTime(
+                        booking.time
+                      )}
                     </span>
                   </div>
 
                   {booking.location && (
                     <p className="mt-2 flex items-start gap-1.5 text-xs text-slate-500">
-                      <MapPin size={13} className="mt-0.5 shrink-0" />
+                      <MapPin
+                        size={13}
+                        className="mt-0.5 shrink-0"
+                      />
                       {booking.location}
                     </p>
                   )}
 
                   <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
                     <Camera size={13} />
-                    {booking.photographer || "Not assigned"}
+                    {booking.photographer ||
+                      "Not assigned"}
                   </p>
                 </div>
               ))}
@@ -777,9 +1031,11 @@ export default function BookingCalendar() {
       </div>
 
       {/* ALL BOOKINGS */}
+
       <section className="min-w-0 rounded-2xl border border-slate-100 bg-white shadow-sm lg:rounded-[22px] lg:border-[#e5ebf3] lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)]">
 
         {/* TOOLBAR */}
+
         <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-5">
           <div>
             <h2 className="text-lg font-bold text-[#10264d]">
@@ -801,7 +1057,11 @@ export default function BookingCalendar() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
                 placeholder="Search bookings..."
                 className={`${inputClass} pl-10`}
               />
@@ -814,7 +1074,10 @@ export default function BookingCalendar() {
 
               <CustomDropdown
                 value={filter}
-                options={["All", ...statuses]}
+                options={[
+                  "All",
+                  ...statuses,
+                ]}
                 onChange={setFilter}
                 compact
               />
@@ -822,91 +1085,196 @@ export default function BookingCalendar() {
           </div>
         </div>
 
-        {/* MOBILE CARDS */}
-        <div className="flex flex-col gap-4 p-4 sm:p-5 lg:hidden">
+        {/* MOBILE COMPACT CARDS */}
+
+        <div className="grid grid-cols-1 gap-4 p-3 sm:p-5 lg:hidden">
           {filtered.length === 0 ? (
-            <p className="py-12 text-center text-sm text-slate-400">
-              No bookings found
-            </p>
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
+              <CalendarDays
+                size={30}
+                className="mx-auto text-slate-300"
+              />
+
+              <p className="mt-3 text-sm font-medium text-slate-500">
+                No bookings found
+              </p>
+            </div>
           ) : (
             filtered.map((booking) => (
-              <div
+              <article
                 key={booking.id}
-                className="flex min-w-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5"
+                className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_3px_14px_rgba(16,38,77,0.05)]"
               >
-                <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
-                  <div className="min-w-0">
-                    <h3 className="break-words text-base font-bold text-[#10264d]">
-                      {booking.customer}
-                    </h3>
+                {/* CARD HEADER */}
 
-                    <p className="mt-1 break-all text-xs text-blue-700">
-                      {booking.id}
-                    </p>
+                <div className="flex items-start justify-between gap-3 border-b border-[#edf1f6] bg-[#f8fafd] p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#315f9a]">
+                      <UserRound
+                        size={19}
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="break-words text-sm font-bold text-[#10264d] sm:text-base">
+                        {booking.customer ||
+                          "Unnamed Customer"}
+                      </h3>
+
+                      <p className="mt-1 break-all text-[11px] font-medium text-[#4972a8]">
+                        {booking.id}
+                      </p>
+
+                      <div className="mt-2">
+                        <StatusBadge
+                          status={
+                            booking.status
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => editBooking(booking)}
-                      className="rounded-xl bg-blue-50 p-2.5 text-blue-700 hover:bg-blue-100"
-                      aria-label="Edit booking"
+                      onClick={() =>
+                        editBooking(
+                          booking
+                        )
+                      }
+                      aria-label={`Edit booking for ${booking.customer}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-700 transition hover:bg-blue-100"
                     >
-                      <Pencil size={17} />
+                      <Pencil
+                        size={16}
+                      />
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => deleteBooking(booking.id)}
-                      className="rounded-xl bg-red-50 p-2.5 text-red-600 hover:bg-red-100"
-                      aria-label="Delete booking"
+                      onClick={() =>
+                        deleteBooking(
+                          booking.id
+                        )
+                      }
+                      aria-label={`Delete booking for ${booking.customer}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
                     >
-                      <Trash2 size={17} />
+                      <Trash2
+                        size={16}
+                      />
                     </button>
                   </div>
                 </div>
 
-                <Detail label="Phone" value={booking.phone} />
-                <Detail label="Event" value={booking.event} />
-                <Detail label="Date" value={booking.date} />
-                <Detail label="Time" value={booking.time} />
-                <Detail label="Location" value={booking.location} />
-                <Detail
-                  label="Photographer"
-                  value={booking.photographer || "Not assigned"}
-                />
-                <Detail label="Package" value={booking.package} />
+                {/* TWO COLUMN DETAILS */}
 
-                <div className="pt-1">
-                  <p className="mb-2 text-xs font-medium text-slate-500">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">
+                  <MobileDetail
+                    label="Event Type"
+                    value={booking.event}
+                  />
+
+                  <MobileDetail
+                    label="Phone Number"
+                    value={booking.phone}
+                  />
+
+                  <MobileDetail
+                    label="Booking Date"
+                    value={formatDate(
+                      booking.date
+                    )}
+                  />
+
+                  <MobileDetail
+                    label="Booking Time"
+                    value={formatTime(
+                      booking.time
+                    )}
+                  />
+
+                  <MobileDetail
+                    label="Location"
+                    value={
+                      booking.location
+                    }
+                  />
+
+                  <MobileDetail
+                    label="Photographer"
+                    value={
+                      booking.photographer ||
+                      "Not assigned"
+                    }
+                  />
+
+                  <div className="col-span-2 border-t border-slate-100 pt-3">
+                    <MobileDetail
+                      label="Photography Package"
+                      value={
+                        booking.package ||
+                        "Not specified"
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* STATUS */}
+
+                <div className="border-t border-[#edf1f6] bg-[#fafcff] px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold text-[#52627b]">
                     Booking Status
                   </p>
 
                   <CustomDropdown
-                    value={booking.status || "Confirmed"}
+                    value={
+                      booking.status ||
+                      "Confirmed"
+                    }
                     options={statuses}
                     onChange={(status) =>
-                      changeStatus(booking.id, status)
+                      changeStatus(
+                        booking.id,
+                        status
+                      )
                     }
+                    compact
                   />
                 </div>
-              </div>
+              </article>
             ))
           )}
         </div>
 
         {/* DESKTOP TABLE */}
+
         <div className="hidden w-full overflow-x-auto lg:block">
           <table className="w-full min-w-[900px] border-collapse text-left">
             <thead className="bg-[#f7f9fd]">
               <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
-                <th className="px-5 py-4">Customer</th>
-                <th className="px-5 py-4">Event</th>
-                <th className="px-5 py-4">Date & Time</th>
-                <th className="px-5 py-4">Location</th>
-                <th className="px-5 py-4">Photographer</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4 text-center">Actions</th>
+                <th className="px-5 py-4">
+                  Customer
+                </th>
+                <th className="px-5 py-4">
+                  Event
+                </th>
+                <th className="px-5 py-4">
+                  Date & Time
+                </th>
+                <th className="px-5 py-4">
+                  Location
+                </th>
+                <th className="px-5 py-4">
+                  Photographer
+                </th>
+                <th className="px-5 py-4">
+                  Status
+                </th>
+                <th className="px-5 py-4 text-center">
+                  Actions
+                </th>
               </tr>
             </thead>
 
@@ -921,97 +1289,140 @@ export default function BookingCalendar() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    className="transition hover:bg-[#f8faff]"
-                  >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a]">
-                          <UserRound size={18} />
+                filtered.map(
+                  (booking) => (
+                    <tr
+                      key={booking.id}
+                      className="transition hover:bg-[#f8faff]"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a]">
+                            <UserRound
+                              size={18}
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#10264d]">
+                              {
+                                booking.customer
+                              }
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-400">
+                              {booking.phone ||
+                                "—"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[#52627b]">
+                        {booking.event ||
+                          "—"}
+                      </td>
+
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <p className="text-sm font-medium text-[#52627b]">
+                          {formatDate(
+                            booking.date
+                          )}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          {formatTime(
+                            booking.time
+                          )}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[#52627b]">
+                        {booking.location ||
+                          "—"}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-[#52627b]">
+                        {booking.photographer ||
+                          "Not assigned"}
+                      </td>
+
+                      <td className="min-w-[145px] px-5 py-4">
+                        <div className="mb-1">
+                          <StatusBadge
+                            status={
+                              booking.status
+                            }
+                          />
                         </div>
 
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[#10264d]">
-                            {booking.customer}
-                          </p>
+                        <CustomDropdown
+                          value={
+                            booking.status ||
+                            "Confirmed"
+                          }
+                          options={
+                            statuses
+                          }
+                          onChange={(
+                            status
+                          ) =>
+                            changeStatus(
+                              booking.id,
+                              status
+                            )
+                          }
+                          compact
+                        />
+                      </td>
 
-                          <p className="mt-1 text-xs text-slate-400">
-                            {booking.phone || "—"}
-                          </p>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              editBooking(
+                                booking
+                              )
+                            }
+                            aria-label={`Edit booking for ${booking.customer}`}
+                            className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                          >
+                            <Pencil
+                              size={17}
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteBooking(
+                                booking.id
+                              )
+                            }
+                            aria-label={`Delete booking for ${booking.customer}`}
+                            className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                          >
+                            <Trash2
+                              size={17}
+                            />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#52627b]">
-                      {booking.event || "—"}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <p className="text-sm font-medium text-[#52627b]">
-                        {formatDate(booking.date)}
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        {formatTime(booking.time)}
-                      </p>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#52627b]">
-                      {booking.location || "—"}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-[#52627b]">
-                      {booking.photographer || "Not assigned"}
-                    </td>
-
-                    <td className="min-w-[145px] px-5 py-4">
-                      <div className="mb-1">
-                        <StatusBadge status={booking.status} />
-                      </div>
-
-                      <CustomDropdown
-                        value={booking.status || "Confirmed"}
-                        options={statuses}
-                        onChange={(status) =>
-                          changeStatus(booking.id, status)
-                        }
-                        compact
-                      />
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => editBooking(booking)}
-                          aria-label={`Edit booking for ${booking.customer}`}
-                          className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
-                        >
-                          <Pencil size={17} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => deleteBooking(booking.id)}
-                          aria-label={`Delete booking for ${booking.customer}`}
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  )
+                )
               )}
             </tbody>
           </table>
         </div>
 
+        {/* DESKTOP FOOTER */}
+
         <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
           <p className="text-xs text-[#8290a5]">
-            Showing {filtered.length} of {bookings.length} bookings
+            Showing {filtered.length} of{" "}
+            {bookings.length} bookings
           </p>
 
           <span className="text-xs text-[#8290a5]">
@@ -1020,13 +1431,17 @@ export default function BookingCalendar() {
         </div>
       </section>
 
-      {/* NEW / EDIT BOOKING MODAL */}
+      {/* ADD / EDIT MODAL */}
+
       {showForm &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/65 p-3 backdrop-blur-[3px] sm:p-5"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
                 closeForm();
               }
             }}
@@ -1039,13 +1454,18 @@ export default function BookingCalendar() {
               className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)] lg:max-w-[800px] lg:rounded-[18px]"
             >
               {/* MODAL HEADER */}
+
               <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7 lg:px-8 lg:py-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
                     {editingId ? (
-                      <Pencil size={19} />
+                      <Pencil
+                        size={19}
+                      />
                     ) : (
-                      <CalendarDays size={21} />
+                      <CalendarDays
+                        size={21}
+                      />
                     )}
                   </div>
 
@@ -1078,106 +1498,176 @@ export default function BookingCalendar() {
               </div>
 
               {/* FORM */}
+
               <form
                 onSubmit={saveBooking}
                 className="flex min-h-0 flex-1 flex-col"
               >
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 lg:space-y-5 lg:px-8 lg:py-6">
 
-                  {/* CUSTOMER */}
+                  {/* CUSTOMER INFORMATION */}
+
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5">
                     <FormSectionTitle
                       icon={UserRound}
                       title="Customer Information"
                     />
 
-                    <FormField label="Customer Name" required>
+                    <FormField
+                      label="Customer Name"
+                      required
+                    >
                       <input
-                        ref={firstInputRef}
+                        ref={
+                          firstInputRef
+                        }
                         type="text"
                         required
-                        value={form.customer}
-                        onChange={(event) =>
-                          update("customer", event.target.value)
+                        value={
+                          form.customer
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "customer",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter customer name"
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
 
-                    <FormField label="Phone Number" required>
+                    <FormField
+                      label="Phone Number"
+                      required
+                    >
                       <input
                         type="tel"
                         inputMode="numeric"
                         maxLength={10}
                         required
                         value={form.phone}
-                        onChange={(event) =>
+                        onChange={(
+                          event
+                        ) =>
                           update(
                             "phone",
-                            event.target.value.replace(/\D/g, "")
+                            event.target.value.replace(
+                              /\D/g,
+                              ""
+                            )
                           )
                         }
                         placeholder="Enter 10-digit phone number"
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
                   </div>
 
-                  {/* EVENT */}
+                  {/* EVENT & SCHEDULE */}
+
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5">
                     <FormSectionTitle
-                      icon={CalendarDays}
+                      icon={
+                        CalendarDays
+                      }
                       title="Event & Schedule"
                     />
 
                     <FormField label="Event Type">
                       <CustomDropdown
-                        value={form.event}
-                        options={events}
-                        onChange={(value) => update("event", value)}
+                        value={
+                          form.event
+                        }
+                        options={
+                          events
+                        }
+                        onChange={(
+                          value
+                        ) =>
+                          update(
+                            "event",
+                            value
+                          )
+                        }
                         compact
                       />
                     </FormField>
 
-                    <FormField label="Booking Date" required>
+                    <FormField
+                      label="Booking Date"
+                      required
+                    >
                       <input
                         type="date"
                         required
                         value={form.date}
-                        onChange={(event) =>
-                          update("date", event.target.value)
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "date",
+                            event.target.value
+                          )
                         }
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
 
-                    <FormField label="Booking Time" required>
+                    <FormField
+                      label="Booking Time"
+                      required
+                    >
                       <input
                         type="time"
                         required
                         value={form.time}
-                        onChange={(event) =>
-                          update("time", event.target.value)
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "time",
+                            event.target.value
+                          )
                         }
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
 
                     <FormField label="Location">
                       <input
                         type="text"
-                        value={form.location}
-                        onChange={(event) =>
-                          update("location", event.target.value)
+                        value={
+                          form.location
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "location",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter shoot location"
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
                   </div>
 
-                  {/* ASSIGNMENT */}
+                  {/* PHOTOGRAPHY ASSIGNMENT */}
+
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-x-5">
                     <FormSectionTitle
                       icon={Camera}
@@ -1187,36 +1677,67 @@ export default function BookingCalendar() {
                     <FormField label="Photographer">
                       <input
                         type="text"
-                        value={form.photographer}
-                        onChange={(event) =>
-                          update("photographer", event.target.value)
+                        value={
+                          form.photographer
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "photographer",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter photographer name"
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
 
                     <FormField label="Photography Package">
                       <input
                         type="text"
-                        value={form.package}
-                        onChange={(event) =>
-                          update("package", event.target.value)
+                        value={
+                          form.package
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          update(
+                            "package",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter photography package"
-                        className={inputClass}
+                        className={
+                          inputClass
+                        }
                       />
                     </FormField>
 
                     <FormField label="Booking Status">
                       <CustomDropdown
-                        value={form.status}
-                        options={statuses}
-                        onChange={(value) => update("status", value)}
+                        value={
+                          form.status
+                        }
+                        options={
+                          statuses
+                        }
+                        onChange={(
+                          value
+                        ) =>
+                          update(
+                            "status",
+                            value
+                          )
+                        }
                         compact
                       />
                     </FormField>
                   </div>
+
+                  {/* VALIDATION ERROR */}
 
                   {error && (
                     <div
@@ -1229,10 +1750,13 @@ export default function BookingCalendar() {
                 </div>
 
                 {/* MODAL FOOTER */}
+
                 <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7 lg:px-8">
                   <button
                     type="button"
-                    onClick={closeForm}
+                    onClick={
+                      closeForm
+                    }
                     className="w-full rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] transition hover:bg-[#eef3f9] sm:w-auto"
                   >
                     Cancel
@@ -1243,6 +1767,7 @@ export default function BookingCalendar() {
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1b467e] sm:w-auto"
                   >
                     <Save size={17} />
+
                     {editingId
                       ? "Update Booking"
                       : "Save Booking"}
