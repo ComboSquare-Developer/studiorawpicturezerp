@@ -25,9 +25,7 @@ const KEY = "studioraw_payments";
 
 const todayKey = () => {
   const date = new Date();
-  return `${date.getFullYear()}-${String(
-    date.getMonth() + 1
-  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const createEmptyForm = () => ({
@@ -49,15 +47,96 @@ const eventOptions = [
   "Pre-Wedding",
   "Baby Shoot",
   "Corporate",
+  "Portrait Photography",
   "Other",
 ];
 
-const methodOptions = ["Cash", "UPI", "Bank Transfer", "Card"];
+const packageOptions = [
+  "Premium Wedding",
+  "Classic Wedding",
+  "Wedding Photography",
+  "Classic Engagement",
+  "Birthday Special",
+  "Pre-Wedding Premium",
+  "Baby Portrait",
+  "Corporate Photography",
+  "Portrait Photography",
+  "Custom Package",
+];
 
+const methodOptions = ["Cash", "UPI", "Bank Transfer", "Card"];
 const filterOptions = ["All", "Paid", "Partial", "Pending"];
 
 const inputClass =
   "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-[#8ca0bd] focus:border-[#3478e5] focus:ring-2 focus:ring-blue-100";
+
+const demoPayments = [
+  {
+    id: "DEMO-PAY-001",
+    invoice: "INV-2026-1001",
+    customer: "Arun Kumar",
+    phone: "9876543210",
+    event: "Wedding",
+    packageName: "Premium Wedding",
+    total: 75000,
+    advance: 30000,
+    method: "UPI",
+    date: "2026-10-10",
+    notes: "Wedding photography and videography",
+  },
+  {
+    id: "DEMO-PAY-002",
+    invoice: "INV-2026-1002",
+    customer: "Priya Sharma",
+    phone: "9876543211",
+    event: "Engagement",
+    packageName: "Classic Engagement",
+    total: 25000,
+    advance: 25000,
+    method: "Cash",
+    date: "2026-10-12",
+    notes: "Engagement photo session",
+  },
+  {
+    id: "DEMO-PAY-003",
+    invoice: "INV-2026-1003",
+    customer: "Vijay Raj",
+    phone: "9876543212",
+    event: "Birthday",
+    packageName: "Birthday Special",
+    total: 18000,
+    advance: 5000,
+    method: "Bank Transfer",
+    date: "2026-10-15",
+    notes: "Birthday event coverage",
+  },
+  {
+    id: "DEMO-PAY-004",
+    invoice: "INV-2026-1004",
+    customer: "Meena Devi",
+    phone: "9876543213",
+    event: "Pre-Wedding",
+    packageName: "Pre-Wedding Premium",
+    total: 35000,
+    advance: 10000,
+    method: "UPI",
+    date: "2026-10-18",
+    notes: "Outdoor pre-wedding shoot",
+  },
+  {
+    id: "DEMO-PAY-005",
+    invoice: "INV-2026-1005",
+    customer: "Karthik S",
+    phone: "9876543214",
+    event: "Baby Shoot",
+    packageName: "Baby Portrait",
+    total: 12000,
+    advance: 0,
+    method: "Cash",
+    date: "2026-10-20",
+    notes: "Baby photography session",
+  },
+];
 
 const toAmount = (value) => {
   const number = Number(String(value ?? 0).replace(/[₹,\s]/g, ""));
@@ -92,6 +171,7 @@ const formatDate = (value) => {
   if (!value) return "—";
   const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -172,9 +252,9 @@ function StatusBadge({ status }) {
   );
 }
 
-function MobileDetail({ label, value, highlight = false, span = false }) {
+function MobileDetail({ label, value, highlight = false }) {
   return (
-    <div className={`min-w-0 ${span ? "col-span-2" : ""}`}>
+    <div className="min-w-0">
       <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
         {label}
       </p>
@@ -242,6 +322,7 @@ function ModalShell({
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -256,6 +337,7 @@ function ModalShell({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-9 sm:py-7">
             {children}
           </div>
+
           <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
             <button
               type="button"
@@ -264,6 +346,7 @@ function ModalShell({
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3 text-sm font-semibold text-white hover:bg-[#1a4384]"
@@ -280,7 +363,11 @@ function ModalShell({
 }
 
 export default function Payments() {
-  const [payments, setPayments] = useState(readPayments);
+  const [payments, setPayments] = useState(() => {
+    const saved = readPayments();
+    return saved.length > 0 ? saved : demoPayments;
+  });
+
   const [form, setForm] = useState(createEmptyForm);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
@@ -323,7 +410,7 @@ export default function Payments() {
     }
 
     if (!form.packageName.trim()) {
-      setError("Please enter the package name.");
+      setError("Please select a package name.");
       return;
     }
 
@@ -434,11 +521,12 @@ export default function Payments() {
         payment.invoice,
         payment.event,
         payment.packageName,
-      ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
+      ].some((value) => String(value || "").toLowerCase().includes(query));
 
-      return matchesSearch && (filter === "All" || getStatus(payment) === filter);
+      return (
+        matchesSearch &&
+        (filter === "All" || getStatus(payment) === filter)
+      );
     });
   }, [payments, search, filter]);
 
@@ -568,7 +656,7 @@ export default function Payments() {
             <div>
               <strong>PAYMENT INVOICE</strong>
               <p>${safe(payment.invoice)}</p>
-              <p class="muted">${safe(payment.date)}</p>
+              <p class="muted">${safe(formatDate(payment.date))}</p>
             </div>
           </div>
 
@@ -623,7 +711,6 @@ export default function Payments() {
 
   return (
     <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
-      {/* PAGE HEADER */}
       <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
@@ -647,7 +734,6 @@ export default function Payments() {
         </button>
       </div>
 
-      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -662,15 +748,11 @@ export default function Payments() {
                   <p className="text-[10px] font-semibold leading-4 text-slate-500 sm:text-sm">
                     {stat.title}
                   </p>
-                  <h2
-                    className={`mt-2 break-words text-lg font-extrabold tracking-tight sm:mt-3 sm:text-2xl ${stat.color}`}
-                  >
+                  <h2 className={`mt-2 break-words text-lg font-extrabold tracking-tight sm:mt-3 sm:text-2xl ${stat.color}`}>
                     {stat.value}
                   </h2>
                 </div>
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
-                >
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}>
                   <Icon size={17} className={stat.color} />
                 </div>
               </div>
@@ -679,7 +761,6 @@ export default function Payments() {
         })}
       </div>
 
-      {/* INVOICE MANAGEMENT */}
       <section className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm lg:rounded-[22px]">
         <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:px-6 lg:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -694,10 +775,7 @@ export default function Payments() {
 
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <div className="relative w-full sm:min-w-[230px] lg:w-72">
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+                <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="search"
                   value={search}
@@ -706,6 +784,7 @@ export default function Payments() {
                   className={`${inputClass} pl-10`}
                 />
               </div>
+
               <div className="w-full sm:w-44">
                 <CustomDropdown
                   value={filter}
@@ -719,11 +798,10 @@ export default function Payments() {
 
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">
-            No invoices found
+            No invoices found. Create a new invoice to get started.
           </div>
         ) : (
           <>
-            {/* DESKTOP TABLE - UNCHANGED FUNCTIONALITY */}
             <div className="hidden w-full overflow-x-auto lg:block">
               <table className="w-full min-w-[1050px] border-collapse text-left">
                 <thead className="bg-[#f7f9fd]">
@@ -751,48 +829,25 @@ export default function Payments() {
                     const balance = getBalance(payment);
 
                     return (
-                      <tr
-                        key={payment.id}
-                        className="transition hover:bg-[#f8faff]"
-                      >
+                      <tr key={payment.id} className="transition hover:bg-[#f8faff]">
                         <td className="px-5 py-5">
-                          <p className="text-sm font-semibold text-blue-700">
-                            {payment.invoice}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-400">
-                            {payment.date || "No date"}
-                          </p>
+                          <p className="text-sm font-semibold text-blue-700">{payment.invoice}</p>
+                          <p className="mt-1 text-xs text-slate-400">{formatDate(payment.date)}</p>
                         </td>
 
                         <td className="px-5 py-5">
-                          <p className="text-sm font-semibold text-[#10264d]">
-                            {payment.customer}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {payment.phone}
-                          </p>
+                          <p className="text-sm font-semibold text-[#10264d]">{payment.customer}</p>
+                          <p className="mt-1 text-xs text-slate-500">{payment.phone}</p>
                         </td>
 
                         <td className="px-5 py-5">
-                          <p className="text-sm font-medium text-slate-700">
-                            {payment.event}
-                          </p>
-                          <p className="mt-1 max-w-40 break-words text-xs text-slate-500">
-                            {payment.packageName}
-                          </p>
+                          <p className="text-sm font-medium text-slate-700">{payment.event}</p>
+                          <p className="mt-1 max-w-40 break-words text-xs text-slate-500">{payment.packageName}</p>
                         </td>
 
-                        <td className="px-5 py-5 text-sm font-semibold text-[#10264d]">
-                          {currency(payment.total)}
-                        </td>
-
-                        <td className="px-5 py-5 text-sm font-semibold text-green-700">
-                          {currency(payment.advance)}
-                        </td>
-
-                        <td className="px-5 py-5 text-sm font-semibold text-orange-600">
-                          {currency(balance)}
-                        </td>
+                        <td className="px-5 py-5 text-sm font-semibold text-[#10264d]">{currency(payment.total)}</td>
+                        <td className="px-5 py-5 text-sm font-semibold text-green-700">{currency(payment.advance)}</td>
+                        <td className="px-5 py-5 text-sm font-semibold text-orange-600">{currency(balance)}</td>
 
                         <td className="px-5 py-5">
                           <StatusBadge status={status} />
@@ -810,6 +865,7 @@ export default function Payments() {
                                 <Plus size={17} />
                               </button>
                             )}
+
                             <button
                               type="button"
                               title="Print Invoice"
@@ -818,6 +874,7 @@ export default function Payments() {
                             >
                               <Printer size={17} />
                             </button>
+
                             <button
                               type="button"
                               title="Delete Invoice"
@@ -835,108 +892,56 @@ export default function Payments() {
               </table>
             </div>
 
-            {/* PREMIUM COMPACT MOBILE CARDS */}
             <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
               {filtered.map((payment) => {
                 const status = getStatus(payment);
                 const balance = getBalance(payment);
 
                 return (
-                  <article
-                    key={payment.id}
-                    className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
-                  >
-                    {/* HEADER */}
+                  <article key={payment.id} className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4">
                     <div className="flex min-w-0 items-start justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2.5">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
                           <UserRound size={18} />
                         </div>
-
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-bold text-[#10264d]">
-                            {payment.customer}
-                          </h3>
-                          <p className="mt-0.5 truncate text-[10px] font-semibold text-[#4972a8]">
-                            {payment.invoice}
-                          </p>
+                          <h3 className="truncate text-sm font-bold text-[#10264d]">{payment.customer}</h3>
+                          <p className="mt-0.5 truncate text-[10px] font-semibold text-[#4972a8]">{payment.invoice}</p>
                         </div>
                       </div>
-
                       <StatusBadge status={status} />
                     </div>
 
-                    {/* DATE AND PHONE */}
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[#edf1f6] pb-3 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1.5">
-                        <Phone size={12} />
-                        {payment.phone || "—"}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <CalendarDays size={12} />
-                        {formatDate(payment.date)}
-                      </span>
+                      <span className="flex items-center gap-1.5"><Phone size={12} />{payment.phone || "—"}</span>
+                      <span className="flex items-center gap-1.5"><CalendarDays size={12} />{formatDate(payment.date)}</span>
                     </div>
 
-                    {/* COMPACT TWO-COLUMN DETAILS */}
                     <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
-                      <MobileDetail
-                        label="Event"
-                        value={payment.event}
-                      />
-                      <MobileDetail
-                        label="Package"
-                        value={payment.packageName}
-                      />
-                      <MobileDetail
-                        label="Payment Method"
-                        value={payment.method}
-                      />
-                      <MobileDetail
-                        label="Total Amount"
-                        value={currency(payment.total)}
-                      />
+                      <MobileDetail label="Event" value={payment.event} />
+                      <MobileDetail label="Package" value={payment.packageName} />
+                      <MobileDetail label="Payment Method" value={payment.method} />
+                      <MobileDetail label="Total Amount" value={currency(payment.total)} />
                     </div>
 
-                    {/* PAYMENT SUMMARY */}
                     <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-[#e6edf7] bg-[#f7faff] p-3">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-medium text-slate-500">
-                          Received
-                        </p>
-                        <p className="mt-1 break-words text-sm font-bold text-emerald-700">
-                          {currency(payment.advance)}
-                        </p>
+                        <p className="text-[10px] font-medium text-slate-500">Received</p>
+                        <p className="mt-1 break-words text-sm font-bold text-emerald-700">{currency(payment.advance)}</p>
                       </div>
-
                       <div className="min-w-0 border-l border-[#dce5f2] pl-3">
-                        <p className="text-[10px] font-medium text-slate-500">
-                          Balance
-                        </p>
-                        <p
-                          className={`mt-1 break-words text-sm font-bold ${
-                            balance > 0
-                              ? "text-orange-600"
-                              : "text-emerald-700"
-                          }`}
-                        >
-                          {currency(balance)}
-                        </p>
+                        <p className="text-[10px] font-medium text-slate-500">Balance</p>
+                        <p className={`mt-1 break-words text-sm font-bold ${balance > 0 ? "text-orange-600" : "text-emerald-700"}`}>{currency(balance)}</p>
                       </div>
                     </div>
 
                     {payment.notes && (
                       <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                        <p className="text-[10px] font-medium text-slate-400">
-                          Notes
-                        </p>
-                        <p className="mt-1 break-words text-xs text-[#52627b]">
-                          {payment.notes}
-                        </p>
+                        <p className="text-[10px] font-medium text-slate-400">Notes</p>
+                        <p className="mt-1 break-words text-xs text-[#52627b]">{payment.notes}</p>
                       </div>
                     )}
 
-                    {/* COMPACT ACTIONS */}
                     <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#edf1f6] pt-3">
                       <div className="flex min-w-0 items-center gap-1.5">
                         {balance > 0 ? (
@@ -989,13 +994,10 @@ export default function Payments() {
           <p className="text-xs text-[#8290a5]">
             Showing {filtered.length} of {payments.length} invoices
           </p>
-          <span className="text-xs text-[#8290a5]">
-            Studio Raw Picturez ERP
-          </span>
+          <span className="text-xs text-[#8290a5]">Studio Raw Picturez ERP</span>
         </div>
       </section>
 
-      {/* CREATE INVOICE MODAL */}
       {showForm && (
         <ModalShell
           title="Create New Invoice"
@@ -1007,10 +1009,7 @@ export default function Payments() {
         >
           <div className="space-y-8">
             <section>
-              <SectionHeading
-                icon={UserRound}
-                title="Customer Information"
-              />
+              <SectionHeading icon={UserRound} title="Customer Information" />
 
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <FormField label="Customer Name" required>
@@ -1019,9 +1018,7 @@ export default function Payments() {
                     required
                     autoFocus
                     value={form.customer}
-                    onChange={(event) =>
-                      update("customer", event.target.value)
-                    }
+                    onChange={(event) => update("customer", event.target.value)}
                     placeholder="Enter customer name"
                     className={inputClass}
                   />
@@ -1034,15 +1031,13 @@ export default function Payments() {
                     maxLength={10}
                     required
                     value={form.phone}
-                    onChange={(event) =>
-                      update("phone", event.target.value.replace(/\D/g, ""))
-                    }
+                    onChange={(event) => update("phone", event.target.value.replace(/\D/g, ""))}
                     placeholder="Enter 10-digit mobile number"
                     className={inputClass}
                   />
                 </FormField>
 
-                <FormField label="Event Type">
+                <FormField label="Event Type" required>
                   <CustomDropdown
                     value={form.event}
                     options={eventOptions}
@@ -1051,25 +1046,17 @@ export default function Payments() {
                 </FormField>
 
                 <FormField label="Package Name" required>
-                  <input
-                    type="text"
-                    required
+                  <CustomDropdown
                     value={form.packageName}
-                    onChange={(event) =>
-                      update("packageName", event.target.value)
-                    }
-                    placeholder="Enter package name"
-                    className={inputClass}
+                    options={packageOptions}
+                    onChange={(value) => update("packageName", value)}
                   />
                 </FormField>
               </div>
             </section>
 
             <section>
-              <SectionHeading
-                icon={IndianRupee}
-                title="Billing Information"
-              />
+              <SectionHeading icon={IndianRupee} title="Billing Information" />
 
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <FormField label="Total Amount" required>
@@ -1079,9 +1066,7 @@ export default function Payments() {
                     step="0.01"
                     required
                     value={form.total}
-                    onChange={(event) =>
-                      update("total", event.target.value)
-                    }
+                    onChange={(event) => update("total", event.target.value)}
                     placeholder="Enter total amount"
                     className={inputClass}
                   />
@@ -1093,15 +1078,13 @@ export default function Payments() {
                     min="0"
                     step="0.01"
                     value={form.advance}
-                    onChange={(event) =>
-                      update("advance", event.target.value)
-                    }
+                    onChange={(event) => update("advance", event.target.value)}
                     placeholder="Enter advance amount"
                     className={inputClass}
                   />
                 </FormField>
 
-                <FormField label="Payment Method">
+                <FormField label="Payment Method" required>
                   <CustomDropdown
                     value={form.method}
                     options={methodOptions}
@@ -1114,41 +1097,27 @@ export default function Payments() {
                     type="date"
                     required
                     value={form.date}
-                    onChange={(event) =>
-                      update("date", event.target.value)
-                    }
+                    onChange={(event) => update("date", event.target.value)}
                     className={inputClass}
                   />
                 </FormField>
               </div>
 
               <div className="mt-5 rounded-xl border border-blue-100 bg-[#edf4ff] p-5">
-                <p className="text-sm font-medium text-[#627895]">
-                  Remaining Balance
-                </p>
+                <p className="text-sm font-medium text-[#627895]">Remaining Balance</p>
                 <h3 className="mt-2 text-2xl font-bold text-[#112e60]">
-                  {currency(
-                    Math.max(
-                      0,
-                      toAmount(form.total) - toAmount(form.advance)
-                    )
-                  )}
+                  {currency(Math.max(0, toAmount(form.total) - toAmount(form.advance)))}
                 </h3>
               </div>
             </section>
 
             <section>
-              <SectionHeading
-                icon={FileText}
-                title="Additional Information"
-              />
+              <SectionHeading icon={FileText} title="Additional Information" />
               <FormField label="Notes">
                 <textarea
                   rows={4}
                   value={form.notes}
-                  onChange={(event) =>
-                    update("notes", event.target.value)
-                  }
+                  onChange={(event) => update("notes", event.target.value)}
                   placeholder="Enter additional payment details..."
                   className={inputClass}
                 />
@@ -1156,10 +1125,7 @@ export default function Payments() {
             </section>
 
             {error && (
-              <p
-                role="alert"
-                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-              >
+              <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                 {error}
               </p>
             )}
@@ -1167,7 +1133,6 @@ export default function Payments() {
         </ModalShell>
       )}
 
-      {/* ADD PAYMENT MODAL */}
       {selectedPayment && (
         <ModalShell
           title="Add Payment"
@@ -1179,25 +1144,18 @@ export default function Payments() {
           maxWidth="max-w-[650px]"
         >
           <div className="space-y-6">
-            <SectionHeading
-              icon={Wallet}
-              title="Payment Information"
-            />
+            <SectionHeading icon={Wallet} title="Payment Information" />
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
-                <p className="text-xs font-medium text-slate-500">
-                  Total Invoice Amount
-                </p>
+                <p className="text-xs font-medium text-slate-500">Total Invoice Amount</p>
                 <h3 className="mt-2 break-words text-lg font-bold text-[#10264d] sm:text-xl">
                   {currency(selectedPayment.total)}
                 </h3>
               </div>
 
               <div className="min-w-0 rounded-xl border border-green-100 bg-green-50 p-3 sm:p-4">
-                <p className="text-xs font-medium text-green-700">
-                  Amount Received
-                </p>
+                <p className="text-xs font-medium text-green-700">Amount Received</p>
                 <h3 className="mt-2 break-words text-lg font-bold text-green-700 sm:text-xl">
                   {currency(selectedPayment.advance)}
                 </h3>
@@ -1205,9 +1163,7 @@ export default function Payments() {
             </div>
 
             <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
-              <p className="text-sm font-medium text-orange-700">
-                Pending Balance
-              </p>
+              <p className="text-sm font-medium text-orange-700">Pending Balance</p>
               <h3 className="mt-2 text-2xl font-bold text-orange-700">
                 {currency(getBalance(selectedPayment))}
               </h3>
@@ -1217,6 +1173,7 @@ export default function Payments() {
               <input
                 type="number"
                 min="0.01"
+                max={getBalance(selectedPayment)}
                 step="0.01"
                 required
                 autoFocus
@@ -1231,10 +1188,7 @@ export default function Payments() {
             </FormField>
 
             {paymentError && (
-              <p
-                role="alert"
-                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-              >
+              <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                 {paymentError}
               </p>
             )}

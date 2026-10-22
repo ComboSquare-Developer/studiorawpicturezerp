@@ -1,1180 +1,1288 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   Plus,
   Search,
   X,
   Camera,
+  Users,
   Images,
-  HardDrive,
   CalendarDays,
   MapPin,
-  UserRound,
-  Trash2,
   Pencil,
+  Trash2,
+  Eye,
   CheckCircle2,
-  Save,
+  Film,
+  IndianRupee,
   ChevronDown,
-  FolderOpen,
-  Video,
-  AlertCircle,
-  ClipboardList,
-  Database,
 } from "lucide-react";
 
-const KEY = "studioraw_photoshoots";
+const STORAGE_KEY = "studioraw_photoshoots";
 
-const createEmptyForm = () => ({
-  customer: "",
-  event: "Wedding",
+const eventOptions = [
+  "Wedding Photography",
+  "Traditional Photography",
+  "Candid Photography",
+  "Helicam(Drone) Photography",
+  "PreWedding Photography",
+  "Post Wedding Photography",
+  "Custom Package",
+  "Wedding Videography",
+  "Function We Arrange",
+  "Event Management",
+  "Customized Gifts",
+  "Pre-Wedding / Outdoor Shoot",
+  "Baby & Kids Shoot",
+  "Complete Wedding Package",
+];
+
+const initialRecords = [
+  {
+    id: 1001,
+    clientName: "Arun Kumar",
+    eventType: "Wedding Photography",
+    shootDate: "2026-10-10",
+    location: "Nagercoil",
+    photographer: "Prathiksha",
+    packageType: "Premium",
+    totalPhotos: 850,
+    status: "Completed",
+    paymentStatus: "Paid",
+  },
+  {
+    id: 1002,
+    clientName: "Priya & Karthik",
+    eventType: "Pre-Wedding / Outdoor Shoot",
+    shootDate: "2026-10-14",
+    location: "Kanyakumari",
+    photographer: "Arun",
+    packageType: "Luxury",
+    totalPhotos: 420,
+    status: "Editing",
+    paymentStatus: "Partial",
+  },
+  {
+    id: 1003,
+    clientName: "Divya Raj",
+    eventType: "Baby & Kids Shoot",
+    shootDate: "2026-10-17",
+    location: "Marthandam",
+    photographer: "Prathiksha",
+    packageType: "Standard",
+    totalPhotos: 280,
+    status: "In Progress",
+    paymentStatus: "Pending",
+  },
+  {
+    id: 1004,
+    clientName: "Michael & Sarah",
+    eventType: "Complete Wedding Package",
+    shootDate: "2026-10-20",
+    location: "Tirunelveli",
+    photographer: "David",
+    packageType: "Luxury",
+    totalPhotos: 1200,
+    status: "Scheduled",
+    paymentStatus: "Partial",
+  },
+  {
+    id: 1005,
+    clientName: "Sneha",
+    eventType: "Candid Photography",
+    shootDate: "2026-10-25",
+    location: "Nagercoil",
+    photographer: "Arun",
+    packageType: "Standard",
+    totalPhotos: 150,
+    status: "Scheduled",
+    paymentStatus: "Pending",
+  },
+];
+
+const emptyForm = {
+  clientName: "",
+  eventType: "Wedding Photography",
   shootDate: "",
   location: "",
   photographer: "",
-  videographer: "",
-  camera: "",
-  memoryCard: "",
+  packageType: "Standard",
   totalPhotos: "",
-  totalVideos: "",
-  storageLocation: "",
-  backup: "Pending",
   status: "Scheduled",
-  notes: "",
-});
+  paymentStatus: "Pending",
+};
 
-const events = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Pre-Wedding",
-  "Baby Shoot",
-  "Portrait",
-  "Corporate",
-  "Other",
+const locationOptions = [
+  "Nagercoil",
+  "Kanyakumari",
+  "Marthandam",
+  "Tirunelveli",
+  "Chennai",
+  "Trivandrum",
 ];
 
-const statuses = [
+const photographerOptions = [
+  "Prathiksha",
+  "Arun",
+  "David",
+  "Rahul",
+  "Studio Team",
+];
+
+const packageOptions = [
+  "Standard",
+  "Premium",
+  "Luxury",
+  "Custom",
+];
+
+const statusOptions = [
   "Scheduled",
   "In Progress",
+  "Editing",
   "Completed",
   "Cancelled",
 ];
 
-const backupStatuses = ["Pending", "Completed"];
+const paymentOptions = [
+  "Pending",
+  "Partial",
+  "Paid",
+];
 
-const statusColors = {
-  Scheduled: "border-amber-100 bg-amber-50 text-amber-700",
-  "In Progress": "border-blue-100 bg-blue-50 text-blue-700",
-  Completed: "border-green-100 bg-green-50 text-green-700",
-  Cancelled: "border-red-100 bg-red-50 text-red-700",
-};
+function readRecords() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
 
-const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+    if (saved === null) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(initialRecords)
+      );
+      return initialRecords;
+    }
 
-const countNumber = (value) => {
-  const number = Number(value || 0);
-  return Number.isFinite(number) ? Math.max(0, number) : 0;
-};
+    const parsed = JSON.parse(saved);
 
-const formatCount = (value) =>
-  countNumber(value).toLocaleString("en-IN");
+    if (Array.isArray(parsed) && parsed.length === 0) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(initialRecords)
+      );
+      return initialRecords;
+    }
 
-const formatDate = (value) => {
-  if (!value) return "—";
+    return Array.isArray(parsed)
+      ? parsed
+      : initialRecords;
+  } catch {
+    return initialRecords;
+  }
+}
 
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+function formatDate(date) {
+  if (!date) return "Not set";
 
-  if (Number.isNaN(date.getTime())) return String(value);
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-function CustomDropdown({ value, options, onChange }) {
-  return (
-    <div className="relative w-full min-w-0">
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${inputClass} appearance-none pr-11`}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-
-      <ChevronDown
-        size={17}
-        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
-      />
-    </div>
+  return new Date(`${date}T00:00:00`).toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
   );
 }
 
-function FormField({ label, required = false, children }) {
-  return (
-    <div className="min-w-0">
-      <label className="mb-2 block text-[13px] font-semibold text-[#29416a]">
-        {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
-      </label>
+function statusStyle(status) {
+  const styles = {
+    Completed:
+      "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    Scheduled:
+      "bg-blue-50 text-blue-700 ring-blue-200",
+    "In Progress":
+      "bg-amber-50 text-amber-700 ring-amber-200",
+    Editing:
+      "bg-violet-50 text-violet-700 ring-violet-200",
+    Cancelled:
+      "bg-red-50 text-red-700 ring-red-200",
+    Paid:
+      "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    Partial:
+      "bg-amber-50 text-amber-700 ring-amber-200",
+    Pending:
+      "bg-red-50 text-red-700 ring-red-200",
+  };
 
-      {children}
-    </div>
+  return (
+    styles[status] ||
+    "bg-gray-100 text-gray-700 ring-gray-200"
   );
 }
 
-function SectionHeading({ icon: Icon, title, description }) {
-  return (
-    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#174b91] sm:h-11 sm:w-11">
-        <Icon size={20} />
-      </div>
-
-      <div className="min-w-0">
-        <h3 className="text-sm font-bold text-[#10264d]">
-          {title}
-        </h3>
-
-        {description && (
-          <p className="mt-1 text-xs text-slate-400">
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function MobileDetail({ label, value, icon: Icon, full = false }) {
-  return (
-    <div className={`min-w-0 ${full ? "col-span-2" : ""}`}>
-      <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
-        {label}
-      </p>
-
-      <div className="mt-1 flex min-w-0 items-start gap-1.5">
-        {Icon && (
-          <Icon
-            size={13}
-            className="mt-0.5 shrink-0 text-[#4972a8]"
-          />
-        )}
-
-        <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
-          {value || "—"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function StatusBadge({ value, backup = false }) {
-  const color = backup
-    ? value === "Completed"
-      ? "border-green-100 bg-green-50 text-green-700"
-      : "border-orange-100 bg-orange-50 text-orange-700"
-    : statusColors[value] ||
-      "border-slate-100 bg-slate-50 text-slate-700";
-
+function Badge({ children }) {
   return (
     <span
-      className={`inline-flex w-fit shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-xs ${color}`}
+      className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyle(
+        children
+      )}`}
     >
-      {value || "Pending"}
+      {children}
     </span>
   );
 }
 
-function MediaCount({ title, value, icon: Icon, color, bg }) {
+function Field({ label, children, required = false }) {
   return (
-    <div className={`min-w-0 rounded-xl border border-slate-100 ${bg} p-3`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-medium text-slate-500 sm:text-xs">
-          {title}
-        </p>
+    <label className="block min-w-0">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">
+        {label}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
+      </span>
+      {children}
+    </label>
+  );
+}
 
-        <Icon size={15} className={`shrink-0 ${color}`} />
+const inputClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  required = false,
+}) {
+  return (
+    <Field label={label} required={required}>
+      <div className="relative">
+        <select
+          className={`${inputClass} appearance-none pr-10`}
+          value={value}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+          required={required}
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown
+          size={17}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+        />
       </div>
+    </Field>
+  );
+}
 
-      <p
-        className={`mt-1.5 break-all text-lg font-extrabold tracking-tight sm:text-xl ${color}`}
-      >
-        {formatCount(value)}
-      </p>
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  options,
+  required = false,
+}) {
+  const listId = `suggestions-${label.replace(
+    /[^a-zA-Z0-9]/g,
+    ""
+  )}`;
+
+  return (
+    <Field label={label} required={required}>
+      <input
+        className={inputClass}
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        placeholder={placeholder}
+        list={options ? listId : undefined}
+        autoComplete="off"
+        required={required}
+      />
+
+      {options && (
+        <datalist id={listId}>
+          {options.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+      )}
+    </Field>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  iconClass,
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">
+            {title}
+          </p>
+
+          <h3 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+            {value}
+          </h3>
+
+          <p className="mt-2 text-xs text-slate-500">
+            {subtitle}
+          </p>
+        </div>
+
+        <div className={`rounded-xl p-3 ${iconClass}`}>
+          <Icon size={23} />
+        </div>
+      </div>
     </div>
   );
 }
 
-function ModalShell({
-  title,
-  description,
-  onClose,
-  onSubmit,
-  submitLabel,
-  children,
-}) {
+export default function PhotoShoot() {
+  const [records, setRecords] = useState(readRecords);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [eventFilter, setEventFilter] = useState("All");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [viewRecord, setViewRecord] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [deleteId, setDeleteId] = useState(null);
+
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(records)
+    );
+  }, [records]);
 
-    const handleEscape = (event) => {
-      if (event.key === "Escape") onClose();
+  const filteredRecords = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return records.filter((record) => {
+      const matchesSearch = [
+        record.clientName,
+        record.eventType,
+        record.location,
+        record.photographer,
+        record.packageType,
+        String(record.id),
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(term)
+      );
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        record.status === statusFilter;
+
+      const matchesEvent =
+        eventFilter === "All" ||
+        record.eventType === eventFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesEvent
+      );
+    });
+  }, [records, search, statusFilter, eventFilter]);
+
+  const stats = useMemo(
+    () => ({
+      total: records.length,
+      scheduled: records.filter(
+        (record) => record.status === "Scheduled"
+      ).length,
+      completed: records.filter(
+        (record) => record.status === "Completed"
+      ).length,
+      photos: records.reduce(
+        (sum, record) =>
+          sum + (Number(record.totalPhotos) || 0),
+        0
+      ),
+    }),
+    [records]
+  );
+
+  function updateField(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function openCreateModal() {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setModalOpen(true);
+  }
+
+  function openEditModal(record) {
+    setEditingId(record.id);
+
+    setForm({
+      clientName: record.clientName || "",
+      eventType:
+        record.eventType || "Wedding Photography",
+      shootDate: record.shootDate || "",
+      location: record.location || "",
+      photographer: record.photographer || "",
+      packageType: record.packageType || "Standard",
+      totalPhotos: String(record.totalPhotos ?? ""),
+      status: record.status || "Scheduled",
+      paymentStatus: record.paymentStatus || "Pending",
+    });
+
+    setModalOpen(true);
+    setViewRecord(null);
+  }
+
+  function saveRecord(event) {
+    event.preventDefault();
+
+    const recordData = {
+      ...form,
+      clientName: form.clientName.trim(),
+      location: form.location.trim(),
+      photographer: form.photographer.trim(),
+      totalPhotos: Number(form.totalPhotos) || 0,
     };
 
-    document.addEventListener("keydown", handleEscape);
+    if (editingId !== null) {
+      setRecords((previous) =>
+        previous.map((record) =>
+          record.id === editingId
+            ? { ...record, ...recordData }
+            : record
+        )
+      );
+    } else {
+      setRecords((previous) => [
+        {
+          ...recordData,
+          id: Date.now(),
+        },
+        ...previous,
+      ]);
+    }
 
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [onClose]);
+    setModalOpen(false);
+    setEditingId(null);
+    setForm({ ...emptyForm });
+  }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152d]/65 p-2 backdrop-blur-[4px] sm:p-5"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
-      >
-        {/* FIXED HEADER */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-7">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
-              <Camera size={22} />
+  function deleteRecord() {
+    setRecords((previous) =>
+      previous.filter(
+        (record) => record.id !== deleteId
+      )
+    );
+
+    setDeleteId(null);
+    setViewRecord(null);
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+
+        {/* HEADER */}
+        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-blue-600 p-3.5 text-white shadow-lg shadow-blue-200">
+              <Camera size={28} />
             </div>
 
-            <div className="min-w-0">
-              <h2 className="break-words text-lg font-bold text-[#10264d] sm:text-[23px]">
-                {title}
-              </h2>
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
+                Studio Management
+              </p>
 
-              <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
-                {description}
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Studio Media Tracker
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+                Manage studio bookings, shoot schedules,
+                photographers and project records in one place.
               </p>
             </div>
           </div>
 
           <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close form"
-            className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+            onClick={openCreateModal}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98]"
           >
-            <X size={21} />
+            <Plus size={19} />
+            Add New Record
           </button>
         </div>
 
-        {/* SCROLLABLE FORM */}
-        <form
-          onSubmit={onSubmit}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-9 sm:py-7">
-            {children}
-          </div>
+        {/* STATISTICS */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Total Records"
+            value={stats.total}
+            subtitle="All studio projects"
+            icon={Images}
+            iconClass="bg-blue-50 text-blue-600"
+          />
 
-          {/* FIXED FOOTER */}
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-[#d9e3f2] bg-[#f7f9fd] px-7 py-3 text-sm font-semibold text-[#18345f] transition hover:bg-slate-100"
-            >
-              Cancel
-            </button>
+          <StatCard
+            title="Scheduled Shoots"
+            value={stats.scheduled}
+            subtitle="Upcoming studio projects"
+            icon={CalendarDays}
+            iconClass="bg-violet-50 text-violet-600"
+          />
 
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#112e60] px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384]"
-            >
-              <Save size={18} />
-              {submitLabel}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  );
-}
+          <StatCard
+            title="Completed Projects"
+            value={stats.completed}
+            subtitle="Successfully completed"
+            icon={CheckCircle2}
+            iconClass="bg-emerald-50 text-emerald-600"
+          />
 
-export default function PhotoShoot() {
-  const [shoots, setShoots] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(KEY));
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(createEmptyForm);
-
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(shoots));
-  }, [shoots]);
-
-  const update = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-
-    setError("");
-  };
-
-  const openCreate = () => {
-    setForm(createEmptyForm());
-    setEditingId(null);
-    setError("");
-    setShowForm(true);
-  };
-
-  const openEdit = (item) => {
-    setForm({
-      ...createEmptyForm(),
-      ...item,
-    });
-
-    setEditingId(item.id);
-    setError("");
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setForm(createEmptyForm());
-    setEditingId(null);
-    setError("");
-  };
-
-  const saveShoot = (event) => {
-    event.preventDefault();
-
-    if (!form.customer.trim()) {
-      setError("Please enter customer name.");
-      return;
-    }
-
-    if (!form.shootDate) {
-      setError("Please select shoot date.");
-      return;
-    }
-
-    const photos = Number(form.totalPhotos || 0);
-    const videos = Number(form.totalVideos || 0);
-
-    if (
-      !Number.isFinite(photos) ||
-      !Number.isFinite(videos) ||
-      photos < 0 ||
-      videos < 0 ||
-      !Number.isInteger(photos) ||
-      !Number.isInteger(videos)
-    ) {
-      setError(
-        "Enter valid non-negative whole numbers for photos and videos."
-      );
-      return;
-    }
-
-    const data = {
-      ...form,
-      customer: form.customer.trim(),
-      totalPhotos: photos,
-      totalVideos: videos,
-      id:
-        editingId ||
-        globalThis.crypto?.randomUUID?.() ||
-        `SHOOT-${Date.now()}`,
-    };
-
-    if (editingId) {
-      setShoots((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? data : item
-        )
-      );
-    } else {
-      setShoots((previous) => [data, ...previous]);
-    }
-
-    closeForm();
-  };
-
-  const deleteShoot = (id) => {
-    if (!window.confirm("Delete this shoot record?")) {
-      return;
-    }
-
-    setShoots((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
-
-    if (editingId === id) closeForm();
-  };
-
-  const filtered = useMemo(() => {
-    const query = search.toLowerCase().trim();
-
-    return shoots.filter((item) => {
-      const matches = [
-        item.customer,
-        item.event,
-        item.photographer,
-        item.videographer,
-        item.location,
-        item.camera,
-        item.storageLocation,
-      ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
-
-      return (
-        matches &&
-        (filter === "All" || item.status === filter)
-      );
-    });
-  }, [shoots, search, filter]);
-
-  const totalPhotos = shoots.reduce(
-    (sum, item) => sum + countNumber(item.totalPhotos),
-    0
-  );
-
-  const stats = [
-    {
-      title: "Total Shoots",
-      value: shoots.length,
-      icon: Camera,
-      color: "text-blue-700",
-      bg: "bg-blue-50",
-    },
-    {
-      title: "Completed Shoots",
-      value: shoots.filter(
-        (item) => item.status === "Completed"
-      ).length,
-      icon: CheckCircle2,
-      color: "text-green-700",
-      bg: "bg-green-50",
-    },
-    {
-      title: "Total Photos",
-      value: totalPhotos.toLocaleString("en-IN"),
-      icon: Images,
-      color: "text-indigo-700",
-      bg: "bg-indigo-50",
-    },
-    {
-      title: "Backup Pending",
-      value: shoots.filter(
-        (item) => (item.backup || "Pending") === "Pending"
-      ).length,
-      icon: HardDrive,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-    },
-  ];
-
-  const renderActions = (item, compact = false) => (
-    <div
-      className={
-        compact
-          ? "grid grid-cols-[minmax(0,1fr)_auto] gap-2"
-          : "flex items-center justify-end gap-2"
-      }
-    >
-      <button
-        type="button"
-        onClick={() => openEdit(item)}
-        title="Manage Shoot"
-        aria-label={`Manage shoot for ${item.customer}`}
-        className={
-          compact
-            ? "flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#112e60] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1a4384] sm:text-xs"
-            : "rounded-lg bg-blue-50 p-2.5 text-blue-700 transition hover:bg-blue-100"
-        }
-      >
-        <Pencil size={compact ? 15 : 17} className="shrink-0" />
-
-        {compact && (
-          <span className="truncate">Manage Shoot</span>
-        )}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => deleteShoot(item.id)}
-        title="Delete Shoot"
-        aria-label={`Delete shoot for ${item.customer}`}
-        className={
-          compact
-            ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
-            : "rounded-lg bg-red-50 p-2.5 text-red-600 transition hover:bg-red-100"
-        }
-      >
-        <Trash2 size={compact ? 16 : 17} />
-      </button>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-7 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
-      {/* PAGE HEADER */}
-      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af] lg:block">
-            Photography Operations
-          </p>
-
-          <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
-            Photo Shoot & Data Collection
-          </h1>
-
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Manage shoots, media collection, storage and backup tracking.
-          </p>
+          <StatCard
+            title="Total Photos"
+            value={stats.photos.toLocaleString("en-IN")}
+            subtitle="Across all records"
+            icon={Film}
+            iconClass="bg-amber-50 text-amber-600"
+          />
         </div>
 
-        <button
-          type="button"
-          onClick={openCreate}
-          className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1a4384] lg:w-auto lg:px-6"
-        >
-          <Plus size={18} />
-          New Shoot
-        </button>
-      </div>
+        {/* SHOOT RECORDS */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      {/* COMPACT 2 X 2 MOBILE STATISTICS */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-
-          return (
-            <div
-              key={stat.title}
-              className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white p-3.5 shadow-[0_3px_14px_rgba(16,38,77,0.035)] transition hover:shadow-md sm:p-5 lg:hover:-translate-y-0.5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold leading-4 text-slate-500 sm:text-sm">
-                    {stat.title}
-                  </p>
-
-                  <h2
-                    className={`mt-2 break-all text-xl font-extrabold tracking-tight sm:mt-3 sm:text-3xl ${stat.color}`}
-                  >
-                    {stat.value}
-                  </h2>
-                </div>
-
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
-                >
-                  <Icon size={17} className={stat.color} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* SHOOT RECORDS */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm lg:rounded-[22px]">
-        {/* TOOLBAR */}
-        <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:px-6 lg:py-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          {/* FILTER HEADER */}
+          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#10264d]">
+              <h2 className="text-xl font-bold text-slate-900">
                 Shoot Records
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-                View and manage photography shoot records.
+              <p className="mt-1 text-sm text-slate-500">
+                Sample records are available to explore and edit.
               </p>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <div className="relative w-full sm:min-w-[230px] lg:w-72">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative min-w-0 sm:w-64">
                 <Search
-                  size={17}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                 />
 
                 <input
-                  type="search"
+                  className={`${inputClass} pl-10`}
                   value={search}
                   onChange={(event) =>
                     setSearch(event.target.value)
                   }
-                  placeholder="Search shoots..."
-                  className={`${inputClass} pl-10`}
+                  placeholder="Search records..."
                 />
               </div>
 
-              <div className="w-full sm:w-44">
-                <CustomDropdown
-                  value={filter}
-                  options={["All", ...statuses]}
-                  onChange={setFilter}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="px-4 py-16 text-center">
-            <Camera
-              size={42}
-              className="mx-auto mb-3 text-slate-300"
-            />
-
-            <p className="text-sm text-slate-400">
-              No photo shoot records found
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* DESKTOP TABLE */}
-            <div className="hidden w-full overflow-x-auto lg:block">
-              <table className="w-full min-w-[1050px] border-collapse text-left">
-                <thead className="bg-[#f7f9fd]">
-                  <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#8290a5]">
-                    {[
-                      "Customer / Event",
-                      "Shoot Date",
-                      "Location",
-                      "Team",
-                      "Media",
-                      "Backup",
-                      "Status",
-                      "Actions",
-                    ].map((heading) => (
-                      <th key={heading} className="px-5 py-4">
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-[#edf1f6]">
-                  {filtered.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition hover:bg-[#f8faff]"
-                    >
-                      <td className="px-5 py-5">
-                        <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">
-                          {item.customer}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          {item.event}
-                        </p>
-                      </td>
-
-                      <td className="whitespace-nowrap px-5 py-5 text-sm text-slate-700">
-                        {item.shootDate || "—"}
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <p className="max-w-40 break-words text-sm text-slate-700">
-                          {item.location || "Not specified"}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <p className="max-w-40 break-words text-sm font-medium text-[#10264d]">
-                          {item.photographer || "Not assigned"}
-                        </p>
-
-                        <p className="mt-1 max-w-40 break-words text-xs text-slate-500">
-                          {item.videographer || "No videographer"}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <p className="whitespace-nowrap text-sm font-semibold text-[#10264d]">
-                          {formatCount(item.totalPhotos)} Photos
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          {formatCount(item.totalVideos)} Videos
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <StatusBadge
-                          value={item.backup || "Pending"}
-                          backup
-                        />
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <StatusBadge
-                          value={item.status || "Scheduled"}
-                        />
-                      </td>
-
-                      <td className="px-5 py-5">
-                        {renderActions(item)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* PREMIUM COMPACT MOBILE / TABLET CARDS */}
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
-              {filtered.map((item) => (
-                <article
-                  key={item.id}
-                  className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
+              {/* STATUS FILTER */}
+              <div className="relative sm:w-44">
+                <select
+                  className={`${inputClass} appearance-none pr-9`}
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value)
+                  }
                 >
-                  {/* CARD HEADER */}
-                  <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
-                        <Camera size={18} />
-                      </div>
+                  <option value="All">All</option>
 
-                      <div className="min-w-0">
-                        <h3 className="truncate text-sm font-bold text-[#10264d]">
-                          {item.customer}
-                        </h3>
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
 
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                          {item.event}
-                        </p>
-                      </div>
-                    </div>
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
 
-                    <StatusBadge
-                      value={item.status || "Scheduled"}
-                    />
-                  </div>
+              {/* EVENT FILTER */}
+              <div className="relative sm:w-56">
+                <select
+                  className={`${inputClass} appearance-none pr-9`}
+                  value={eventFilter}
+                  onChange={(event) =>
+                    setEventFilter(event.target.value)
+                  }
+                >
+                  <option value="All">All Events</option>
 
-                  {/* TWO-COLUMN DETAILS */}
-                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
-                    <MobileDetail
-                      label="Shoot Date"
-                      value={formatDate(item.shootDate)}
-                      icon={CalendarDays}
-                    />
+                  {eventOptions.map((eventType) => (
+                    <option
+                      key={eventType}
+                      value={eventType}
+                    >
+                      {eventType}
+                    </option>
+                  ))}
+                </select>
 
-                    <MobileDetail
-                      label="Location"
-                      value={item.location || "Not specified"}
-                      icon={MapPin}
-                    />
-
-                    <MobileDetail
-                      label="Photographer"
-                      value={item.photographer || "Not assigned"}
-                      icon={UserRound}
-                    />
-
-                    <MobileDetail
-                      label="Videographer"
-                      value={item.videographer || "Not assigned"}
-                      icon={UserRound}
-                    />
-
-                    <MobileDetail
-                      label="Camera Model"
-                      value={item.camera || "Not specified"}
-                      icon={Camera}
-                    />
-
-                    <MobileDetail
-                      label="Memory Card"
-                      value={item.memoryCard || "Not specified"}
-                      icon={HardDrive}
-                    />
-
-                    <MobileDetail
-                      label="Storage Location / Folder"
-                      value={
-                        item.storageLocation || "Not specified"
-                      }
-                      icon={FolderOpen}
-                      full
-                    />
-                  </div>
-
-                  {/* MEDIA COUNTS */}
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <MediaCount
-                      title="Total Photos"
-                      value={item.totalPhotos}
-                      icon={Images}
-                      color="text-blue-800"
-                      bg="bg-blue-50/80"
-                    />
-
-                    <MediaCount
-                      title="Total Videos"
-                      value={item.totalVideos}
-                      icon={Video}
-                      color="text-indigo-800"
-                      bg="bg-indigo-50/80"
-                    />
-                  </div>
-
-                  {/* BACKUP STATUS */}
-                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#e6edf7] bg-[#f8faff] px-3 py-2.5">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <HardDrive
-                        size={15}
-                        className="shrink-0 text-[#4972a8]"
-                      />
-
-                      <p className="text-[11px] font-semibold text-[#52627b]">
-                        Backup Status
-                      </p>
-                    </div>
-
-                    <StatusBadge
-                      value={item.backup || "Pending"}
-                      backup
-                    />
-                  </div>
-
-                  {/* NOTES */}
-                  {item.notes && (
-                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5">
-                      <p className="text-[10px] font-medium text-slate-400">
-                        Shoot Notes
-                      </p>
-
-                      <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#52627b]">
-                        {item.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* COMPACT ACTIONS */}
-                  <div className="mt-3 border-t border-[#edf1f6] pt-3">
-                    {renderActions(item, true)}
-                  </div>
-                </article>
-              ))}
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
             </div>
-          </>
-        )}
+          </div>
 
-        <div className="hidden items-center justify-between border-t border-[#edf1f6] px-6 py-4 lg:flex">
-          <p className="text-xs text-[#8290a5]">
-            Showing {filtered.length} of {shoots.length} shoots
-          </p>
+          {/* DESKTOP TABLE */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1000px] text-left">
+              <thead>
+                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                  <th className="px-6 py-4 font-semibold">
+                    Project / Client
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Event Type
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Shoot Date
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Photographer
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Photos
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Status
+                  </th>
+                  <th className="px-5 py-4 font-semibold">
+                    Payment
+                  </th>
+                  <th className="px-5 py-4 text-right font-semibold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
 
-          <span className="text-xs text-[#8290a5]">
-            Studio Raw Picturez ERP
-          </span>
-        </div>
-      </section>
+              <tbody className="divide-y divide-slate-100">
+                {filteredRecords.map((record) => (
+                  <tr
+                    key={record.id}
+                    className="transition hover:bg-blue-50/40"
+                  >
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-blue-700">
+                          {(record.clientName || "")
+                            .split(" ")
+                            .filter(Boolean)
+                            .map((part) => part[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase()}
+                        </div>
 
-      {/* CREATE / EDIT MODAL */}
-      {showForm && (
-        <ModalShell
-          title={
-            editingId ? "Manage Photo Shoot" : "New Photo Shoot"
-          }
-          description="Enter shoot and media collection details"
-          onClose={closeForm}
-          onSubmit={saveShoot}
-          submitLabel={
-            editingId ? "Update Shoot" : "Save Shoot"
-          }
+                        <div>
+                          <p className="font-semibold text-slate-800">
+                            {record.clientName}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            ID: #{record.id}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-5 text-sm">
+                      {record.eventType}
+                    </td>
+
+                    <td className="px-5 py-5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarDays
+                          size={15}
+                          className="text-slate-400"
+                        />
+                        {formatDate(record.shootDate)}
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-5 text-sm">
+                      {record.photographer || "Not assigned"}
+                    </td>
+
+                    <td className="px-5 py-5 text-sm font-semibold">
+                      {Number(
+                        record.totalPhotos || 0
+                      ).toLocaleString("en-IN")}
+                    </td>
+
+                    <td className="px-5 py-5">
+                      <Badge>{record.status}</Badge>
+                    </td>
+
+                    <td className="px-5 py-5">
+                      <Badge>{record.paymentStatus}</Badge>
+                    </td>
+
+                    <td className="px-5 py-5">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          title="View record"
+                          onClick={() =>
+                            setViewRecord(record)
+                          }
+                          className="rounded-lg p-2.5 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                        >
+                          <Eye size={17} />
+                        </button>
+
+                        <button
+                          title="Edit record"
+                          onClick={() =>
+                            openEditModal(record)
+                          }
+                          className="rounded-lg p-2.5 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600"
+                        >
+                          <Pencil size={17} />
+                        </button>
+
+                        <button
+                          title="Delete record"
+                          onClick={() =>
+                            setDeleteId(record.id)
+                          }
+                          className="rounded-lg p-2.5 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MOBILE CARDS */}
+          <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+            {filteredRecords.map((record) => (
+              <article
+                key={record.id}
+                className="rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200 hover:shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 font-bold text-blue-700">
+                      {(record.clientName || "")
+                        .split(" ")
+                        .filter(Boolean)
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="break-words font-bold text-slate-900">
+                        {record.clientName}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        ID: #{record.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    title="View record"
+                    onClick={() => setViewRecord(record)}
+                    className="shrink-0 rounded-lg p-2 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Eye size={19} />
+                  </button>
+                </div>
+
+                <div className="my-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Event Type
+                    </p>
+                    <p className="mt-1 break-words text-sm font-semibold">
+                      {record.eventType}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Shoot Date
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {formatDate(record.shootDate)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Photographer
+                    </p>
+                    <p className="mt-1 break-words text-sm font-semibold">
+                      {record.photographer || "Not assigned"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Total Photos
+                    </p>
+                    <p className="mt-1 text-sm font-semibold">
+                      {Number(
+                        record.totalPhotos || 0
+                      ).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge>{record.status}</Badge>
+                  <Badge>{record.paymentStatus}</Badge>
+                </div>
+
+                <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    onClick={() => openEditModal(record)}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Pencil size={15} />
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => setDeleteId(record.id)}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-100 px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 size={15} />
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* EMPTY STATE */}
+          {filteredRecords.length === 0 && (
+            <div className="px-5 py-16 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Camera size={25} />
+              </div>
+
+              <h3 className="mt-4 font-semibold text-slate-800">
+                No records found
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Try changing your search or filter.
+              </p>
+
+              <button
+                onClick={openCreateModal}
+                className="mt-5 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Add New Record
+              </button>
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Showing {filteredRecords.length} of{" "}
+              {records.length} records
+            </span>
+
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Studio Raw ERP
+            </span>
+          </div>
+        </section>
+      </main>
+
+      {/* ADD / EDIT MODAL */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setModalOpen(false);
+            }
+          }}
         >
-          <div className="space-y-8">
-            {/* SHOOT INFORMATION */}
-            <section>
-              <SectionHeading
-                icon={UserRound}
-                title="Shoot Information"
-                description="Customer, event and shoot schedule"
-              />
+          <div className="my-auto w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
 
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                <FormField label="Customer Name" required>
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    value={form.customer}
-                    onChange={(event) =>
-                      update("customer", event.target.value)
-                    }
-                    placeholder="Enter customer name"
-                    className={inputClass}
-                  />
-                </FormField>
+            {/* MODAL HEADER */}
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:px-7">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                  {editingId !== null ? (
+                    <Pencil size={22} />
+                  ) : (
+                    <Plus size={22} />
+                  )}
+                </div>
 
-                <FormField label="Event Type">
-                  <CustomDropdown
-                    value={form.event}
-                    options={events}
-                    onChange={(value) =>
-                      update("event", value)
-                    }
-                  />
-                </FormField>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+                    {editingId !== null
+                      ? "Manage Record"
+                      : "Add New Record"}
+                  </h2>
 
-                <FormField label="Shoot Date" required>
-                  <input
-                    type="date"
-                    required
-                    value={form.shootDate}
-                    onChange={(event) =>
-                      update("shootDate", event.target.value)
-                    }
-                    className={inputClass}
-                  />
-                </FormField>
-
-                <FormField label="Shoot Location">
-                  <input
-                    type="text"
-                    value={form.location}
-                    onChange={(event) =>
-                      update("location", event.target.value)
-                    }
-                    placeholder="Enter shoot location"
-                    className={inputClass}
-                  />
-                </FormField>
-              </div>
-            </section>
-
-            {/* TEAM & EQUIPMENT */}
-            <section>
-              <SectionHeading
-                icon={Camera}
-                title="Team & Equipment"
-                description="Assigned team and camera details"
-              />
-
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                <FormField label="Photographer">
-                  <input
-                    type="text"
-                    value={form.photographer}
-                    onChange={(event) =>
-                      update("photographer", event.target.value)
-                    }
-                    placeholder="Enter photographer name"
-                    className={inputClass}
-                  />
-                </FormField>
-
-                <FormField label="Videographer">
-                  <input
-                    type="text"
-                    value={form.videographer}
-                    onChange={(event) =>
-                      update("videographer", event.target.value)
-                    }
-                    placeholder="Enter videographer name"
-                    className={inputClass}
-                  />
-                </FormField>
-
-                <FormField label="Camera Model">
-                  <input
-                    type="text"
-                    value={form.camera}
-                    onChange={(event) =>
-                      update("camera", event.target.value)
-                    }
-                    placeholder="Enter camera model"
-                    className={inputClass}
-                  />
-                </FormField>
-
-                <FormField label="Memory Card Details">
-                  <input
-                    type="text"
-                    value={form.memoryCard}
-                    onChange={(event) =>
-                      update("memoryCard", event.target.value)
-                    }
-                    placeholder="Enter memory card details"
-                    className={inputClass}
-                  />
-                </FormField>
-              </div>
-            </section>
-
-            {/* MEDIA & STORAGE */}
-            <section>
-              <SectionHeading
-                icon={Database}
-                title="Media & Storage"
-                description="Collected media and storage location"
-              />
-
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                <FormField label="Total Photos">
-                  <div className="relative">
-                    <Images
-                      size={17}
-                      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={form.totalPhotos}
-                      onChange={(event) =>
-                        update(
-                          "totalPhotos",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter total photos"
-                      className={`${inputClass} pr-11`}
-                    />
-                  </div>
-                </FormField>
-
-                <FormField label="Total Videos">
-                  <div className="relative">
-                    <Video
-                      size={17}
-                      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={form.totalVideos}
-                      onChange={(event) =>
-                        update(
-                          "totalVideos",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter total videos"
-                      className={`${inputClass} pr-11`}
-                    />
-                  </div>
-                </FormField>
-
-                <div className="md:col-span-2">
-                  <FormField label="Storage Location / Folder">
-                    <input
-                      type="text"
-                      value={form.storageLocation}
-                      onChange={(event) =>
-                        update(
-                          "storageLocation",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter storage location or folder path"
-                      className={inputClass}
-                    />
-                  </FormField>
+                  <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                    Enter the studio project details below.
+                  </p>
                 </div>
               </div>
-            </section>
 
-            {/* SHOOT TRACKING */}
-            <section>
-              <SectionHeading
-                icon={ClipboardList}
-                title="Shoot Tracking"
-                description="Backup and shoot progress"
-              />
-
-              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                <FormField label="Backup Status">
-                  <CustomDropdown
-                    value={form.backup}
-                    options={backupStatuses}
-                    onChange={(value) =>
-                      update("backup", value)
-                    }
-                  />
-                </FormField>
-
-                <FormField label="Shoot Status">
-                  <CustomDropdown
-                    value={form.status}
-                    options={statuses}
-                    onChange={(value) =>
-                      update("status", value)
-                    }
-                  />
-                </FormField>
-              </div>
-            </section>
-
-            {/* ADDITIONAL INFORMATION */}
-            <section>
-              <SectionHeading
-                icon={FolderOpen}
-                title="Additional Information"
-                description="Shoot notes and special instructions"
-              />
-
-              <FormField label="Notes">
-                <textarea
-                  rows={4}
-                  value={form.notes}
-                  onChange={(event) =>
-                    update("notes", event.target.value)
-                  }
-                  placeholder="Shoot notes and instructions..."
-                  className={`${inputClass} resize-y`}
-                />
-              </FormField>
-            </section>
-
-            {/* VALIDATION ERROR */}
-            {error && (
-              <div
-                role="alert"
-                className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+              <button
+                onClick={() => setModalOpen(false)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close form"
               >
-                <AlertCircle
-                  size={18}
-                  className="mt-0.5 shrink-0"
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* FORM */}
+            <form onSubmit={saveRecord}>
+              <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-2 sm:p-7">
+
+                <TextField
+                  label="Client Name"
+                  value={form.clientName}
+                  onChange={(value) =>
+                    updateField("clientName", value)
+                  }
+                  placeholder="Enter client name"
+                  required
                 />
 
-                <span className="break-words">{error}</span>
+                {/* UPDATED EVENT TYPE */}
+                <SelectField
+                  label="Event Type"
+                  value={form.eventType}
+                  onChange={(value) =>
+                    updateField("eventType", value)
+                  }
+                  options={
+                    eventOptions.includes(form.eventType)
+                      ? eventOptions
+                      : [form.eventType, ...eventOptions]
+                  }
+                  required
+                />
+
+                <Field label="Shoot Date" required>
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={form.shootDate}
+                    onChange={(event) =>
+                      updateField(
+                        "shootDate",
+                        event.target.value
+                      )
+                    }
+                    required
+                  />
+                </Field>
+
+                <TextField
+                  label="Location"
+                  value={form.location}
+                  onChange={(value) =>
+                    updateField("location", value)
+                  }
+                  placeholder="Select or type a location"
+                  options={locationOptions}
+                  required
+                />
+
+                <TextField
+                  label="Photographer"
+                  value={form.photographer}
+                  onChange={(value) =>
+                    updateField("photographer", value)
+                  }
+                  placeholder="Select or type a name"
+                  options={photographerOptions}
+                  required
+                />
+
+                <SelectField
+                  label="Package Type"
+                  value={form.packageType}
+                  onChange={(value) =>
+                    updateField("packageType", value)
+                  }
+                  options={packageOptions}
+                  required
+                />
+
+                <Field label="Total Photos">
+                  <input
+                    type="number"
+                    min="0"
+                    className={inputClass}
+                    value={form.totalPhotos}
+                    onChange={(event) =>
+                      updateField(
+                        "totalPhotos",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Enter photo count"
+                  />
+                </Field>
+
+                <SelectField
+                  label="Project Status"
+                  value={form.status}
+                  onChange={(value) =>
+                    updateField("status", value)
+                  }
+                  options={statusOptions}
+                  required
+                />
+
+                <div className="sm:col-span-2">
+                  <SelectField
+                    label="Payment Status"
+                    value={form.paymentStatus}
+                    onChange={(value) =>
+                      updateField("paymentStatus", value)
+                    }
+                    options={paymentOptions}
+                    required
+                  />
+                </div>
               </div>
-            )}
+
+              {/* FORM BUTTONS */}
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
+                >
+                  <CheckCircle2 size={17} />
+
+                  {editingId !== null
+                    ? "Save Changes"
+                    : "Save Record"}
+                </button>
+              </div>
+            </form>
           </div>
-        </ModalShell>
+        </div>
+      )}
+
+      {/* VIEW RECORD MODAL */}
+      {viewRecord && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="my-auto w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
+                  Project Details
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  {viewRecord.clientName}
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Record ID: #{viewRecord.id}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setViewRecord(null)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+                aria-label="Close details"
+              >
+                <X size={21} />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">
+                  Project status
+                </span>
+                <Badge>{viewRecord.status}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">
+                  Event type
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {viewRecord.eventType}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm text-slate-500">
+                  <CalendarDays size={16} />
+                  Shoot date
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {formatDate(viewRecord.shootDate)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm text-slate-500">
+                  <MapPin size={16} />
+                  Location
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {viewRecord.location}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm text-slate-500">
+                  <Users size={16} />
+                  Photographer
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {viewRecord.photographer}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">
+                  Package
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {viewRecord.packageType}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm text-slate-500">
+                  <Images size={16} />
+                  Total photos
+                </span>
+                <span className="text-right text-sm font-semibold">
+                  {Number(
+                    viewRecord.totalPhotos || 0
+                  ).toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm text-slate-500">
+                  <IndianRupee size={16} />
+                  Payment
+                </span>
+                <Badge>{viewRecord.paymentStatus}</Badge>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+              <button
+                onClick={() => {
+                  setDeleteId(viewRecord.id);
+                  setViewRecord(null);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+
+              <button
+                onClick={() => openEditModal(viewRecord)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                <Pencil size={16} />
+                Edit Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <Trash2 size={25} />
+            </div>
+
+            <h2 className="mt-4 text-center text-xl font-bold text-slate-900">
+              Delete this record?
+            </h2>
+
+            <p className="mt-2 text-center text-sm leading-6 text-slate-500">
+              This record will be removed from your
+              Studio Media Tracker.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={deleteRecord}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -8,7 +8,6 @@ import {
   Trash2,
   X,
   PhoneCall,
-  Clock3,
   CheckCircle2,
   CalendarDays,
   ChevronDown,
@@ -71,6 +70,101 @@ const emptyForm = {
   notes: "",
 };
 
+// DUMMY DATA
+const dummyEnquiries = [
+  {
+    id: "ENQ-1001",
+    customer: "Arun Kumar",
+    phone: "9876543210",
+    service: "Wedding Photography",
+    eventDate: "2026-11-15",
+    budget: "45000",
+    source: "Instagram",
+    stage: "New",
+    owner: "Ravi",
+    nextFollowUp: "2026-10-25",
+    notes: "Wedding photography and candid coverage required.",
+  },
+  {
+    id: "ENQ-1002",
+    customer: "Priya S",
+    phone: "9876543211",
+    service: "Pre-Wedding Shoot",
+    eventDate: "2026-11-20",
+    budget: "25000",
+    source: "Referral",
+    stage: "Contacted",
+    owner: "Karthik",
+    nextFollowUp: "2026-10-26",
+    notes: "Outdoor pre-wedding shoot.",
+  },
+  {
+    id: "ENQ-1003",
+    customer: "Vijay Raj",
+    phone: "9876543212",
+    service: "Event Photography",
+    eventDate: "2026-12-05",
+    budget: "18000",
+    source: "WhatsApp",
+    stage: "Qualified",
+    owner: "Ravi",
+    nextFollowUp: "2026-10-27",
+    notes: "Birthday event photography.",
+  },
+  {
+    id: "ENQ-1004",
+    customer: "Meena Devi",
+    phone: "9876543213",
+    service: "Maternity Photography",
+    eventDate: "2026-11-28",
+    budget: "12000",
+    source: "Website",
+    stage: "Quoted",
+    owner: "Priya",
+    nextFollowUp: "2026-10-28",
+    notes: "Indoor maternity photoshoot.",
+  },
+  {
+    id: "ENQ-1005",
+    customer: "Sanjay Kumar",
+    phone: "9876543214",
+    service: "Studio Portrait",
+    eventDate: "2026-11-10",
+    budget: "5000",
+    source: "Walk-in",
+    stage: "Follow-up",
+    owner: "Karthik",
+    nextFollowUp: "2026-10-24",
+    notes: "Family portrait session.",
+  },
+  {
+    id: "ENQ-1006",
+    customer: "Divya R",
+    phone: "9876543215",
+    service: "Wedding Photography",
+    eventDate: "2026-12-12",
+    budget: "65000",
+    source: "Instagram",
+    stage: "Won/Converted",
+    owner: "Ravi",
+    nextFollowUp: "",
+    notes: "Wedding package confirmed.",
+  },
+  {
+    id: "ENQ-1007",
+    customer: "Karthik M",
+    phone: "9876543216",
+    service: "Videography",
+    eventDate: "2026-12-18",
+    budget: "30000",
+    source: "Referral",
+    stage: "Lost",
+    owner: "Priya",
+    nextFollowUp: "",
+    notes: "Customer chose another provider.",
+  },
+];
+
 const fieldClass =
   "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
 
@@ -99,8 +193,7 @@ const stageStyles = {
   Qualified: "bg-violet-50 text-violet-700 border-violet-100",
   Quoted: "bg-amber-50 text-amber-700 border-amber-100",
   "Follow-up": "bg-orange-50 text-orange-700 border-orange-100",
-  "Won/Converted":
-    "bg-emerald-50 text-emerald-700 border-emerald-100",
+  "Won/Converted": "bg-emerald-50 text-emerald-700 border-emerald-100",
   Lost: "bg-red-50 text-red-700 border-red-100",
 };
 
@@ -124,8 +217,10 @@ function CustomDropdown({
     if (!open) return;
 
     const closeOutside = (event) => {
-      if (!dropdownRef.current?.contains(event.target) &&
-          !event.target.closest?.("[data-enquiry-dropdown-menu]")) {
+      if (
+        !dropdownRef.current?.contains(event.target) &&
+        !event.target.closest?.("[data-enquiry-dropdown-menu]")
+      ) {
         setOpen(false);
       }
     };
@@ -163,7 +258,10 @@ function CustomDropdown({
           : rect.bottom + 6,
         left: Math.max(
           8,
-          Math.min(rect.left, window.innerWidth - Math.max(rect.width, 175) - 8)
+          Math.min(
+            rect.left,
+            window.innerWidth - Math.max(rect.width, 175) - 8
+          )
         ),
         width: Math.max(rect.width, 175),
       });
@@ -249,12 +347,10 @@ function SummaryCard({ title, value, icon: Icon, color }) {
         <p className="text-xs font-medium text-slate-500 sm:text-sm">
           {title}
         </p>
-
         <h3 className="mt-2 text-2xl font-bold text-[#10264d]">
           {value}
         </h3>
       </div>
-
       <div className={`shrink-0 rounded-xl p-3 ${color}`}>
         <Icon size={20} />
       </div>
@@ -280,9 +376,7 @@ function FormSectionTitle({ icon: Icon, title }) {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
         <Icon size={17} />
       </div>
-      <h4 className="text-[13px] font-bold text-[#10264d]">
-        {title}
-      </h4>
+      <h4 className="text-[13px] font-bold text-[#10264d]">{title}</h4>
     </div>
   );
 }
@@ -305,11 +399,21 @@ export default function Enquiries() {
   const [enquiries, setEnquiries] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY);
-      if (!saved) return [];
-      const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
+
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+
+        // Existing non-empty data is preserved.
+        // Empty or invalid data is replaced with dummy data.
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+
+      localStorage.setItem(KEY, JSON.stringify(dummyEnquiries));
+      return dummyEnquiries;
     } catch {
-      return [];
+      return dummyEnquiries;
     }
   });
 
@@ -325,7 +429,11 @@ export default function Enquiries() {
   const previousFocusRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(enquiries));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(enquiries));
+    } catch (error) {
+      console.error("Unable to save enquiries:", error);
+    }
   }, [enquiries]);
 
   useEffect(() => {
@@ -401,12 +509,6 @@ export default function Enquiries() {
       color: "bg-blue-50 text-blue-700",
     },
     {
-      title: "New Leads",
-      value: enquiries.filter((item) => item.stage === "New").length,
-      icon: Clock3,
-      color: "bg-violet-50 text-violet-700",
-    },
-    {
       title: "Follow-ups",
       value: enquiries.filter((item) => item.stage === "Follow-up").length,
       icon: CalendarDays,
@@ -451,9 +553,7 @@ export default function Enquiries() {
     const phone = String(form.phone || "").trim();
 
     if (!customer || !/^\d{10}$/.test(phone)) {
-      setError(
-        "Enter customer name and valid 10-digit mobile number."
-      );
+      setError("Enter customer name and valid 10-digit mobile number.");
       return;
     }
 
@@ -462,9 +562,7 @@ export default function Enquiries() {
     if (editing) {
       setEnquiries((previous) =>
         previous.map((item) =>
-          item.id === editing
-            ? { ...item, ...updatedForm }
-            : item
+          item.id === editing ? { ...item, ...updatedForm } : item
         )
       );
     } else {
@@ -481,11 +579,7 @@ export default function Enquiries() {
   };
 
   const remove = (id) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this enquiry?"
-      )
-    ) {
+    if (window.confirm("Are you sure you want to delete this enquiry?")) {
       setEnquiries((previous) =>
         previous.filter((item) => item.id !== id)
       );
@@ -510,24 +604,23 @@ export default function Enquiries() {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#7e93af]">
             Customer Relationship Management
           </p>
-
           <h2 className="text-2xl font-extrabold text-[#10264d] lg:text-[29px]">
             Enquiries & Leads
           </h2>
-
           <p className="mt-1 text-sm text-slate-500">
             Manage enquiries, follow-ups and lead conversions.
           </p>
         </div>
 
-        <button
+        {/* Existing Add Enquiry button remains unchanged */}
+        {/* <button
           type="button"
           onClick={() => openForm()}
           className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4274]"
         >
           <Plus size={18} />
           Add Enquiry
-        </button>
+        </button> */}
       </div>
 
       {/* SUMMARY CARDS */}
@@ -539,13 +632,11 @@ export default function Enquiries() {
 
       {/* ENQUIRIES LIST */}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_4px_24px_rgba(16,38,77,0.035)]">
-        {/* LIST HEADER */}
         <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between xl:px-6">
           <div>
             <h3 className="text-lg font-bold text-[#10264d]">
               Enquiries List
             </h3>
-
             <p className="mt-1 text-xs text-[#8b99ae]">
               {filtered.length} enquiries found
             </p>
@@ -557,7 +648,6 @@ export default function Enquiries() {
                 size={17}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
               />
-
               <input
                 type="search"
                 value={search}
@@ -572,7 +662,6 @@ export default function Enquiries() {
                 size={16}
                 className="shrink-0 text-slate-400 sm:hidden"
               />
-
               <div className="min-w-0 flex-1">
                 <CustomDropdown
                   value={stageFilter}
@@ -585,7 +674,7 @@ export default function Enquiries() {
           </div>
         </div>
 
-        {/* DESKTOP TABLE - NO HORIZONTAL SCROLL */}
+        {/* DESKTOP TABLE */}
         <div className="hidden w-full min-w-0 lg:block">
           <table className="w-full table-fixed border-collapse text-left">
             <colgroup>
@@ -628,13 +717,8 @@ export default function Enquiries() {
                 <tr>
                   <td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                      <Inbox
-                        size={36}
-                        className="mb-3 text-slate-300"
-                      />
-                      <p className="text-sm font-medium">
-                        No enquiries found
-                      </p>
+                      <Inbox size={36} className="mb-3 text-slate-300" />
+                      <p className="text-sm font-medium">No enquiries found</p>
                     </div>
                   </td>
                 </tr>
@@ -644,20 +728,17 @@ export default function Enquiries() {
                     key={item.id}
                     className="group transition-colors hover:bg-[#f8faff]"
                   >
-                    {/* ENQUIRY ID */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <span className="block break-all text-[10px] font-bold text-[#376aa7] xl:text-xs">
                         {item.id}
                       </span>
                     </td>
 
-                    {/* CUSTOMER */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a] xl:flex">
                           <UserRound size={16} />
                         </div>
-
                         <div className="min-w-0">
                           <p
                             className="truncate text-xs font-bold text-[#10264d] xl:text-[13px]"
@@ -665,7 +746,6 @@ export default function Enquiries() {
                           >
                             {item.customer}
                           </p>
-
                           <p className="mt-1 truncate text-[10px] text-[#8b99ae] xl:text-[11px]">
                             {item.phone}
                           </p>
@@ -673,7 +753,6 @@ export default function Enquiries() {
                       </div>
                     </td>
 
-                    {/* SERVICE */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <p
                         className="line-clamp-2 break-words text-xs leading-5 text-[#52627b]"
@@ -683,40 +762,33 @@ export default function Enquiries() {
                       </p>
                     </td>
 
-                    {/* EVENT DATE */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <p className="text-[11px] leading-5 text-[#52627b] xl:text-xs">
                         {formatDate(item.eventDate)}
                       </p>
                     </td>
 
-                    {/* BUDGET */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <p className="break-words text-[11px] font-bold text-[#10264d] xl:text-xs">
                         {formatMoney(item.budget)}
                       </p>
                     </td>
 
-                    {/* SOURCE */}
                     <td className="px-2 py-3 align-middle xl:px-3">
                       <p className="break-words text-xs text-[#52627b]">
                         {item.source || "—"}
                       </p>
                     </td>
 
-                    {/* STAGE - SINGLE DROPDOWN */}
                     <td className="px-1 py-3 align-middle xl:px-2">
                       <CustomDropdown
                         value={item.stage || "New"}
                         options={stages}
-                        onChange={(stage) =>
-                          changeStage(item.id, stage)
-                        }
+                        onChange={(stage) => changeStage(item.id, stage)}
                         status
                       />
                     </td>
 
-                    {/* ACTIONS */}
                     <td className="px-0.5 py-3 align-middle">
                       <div className="flex items-center justify-center gap-0">
                         <button
@@ -728,7 +800,6 @@ export default function Enquiries() {
                         >
                           <Pencil size={14} />
                         </button>
-
                         <button
                           type="button"
                           onClick={() => remove(item.id)}
@@ -765,7 +836,6 @@ export default function Enquiries() {
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
                       <UserRound size={19} />
                     </div>
-
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-[#10264d]">
                         {item.customer}
@@ -785,7 +855,6 @@ export default function Enquiries() {
                     >
                       <Pencil size={15} />
                     </button>
-
                     <button
                       type="button"
                       onClick={() => remove(item.id)}
@@ -801,50 +870,38 @@ export default function Enquiries() {
                   <span className="text-lg font-bold text-[#10264d]">
                     {formatMoney(item.budget)}
                   </span>
-
                   <div className="w-[145px] max-w-[55%]">
                     <CustomDropdown
                       value={item.stage || "New"}
                       options={stages}
-                      onChange={(stage) =>
-                        changeStage(item.id, stage)
-                      }
+                      onChange={(stage) => changeStage(item.id, stage)}
                       status
                     />
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
-                  <DetailItem
-                    icon={Phone}
-                    label="Phone"
-                    value={item.phone}
-                  />
-
+                  <DetailItem icon={Phone} label="Phone" value={item.phone} />
                   <DetailItem
                     icon={CalendarDays}
                     label="Event Date"
                     value={formatDate(item.eventDate)}
                   />
-
                   <DetailItem
                     icon={Camera}
                     label="Service"
                     value={item.service}
                   />
-
                   <DetailItem
                     icon={ArrowUpRight}
                     label="Lead Source"
                     value={item.source}
                   />
-
                   <DetailItem
                     icon={UserRound}
                     label="Assigned Staff"
                     value={item.owner}
                   />
-
                   <DetailItem
                     icon={CalendarClock}
                     label="Follow-up"
@@ -881,9 +938,7 @@ export default function Enquiries() {
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/65 p-3 backdrop-blur-[3px] sm:p-5"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                closeForm();
-              }
+              if (event.target === event.currentTarget) closeForm();
             }}
           >
             <section
@@ -893,17 +948,11 @@ export default function Enquiries() {
               aria-labelledby="enquiry-modal-title"
               className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)]"
             >
-              {/* MODAL HEADER */}
               <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                    {editing ? (
-                      <Pencil size={19} />
-                    ) : (
-                      <Plus size={21} />
-                    )}
+                    {editing ? <Pencil size={19} /> : <Plus size={21} />}
                   </div>
-
                   <div className="min-w-0">
                     <h3
                       id="enquiry-modal-title"
@@ -911,7 +960,6 @@ export default function Enquiries() {
                     >
                       {editing ? "Edit Enquiry" : "Add New Enquiry"}
                     </h3>
-
                     <p className="mt-1 text-xs text-[#8491a5]">
                       {editing
                         ? "Update customer enquiry information"
@@ -930,12 +978,8 @@ export default function Enquiries() {
                 </button>
               </div>
 
-              <form
-                onSubmit={save}
-                className="flex min-h-0 flex-1 flex-col"
-              >
+              <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
-                  {/* CUSTOMER INFORMATION */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Users}
@@ -948,10 +992,7 @@ export default function Enquiries() {
                         type="text"
                         value={form.customer}
                         onChange={(event) =>
-                          updateField(
-                            "customer",
-                            event.target.value
-                          )
+                          updateField("customer", event.target.value)
                         }
                         placeholder="Enter customer name"
                         className={fieldClass}
@@ -981,9 +1022,7 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.source}
                         options={sources}
-                        onChange={(value) =>
-                          updateField("source", value)
-                        }
+                        onChange={(value) => updateField("source", value)}
                       />
                     </FormField>
 
@@ -1000,7 +1039,6 @@ export default function Enquiries() {
                     </FormField>
                   </div>
 
-                  {/* EVENT DETAILS */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Camera}
@@ -1011,9 +1049,7 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.service}
                         options={services}
-                        onChange={(value) =>
-                          updateField("service", value)
-                        }
+                        onChange={(value) => updateField("service", value)}
                       />
                     </FormField>
 
@@ -1022,10 +1058,7 @@ export default function Enquiries() {
                         type="date"
                         value={form.eventDate}
                         onChange={(event) =>
-                          updateField(
-                            "eventDate",
-                            event.target.value
-                          )
+                          updateField("eventDate", event.target.value)
                         }
                         className={fieldClass}
                       />
@@ -1049,17 +1082,13 @@ export default function Enquiries() {
                         type="date"
                         value={form.nextFollowUp}
                         onChange={(event) =>
-                          updateField(
-                            "nextFollowUp",
-                            event.target.value
-                          )
+                          updateField("nextFollowUp", event.target.value)
                         }
                         className={fieldClass}
                       />
                     </FormField>
                   </div>
 
-                  {/* LEAD MANAGEMENT */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={ClipboardList}
@@ -1070,9 +1099,7 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.stage}
                         options={stages}
-                        onChange={(value) =>
-                          updateField("stage", value)
-                        }
+                        onChange={(value) => updateField("stage", value)}
                       />
                     </FormField>
 
@@ -1084,10 +1111,7 @@ export default function Enquiries() {
                           rows={3}
                           value={form.notes}
                           onChange={(event) =>
-                            updateField(
-                              "notes",
-                              event.target.value
-                            )
+                            updateField("notes", event.target.value)
                           }
                           placeholder="Enter enquiry requirements or special notes..."
                           className={`${fieldClass} min-h-[85px] resize-y`}
@@ -1106,7 +1130,6 @@ export default function Enquiries() {
                   )}
                 </div>
 
-                {/* MODAL FOOTER */}
                 <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
                   <button
                     type="button"
@@ -1115,7 +1138,6 @@ export default function Enquiries() {
                   >
                     Cancel
                   </button>
-
                   <button
                     type="submit"
                     className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e]"

@@ -1,31 +1,26 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  Wallet,
   CalendarDays,
   Users,
-  MessageSquare,
-  Boxes,
+  Wallet,
+  Receipt,
   Camera,
-  UserCheck,
-  Building2,
-  Download,
   RefreshCw,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Activity,
+  Download,
   IndianRupee,
-  PieChart,
-  FileSpreadsheet,
+  ClipboardList,
+  Package,
+  Building2,
+  Clock,
   CheckCircle2,
-  Clock3,
+  FileText,
 } from "lucide-react";
 
-const KEYS = {
+const STORAGE_KEYS = {
   payments: "studioraw_payments",
   expenses: "studioraw_expenses",
   bookings: "studioraw_bookings",
@@ -37,168 +32,298 @@ const KEYS = {
   branches: "studioraw_branches",
 };
 
-const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#dbe4f0] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+const money = (value) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
 
-function readArray(key) {
+const numberFormat = (value) =>
+  new Intl.NumberFormat("en-IN").format(Number(value) || 0);
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+const currentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const getMonth = (date) => {
+  if (!date) return "";
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return `${parsed.getFullYear()}-${String(
+    parsed.getMonth() + 1
+  ).padStart(2, "0")}`;
+};
+
+const getDate = (item) =>
+  item?.date ||
+  item?.paymentDate ||
+  item?.payment_date ||
+  item?.expenseDate ||
+  item?.bookingDate ||
+  item?.eventDate ||
+  item?.createdAt ||
+  item?.created_at ||
+  item?.dateAdded ||
+  item?.attendanceDate ||
+  item?.enquiryDate ||
+  item?.updatedAt ||
+  "";
+
+const getAmount = (item) =>
+  Number(
+    item?.amount ??
+      item?.totalAmount ??
+      item?.total_amount ??
+      item?.paidAmount ??
+      item?.paid_amount ??
+      item?.price ??
+      item?.cost ??
+      item?.total ??
+      item?.grandTotal ??
+      item?.grand_total ??
+      0
+  ) || 0;
+
+const getStatus = (item) =>
+  String(item?.status || item?.paymentStatus || item?.payment_status || "")
+    .trim()
+    .toLowerCase();
+
+const getName = (item) =>
+  item?.name ||
+  item?.customerName ||
+  item?.customer_name ||
+  item?.title ||
+  item?.itemName ||
+  item?.item_name ||
+  item?.projectName ||
+  item?.branchName ||
+  item?.branch_name ||
+  "Untitled";
+
+const makeDemoData = (month) => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = (day) =>
+    `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(
+      2,
+      "0"
+    )}`;
+
+  return {
+    payments: [
+      {
+        id: "demo-pay-1",
+        customerName: "Arun Kumar",
+        amount: 15000,
+        date: date(3),
+        status: "Paid",
+        paymentMethod: "UPI",
+      },
+      {
+        id: "demo-pay-2",
+        customerName: "Priya Wedding",
+        amount: 25000,
+        date: date(8),
+        status: "Paid",
+        paymentMethod: "Cash",
+      },
+      {
+        id: "demo-pay-3",
+        customerName: "Karthik Studio",
+        amount: 8500,
+        date: date(12),
+        status: "Paid",
+        paymentMethod: "Bank Transfer",
+      },
+      {
+        id: "demo-pay-4",
+        customerName: "Divya Portraits",
+        amount: 12000,
+        date: date(18),
+        status: "Pending",
+        paymentMethod: "UPI",
+      },
+      {
+        id: "demo-pay-5",
+        customerName: "Rahul & Meena",
+        amount: 18000,
+        date: date(22),
+        status: "Paid",
+        paymentMethod: "Cash",
+      },
+    ],
+    expenses: [
+      {
+        id: "demo-exp-1",
+        title: "Camera Accessories",
+        category: "Equipment",
+        amount: 4500,
+        date: date(4),
+      },
+      {
+        id: "demo-exp-2",
+        title: "Studio Electricity",
+        category: "Utilities",
+        amount: 1800,
+        date: date(10),
+      },
+      {
+        id: "demo-exp-3",
+        title: "Photo Album Printing",
+        category: "Printing",
+        amount: 3200,
+        date: date(15),
+      },
+      {
+        id: "demo-exp-4",
+        title: "Travel Expenses",
+        category: "Travel",
+        amount: 1500,
+        date: date(20),
+      },
+    ],
+    bookings: [
+      {
+        id: "demo-book-1",
+        customerName: "Priya Wedding",
+        title: "Wedding Photography",
+        amount: 25000,
+        date: date(8),
+        status: "Confirmed",
+      },
+      {
+        id: "demo-book-2",
+        customerName: "Arun Kumar",
+        title: "Birthday Photography",
+        amount: 10000,
+        date: date(12),
+        status: "Completed",
+      },
+      {
+        id: "demo-book-3",
+        customerName: "Divya Portraits",
+        title: "Portrait Session",
+        amount: 12000,
+        date: date(18),
+        status: "Pending",
+      },
+      {
+        id: "demo-book-4",
+        customerName: "Rahul & Meena",
+        title: "Pre-wedding Shoot",
+        amount: 18000,
+        date: date(22),
+        status: "Confirmed",
+      },
+    ],
+    customers: [
+      { id: "demo-cus-1", name: "Arun Kumar", createdAt: date(2) },
+      { id: "demo-cus-2", name: "Priya Wedding", createdAt: date(5) },
+      { id: "demo-cus-3", name: "Karthik Studio", createdAt: date(9) },
+      { id: "demo-cus-4", name: "Divya Portraits", createdAt: date(14) },
+      { id: "demo-cus-5", name: "Rahul & Meena", createdAt: date(20) },
+      { id: "demo-cus-6", name: "Meera Family", createdAt: date(23) },
+    ],
+    enquiries: [
+      { id: "demo-enq-1", name: "Wedding Enquiry", createdAt: date(3), status: "New" },
+      { id: "demo-enq-2", name: "Birthday Enquiry", createdAt: date(7), status: "Contacted" },
+      { id: "demo-enq-3", name: "Portrait Enquiry", createdAt: date(13), status: "Converted" },
+    ],
+    inventory: [
+      { id: "demo-inv-1", itemName: "Photo Paper", quantity: 120 },
+      { id: "demo-inv-2", itemName: "Album Covers", quantity: 35 },
+      { id: "demo-inv-3", itemName: "Memory Cards", quantity: 8 },
+    ],
+    equipment: [
+      { id: "demo-eq-1", name: "Canon Camera", status: "Available" },
+      { id: "demo-eq-2", name: "Studio Lighting Kit", status: "In Use" },
+      { id: "demo-eq-3", name: "Tripod", status: "Available" },
+    ],
+    attendance: [
+      { id: "demo-att-1", name: "Photographer", date: date(2), status: "Present" },
+      { id: "demo-att-2", name: "Editor", date: date(2), status: "Present" },
+      { id: "demo-att-3", name: "Assistant", date: date(2), status: "Absent" },
+    ],
+    branches: [
+      { id: "demo-br-1", name: "Nagercoil Branch", status: "Active" },
+      { id: "demo-br-2", name: "Chennai Branch", status: "Active" },
+    ],
+  };
+};
+
+function readStoredArray(key) {
   try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(value) ? value : [];
-  } catch {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+
+    if (Array.isArray(parsed)) return parsed;
+
+    if (parsed && typeof parsed === "object") {
+      for (const field of ["data", "items", "records", "list", "results"]) {
+        if (Array.isArray(parsed[field])) return parsed[field];
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error(`Unable to read ${key}:`, error);
     return [];
   }
 }
 
-function currentMonth() {
-  const date = new Date();
-
-  return `${date.getFullYear()}-${String(
-    date.getMonth() + 1
-  ).padStart(2, "0")}`;
-}
-
-function money(value) {
-  const number = Number(value || 0);
-
-  return `₹${(Number.isFinite(number) ? number : 0).toLocaleString(
-    "en-IN",
-    {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }
-  )}`;
-}
-
-function safeNumber(value) {
-  const number = Number(value || 0);
-  return Number.isFinite(number) ? number : 0;
-}
-
-function getDate(record, fields) {
-  for (const field of fields) {
-    if (record?.[field]) {
-      return String(record[field]).slice(0, 10);
-    }
-  }
-
-  return "";
-}
-
-function paymentAmount(payment) {
-  return safeNumber(
-    payment.paidAmount ??
-      payment.amountPaid ??
-      payment.advance ??
-      payment.amount ??
-      0
-  );
-}
-
-function csvCell(value) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
-
-function formatMonth(value) {
-  if (!value) return "All Months";
-
-  const [year, month] = value.split("-").map(Number);
-
-  if (!year || !month) return value;
-
-  return new Date(year, month - 1, 1).toLocaleDateString(
-    "en-IN",
-    {
-      month: "long",
-      year: "numeric",
-    }
-  );
-}
-
-function ProgressItem({
-  label,
+function StatCard({
+  title,
   value,
-  percentage,
-  color = "bg-[#10264d]",
+  subtitle,
+  icon: Icon,
+  color = "blue",
 }) {
-  return (
-    <div className="min-w-0">
-      <div className="mb-2.5 flex items-center justify-between gap-2 sm:mb-3">
-        <p className="min-w-0 break-words text-xs font-medium text-[#52627d] sm:text-sm">
-          {label}
-        </p>
-
-        <p className="shrink-0 text-xs font-bold text-[#10264d] sm:text-sm">
-          {money(value)}
-        </p>
-      </div>
-
-      <div className="h-2 w-full overflow-hidden rounded-full bg-[#edf2f8] sm:h-2.5">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{
-            width: `${Math.max(
-              0,
-              Math.min(100, percentage)
-            )}%`,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ stat }) {
-  const Icon = stat.icon;
+  const colors = {
+    blue: "bg-blue-50 text-blue-600 ring-blue-100",
+    green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+    red: "bg-rose-50 text-rose-600 ring-rose-100",
+    purple: "bg-violet-50 text-violet-600 ring-violet-100",
+    amber: "bg-amber-50 text-amber-600 ring-amber-100",
+    cyan: "bg-cyan-50 text-cyan-600 ring-cyan-100",
+  };
 
   return (
-    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-[#e8edf5] bg-white p-3.5 shadow-sm transition-all duration-300 hover:shadow-lg sm:p-6 lg:hover:-translate-y-1">
-      <div
-        className={`absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-40 sm:-right-8 sm:-top-8 sm:h-28 sm:w-28 ${stat.bg}`}
-      />
-
-      <div className="relative flex items-start justify-between gap-2 sm:gap-3">
+    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-medium leading-4 text-[#72819a] sm:text-[13px] sm:leading-5">
-            {stat.label}
-          </p>
-
-          <h3
-            className={`mt-2 break-all text-lg font-bold tracking-tight sm:mt-4 sm:text-[27px] ${stat.color}`}
-          >
-            {stat.value}
+          <p className="text-sm font-semibold text-slate-500">{title}</p>
+          <h3 className="mt-3 break-words text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+            {value}
           </h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{subtitle}</p>
         </div>
 
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12 sm:rounded-2xl ${stat.bg}`}
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ${colors[color]}`}
         >
-          <Icon size={17} className={stat.color} />
+          <Icon size={23} />
         </div>
-      </div>
-
-      <div className="relative mt-3 h-1 w-9 rounded-full bg-[#e9eef7] transition-all group-hover:w-16 sm:mt-5 sm:w-12 sm:group-hover:w-20">
-        <div className={`h-full w-full rounded-full ${stat.bar}`} />
       </div>
     </div>
   );
 }
 
-function SectionTitle({ icon: Icon, title, subtitle }) {
+function SectionTitle({ icon: Icon, title, description }) {
   return (
-    <div className="mb-4 flex min-w-0 items-start gap-2.5 sm:mb-6 sm:gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#174b91] sm:h-11 sm:w-11">
-        <Icon size={19} />
+    <div className="mb-5 flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <Icon size={20} />
       </div>
-
-      <div className="min-w-0">
-        <h2 className="break-words text-sm font-bold text-[#10264d] sm:text-lg">
-          {title}
-        </h2>
-
-        {subtitle && (
-          <p className="mt-1 text-[11px] leading-5 text-[#8794a8] sm:text-sm">
-            {subtitle}
-          </p>
+      <div>
+        <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{title}</h2>
+        {description && (
+          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
         )}
       </div>
     </div>
@@ -206,672 +331,929 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
 }
 
 export default function Reports() {
-  const [month, setMonth] = useState(currentMonth);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [storedData, setStoredData] = useState({});
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [loading, setLoading] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
 
-  const [lastUpdated, setLastUpdated] = useState(() =>
-    new Date().toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+  const loadReports = useCallback(() => {
+    setLoading(true);
+
+    const nextData = {};
+
+    Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
+      nextData[name] = readStoredArray(key);
+    });
+
+    setStoredData(nextData);
+    setLastUpdated(new Date());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
+
+  const demoData = useMemo(
+    () => makeDemoData(selectedMonth),
+    [selectedMonth]
   );
 
   const data = useMemo(() => {
     const result = {};
 
-    Object.entries(KEYS).forEach(([name, key]) => {
-      result[name] = readArray(key);
+    Object.keys(STORAGE_KEYS).forEach((name) => {
+      const realRecords = storedData[name] || [];
+
+      // Show demo records only when the corresponding localStorage
+      // collection is empty. Nothing is written back to localStorage.
+      result[name] =
+        realRecords.length === 0 && showDemo
+          ? demoData[name] || []
+          : realRecords;
     });
 
     return result;
-  }, [refreshKey]);
+  }, [storedData, demoData, showDemo]);
 
-  useEffect(() => {
-    const handleStorage = (event) => {
-      if (!event.key || Object.values(KEYS).includes(event.key)) {
-        setRefreshKey((previous) => previous + 1);
-      }
-    };
+  const monthly = useMemo(() => {
+    const filterMonth = (items) =>
+      (items || []).filter((item) => getMonth(getDate(item)) === selectedMonth);
 
-    window.addEventListener("storage", handleStorage);
+    const payments = filterMonth(data.payments);
+    const expenses = filterMonth(data.expenses);
+    const bookings = filterMonth(data.bookings);
+    const customers = filterMonth(data.customers);
+    const enquiries = filterMonth(data.enquiries);
+    const attendance = filterMonth(data.attendance);
 
-    return () =>
-      window.removeEventListener("storage", handleStorage);
-  }, []);
+    const paidPayments = payments.filter((item) => {
+      const status = getStatus(item);
+      return (
+        !status ||
+        ["paid", "completed", "success", "successful", "received"].includes(
+          status
+        )
+      );
+    });
 
-  const report = useMemo(() => {
-    const monthlyPayments = data.payments.filter((item) =>
-      getDate(item, [
-        "paymentDate",
-        "date",
-        "createdAt",
-      ]).startsWith(month)
-    );
-
-    const monthlyExpenses = data.expenses.filter((item) =>
-      getDate(item, [
-        "date",
-        "expenseDate",
-        "createdAt",
-      ]).startsWith(month)
-    );
-
-    const monthlyBookings = data.bookings.filter((item) =>
-      getDate(item, [
-        "eventDate",
-        "bookingDate",
-        "date",
-        "createdAt",
-      ]).startsWith(month)
-    );
-
-    const monthlyAttendance = data.attendance.filter((item) =>
-      getDate(item, ["date", "attendanceDate"]).startsWith(month)
-    );
-
-    const income = monthlyPayments.reduce(
-      (sum, item) => sum + paymentAmount(item),
+    const revenue = paidPayments.reduce(
+      (sum, item) => sum + getAmount(item),
       0
     );
 
-    const expenses = monthlyExpenses.reduce(
-      (sum, item) => sum + safeNumber(item.amount),
+    const expenseTotal = expenses.reduce(
+      (sum, item) => sum + getAmount(item),
       0
     );
 
-    const profit = income - expenses;
-
-    const lowStock = data.inventory.filter(
-      (item) =>
-        safeNumber(item.quantity) <=
-        safeNumber(item.minimumStock)
-    ).length;
-
-    const equipmentInUse = data.equipment.filter(
-      (item) => item.status === "In Use"
-    ).length;
-
-    const activeBranches = data.branches.filter(
-      (item) => item.status === "Active"
-    ).length;
-
-    const attendancePresent = monthlyAttendance.filter(
-      (item) => item.status === "Present"
-    ).length;
-
-    const expenseByCategory = monthlyExpenses.reduce(
-      (result, item) => {
-        const category = item.category || "Other";
-
-        result[category] =
-          (result[category] || 0) + safeNumber(item.amount);
-
-        return result;
-      },
-      {}
+    const pendingPayments = payments.filter((item) =>
+      ["pending", "unpaid", "due", "partially paid", "partial"].includes(
+        getStatus(item)
+      )
     );
 
-    const totalBilling = monthlyPayments.reduce(
-      (sum, item) =>
-        sum +
-        safeNumber(
-          item.total ??
-            item.totalAmount ??
-            item.billAmount ??
-            item.amount ??
-            0
-        ),
+    const pendingAmount = pendingPayments.reduce(
+      (sum, item) => sum + getAmount(item),
       0
     );
 
-    const pendingBalance = monthlyPayments.reduce(
-      (sum, item) => {
-        const total = safeNumber(
-          item.total ??
-            item.totalAmount ??
-            item.billAmount ??
-            0
-        );
-
-        const received = paymentAmount(item);
-
-        return sum + Math.max(0, total - received);
-      },
-      0
+    const confirmedBookings = bookings.filter((item) =>
+      ["confirmed", "completed", "booked", "success"].includes(
+        getStatus(item)
+      )
     );
 
     return {
-      income,
+      payments,
       expenses,
-      profit,
-      totalBilling,
-      pendingBalance,
-      bookings: monthlyBookings.length,
-      customers: data.customers.length,
-      leads: data.enquiries.length,
-      lowStock,
-      equipmentInUse,
-      activeBranches,
-      attendancePresent,
-      expenseByCategory,
-      paymentCount: monthlyPayments.length,
-      expenseCount: monthlyExpenses.length,
+      bookings,
+      customers,
+      enquiries,
+      attendance,
+      revenue,
+      expenseTotal,
+      profit: revenue - expenseTotal,
+      pendingAmount,
+      pendingCount: pendingPayments.length,
+      confirmedBookings: confirmedBookings.length,
     };
-  }, [data, month]);
+  }, [data, selectedMonth]);
 
-  const stats = [
-    {
-      label: "Monthly Revenue",
-      value: money(report.income),
-      icon: TrendingUp,
-      color: "text-emerald-700",
-      bg: "bg-emerald-50",
-      bar: "bg-emerald-500",
-    },
-    {
-      label: "Monthly Expenses",
-      value: money(report.expenses),
-      icon: TrendingDown,
-      color: "text-red-600",
-      bg: "bg-red-50",
-      bar: "bg-red-500",
-    },
-    {
-      label: "Estimated Profit",
-      value: money(report.profit),
-      icon: Wallet,
-      color:
-        report.profit >= 0
-          ? "text-blue-700"
-          : "text-red-600",
-      bg:
-        report.profit >= 0
-          ? "bg-blue-50"
-          : "bg-red-50",
-      bar:
-        report.profit >= 0
-          ? "bg-blue-600"
-          : "bg-red-500",
-    },
-    {
-      label: "Monthly Bookings",
-      value: report.bookings,
-      icon: CalendarDays,
-      color: "text-indigo-700",
-      bg: "bg-indigo-50",
-      bar: "bg-indigo-500",
-    },
-    {
-      label: "Total Customers",
-      value: report.customers,
-      icon: Users,
-      color: "text-blue-700",
-      bg: "bg-blue-50",
-      bar: "bg-blue-600",
-    },
-    {
-      label: "Total Leads",
-      value: report.leads,
-      icon: MessageSquare,
-      color: "text-violet-700",
-      bg: "bg-violet-50",
-      bar: "bg-violet-500",
-    },
-    {
-      label: "Low Stock Items",
-      value: report.lowStock,
-      icon: Boxes,
-      color: "text-amber-700",
-      bg: "bg-amber-50",
-      bar: "bg-amber-500",
-    },
-    {
-      label: "Equipment In Use",
-      value: report.equipmentInUse,
-      icon: Camera,
-      color: "text-blue-700",
-      bg: "bg-blue-50",
-      bar: "bg-blue-500",
-    },
-    {
-      label: "Present Attendance Entries",
-      value: report.attendancePresent,
-      icon: UserCheck,
-      color: "text-green-700",
-      bg: "bg-green-50",
-      bar: "bg-green-500",
-    },
-    {
-      label: "Active Branches",
-      value: report.activeBranches,
-      icon: Building2,
-      color: "text-indigo-700",
-      bg: "bg-indigo-50",
-      bar: "bg-indigo-500",
-    },
-  ];
-
-  const categories = Object.entries(
-    report.expenseByCategory
-  ).sort((a, b) => b[1] - a[1]);
-
-  const financialItems = [
-    {
-      label: "Revenue",
-      value: report.income,
-      color: "bg-emerald-500",
-    },
-    {
-      label: "Expenses",
-      value: report.expenses,
-      color: "bg-red-500",
-    },
-    {
-      label: "Positive Profit",
-      value: Math.max(report.profit, 0),
-      color: "bg-blue-700",
-    },
-  ];
-
-  const financialMax = Math.max(
-    report.income,
-    report.expenses,
-    Math.max(report.profit, 0),
-    1
+  const isUsingDemoData = useMemo(
+    () =>
+      Object.keys(STORAGE_KEYS).some(
+        (name) =>
+          !(storedData[name] || []).length &&
+          showDemo &&
+          (demoData[name] || []).length > 0
+      ),
+    [storedData, showDemo, demoData]
   );
 
-  const operations = [
-    {
-      label: "Bookings This Month",
-      value: report.bookings,
-      icon: CalendarDays,
-    },
-    {
-      label: "Registered Customers",
-      value: report.customers,
-      icon: Users,
-    },
-    {
-      label: "Enquiries & Leads",
-      value: report.leads,
-      icon: MessageSquare,
-    },
-    {
-      label: "Low Stock Alerts",
-      value: report.lowStock,
-      icon: Boxes,
-    },
-    {
-      label: "Equipment Currently In Use",
-      value: report.equipmentInUse,
-      icon: Camera,
-    },
-    {
-      label: "Active Studio Branches",
-      value: report.activeBranches,
-      icon: Building2,
-    },
-  ];
+  const monthlyActivity = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const days = [];
 
-  const refreshReports = () => {
-    setRefreshKey((previous) => previous + 1);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateKey = `${selectedMonth}-${String(day).padStart(2, "0")}`;
 
-    setLastUpdated(
-      new Date().toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      const revenue = monthly.payments
+        .filter((item) => {
+          const status = getStatus(item);
+          const paid =
+            !status ||
+            ["paid", "completed", "success", "successful", "received"].includes(
+              status
+            );
+
+          return getDate(item).slice(0, 10) === dateKey && paid;
+        })
+        .reduce((sum, item) => sum + getAmount(item), 0);
+
+      const expenses = monthly.expenses
+        .filter((item) => getDate(item).slice(0, 10) === dateKey)
+        .reduce((sum, item) => sum + getAmount(item), 0);
+
+      days.push({ day, revenue, expenses });
+    }
+
+    // Display a compact sample of the month in the chart.
+    const step = Math.max(1, Math.ceil(days.length / 10));
+    return days.filter(
+      (_, index) =>
+        index % step === 0 || index === days.length - 1
     );
-  };
+  }, [monthly, selectedMonth]);
 
-  const exportCSV = () => {
+  const maxActivity = Math.max(
+    1,
+    ...monthlyActivity.map((item) =>
+      Math.max(item.revenue, item.expenses)
+    )
+  );
+
+  const paymentMethodSummary = useMemo(() => {
+    const methods = {};
+
+    monthly.payments.forEach((item) => {
+      const status = getStatus(item);
+      if (
+        status &&
+        !["paid", "completed", "success", "successful", "received"].includes(
+          status
+        )
+      ) {
+        return;
+      }
+
+      const method =
+        item.paymentMethod ||
+        item.payment_method ||
+        item.method ||
+        item.mode ||
+        "Other";
+
+      methods[method] = (methods[method] || 0) + getAmount(item);
+    });
+
+    return Object.entries(methods).sort((a, b) => b[1] - a[1]);
+  }, [monthly]);
+
+  const exportCSV = useCallback(() => {
     const rows = [
-      ["Studio Raw Picturez - Reports", formatMonth(month)],
+      ["Studio Raw Picturez - Monthly Report"],
+      ["Report Month", selectedMonth],
+      ["Generated At", lastUpdated.toLocaleString("en-IN")],
+      ["Data Mode", isUsingDemoData ? "Demo fallback included" : "Stored data"],
       [],
-      ["Financial Report", "Amount"],
-      ["Revenue", report.income],
-      ["Expenses", report.expenses],
-      ["Estimated Profit", report.profit],
-      ["Total Billing", report.totalBilling],
-      ["Pending Balance", report.pendingBalance],
+      ["SUMMARY"],
+      ["Metric", "Value"],
+      ["Revenue", monthly.revenue],
+      ["Expenses", monthly.expenseTotal],
+      ["Net Profit", monthly.profit],
+      ["Pending Payments", monthly.pendingAmount],
+      ["Bookings", monthly.bookings.length],
+      ["New Customers", monthly.customers.length],
+      ["Enquiries", monthly.enquiries.length],
       [],
-      ["Operational Report", "Count"],
-      ["Bookings", report.bookings],
-      ["Customers", report.customers],
-      ["Leads", report.leads],
-      ["Low Stock", report.lowStock],
-      ["Equipment In Use", report.equipmentInUse],
-      ["Present Attendance Entries", report.attendancePresent],
-      ["Active Branches", report.activeBranches],
+      ["PAYMENTS"],
+      ["Date", "Customer", "Amount", "Status", "Method"],
+      ...monthly.payments.map((item) => [
+        getDate(item),
+        getName(item),
+        getAmount(item),
+        item.status || item.paymentStatus || "—",
+        item.paymentMethod || item.payment_method || item.method || "—",
+      ]),
       [],
-      ["Expense Category", "Amount"],
-      ...categories,
+      ["EXPENSES"],
+      ["Date", "Expense", "Category", "Amount"],
+      ...monthly.expenses.map((item) => [
+        getDate(item),
+        getName(item),
+        item.category || "—",
+        getAmount(item),
+      ]),
+      [],
+      ["BOOKINGS"],
+      ["Date", "Customer / Project", "Status", "Amount"],
+      ...monthly.bookings.map((item) => [
+        getDate(item),
+        getName(item),
+        item.status || "—",
+        getAmount(item),
+      ]),
     ];
 
-    const csv = rows
-      .map((row) => row.map(csvCell).join(","))
+    const escapeCSV = (value) => {
+      const text = String(value ?? "");
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+
+    const csvContent = rows
+      .map((row) => row.map(escapeCSV).join(","))
       .join("\r\n");
 
-    const blob = new Blob(["\uFEFF", csv], {
+    const blob = new Blob(["\uFEFF" + csvContent], {
       type: "text/csv;charset=utf-8;",
     });
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
-    link.download = `studioraw-report-${month}.csv`;
-
+    link.download = `Studio-Reports-${selectedMonth}.csv`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-
+    link.remove();
     URL.revokeObjectURL(url);
+  }, [selectedMonth, lastUpdated, isUsingDemoData, monthly]);
+
+  const formatMonth = (month) => {
+    const [year, monthNumber] = month.split("-").map(Number);
+    return new Date(year, monthNumber - 1, 1).toLocaleDateString("en-IN", {
+      month: "long",
+      year: "numeric",
+    });
   };
 
-  return (
-    <div className="min-h-screen w-full min-w-0 space-y-5 overflow-x-hidden bg-[#f7f9fc] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:space-y-6 lg:px-8">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl">
-            <BarChart3 size={22} />
-          </div>
+  const formatDate = (value) => {
+    if (!value) return "—";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
-          <div className="min-w-0">
-            <h1 className="break-words text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl">
+  const badgeClass = (status) => {
+    const value = String(status || "").toLowerCase();
+
+    if (
+      ["paid", "completed", "confirmed", "success", "active", "present"].includes(
+        value
+      )
+    ) {
+      return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
+    }
+
+    if (["pending", "new", "in use", "contacted"].includes(value)) {
+      return "bg-amber-50 text-amber-700 ring-amber-600/20";
+    }
+
+    if (["cancelled", "canceled", "failed", "absent", "inactive"].includes(value)) {
+      return "bg-rose-50 text-rose-700 ring-rose-600/20";
+    }
+
+    return "bg-slate-100 text-slate-600 ring-slate-500/20";
+  };
+
+  const tableClass =
+    "min-w-full divide-y divide-slate-100 text-left text-sm";
+
+  const thClass =
+    "whitespace-nowrap bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500";
+
+  const tdClass = "whitespace-nowrap px-4 py-4 text-slate-600";
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-[1600px] space-y-7">
+        {/* Header */}
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-blue-600">
+              <BarChart3 size={17} />
+              STUDIO MANAGEMENT
+            </div>
+
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
               Reports & Analytics
             </h1>
 
-            <p className="mt-1 text-xs leading-5 text-[#8190a7] sm:text-sm">
-              Studio performance and business overview
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              Monitor your studio performance, revenue, expenses, bookings and
+              business activity from one place.
             </p>
           </div>
-        </div>
 
-        {/* RESPONSIVE REPORT ACTIONS */}
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end xl:w-auto">
-          <div className="w-full sm:w-56">
-            <label className="mb-2 block text-xs font-semibold text-[#52627d]">
-              Select Report Month
-            </label>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+              <CalendarDays size={18} className="text-blue-600" />
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                className="min-w-0 bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                aria-label="Select report month"
+              />
+            </div>
 
-            <input
-              type="month"
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
-              className={inputClass}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
             <button
               type="button"
-              onClick={refreshReports}
-              className="flex min-w-0 items-center justify-center gap-2 rounded-xl border border-[#dbe4f0] bg-white px-3 py-3 text-xs font-semibold text-[#10264d] transition hover:bg-slate-50 sm:px-5 sm:text-sm"
+              onClick={loadReports}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
             >
-              <RefreshCw size={16} />
+              <RefreshCw
+                size={17}
+                className={loading ? "animate-spin" : ""}
+              />
               Refresh
             </button>
 
             <button
               type="button"
               onClick={exportCSV}
-              className="flex min-w-0 items-center justify-center gap-2 rounded-xl bg-[#112e60] px-3 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1a4384] sm:px-5 sm:text-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
             >
-              <Download size={16} />
-              Export Report
+              <Download size={17} />
+              Export CSV
             </button>
           </div>
         </div>
-      </div>
 
-      {/* REPORTING PERIOD */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#e7edf6] bg-white px-4 py-3.5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-blue-50 p-2.5 text-blue-700">
-            <CalendarDays size={19} />
+        {/* Demo notice */}
+        {isUsingDemoData && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+                <FileText size={20} />
+              </div>
+
+              <div>
+                <p className="font-bold text-blue-900">
+                  Demo preview is enabled
+                </p>
+                <p className="mt-1 text-sm leading-5 text-blue-700">
+                  Empty sections display sample data for preview. Your real
+                  localStorage records are not changed.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowDemo((value) => !value)}
+              className="shrink-0 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+            >
+              {showDemo ? "Hide Demo Data" : "Show Demo Data"}
+            </button>
           </div>
+        )}
 
-          <div>
-            <p className="text-[11px] font-medium text-slate-400 sm:text-xs">
-              Reporting Period
-            </p>
+        {!isUsingDemoData && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={21} className="text-emerald-600" />
+              <div>
+                <p className="text-sm font-bold text-slate-800">
+                  Report data loaded
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Last updated: {lastUpdated.toLocaleTimeString("en-IN")}
+                </p>
+              </div>
+            </div>
 
-            <p className="mt-1 text-sm font-bold text-[#10264d]">
-              {formatMonth(month)}
-            </p>
+            <button
+              type="button"
+              onClick={() => setShowDemo((value) => !value)}
+              className="text-left text-sm font-bold text-blue-600 hover:text-blue-800 sm:text-right"
+            >
+              {showDemo ? "Demo fallback enabled" : "Demo fallback disabled"}
+            </button>
           </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-slate-900">
+            Overview — {formatMonth(selectedMonth)}
+          </h2>
+
+          <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+            Updated {lastUpdated.toLocaleTimeString("en-IN")}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 text-[11px] text-slate-500 sm:text-xs">
-          <CheckCircle2 size={15} className="text-green-600" />
-          Last refreshed at {lastUpdated}
-        </div>
-      </div>
-
-      {/* FINANCIAL SUMMARY - MOBILE 2 COLUMNS */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {stats.slice(0, 4).map((stat) => (
-          <StatCard key={stat.label} stat={stat} />
-        ))}
-      </div>
-
-      {/* ADDITIONAL STATISTICS - MOBILE 2 COLUMNS */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        {stats.slice(4).map((stat) => (
-          <StatCard key={stat.label} stat={stat} />
-        ))}
-      </div>
-
-      {/* FINANCIAL OVERVIEW + EXPENSE BREAKDOWN */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
-        {/* FINANCIAL OVERVIEW */}
-        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
-          <SectionTitle
-            icon={BarChart3}
-            title="Financial Overview"
-            subtitle="Revenue, expenses and estimated profit comparison"
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            title="Total Revenue"
+            value={money(monthly.revenue)}
+            subtitle={`${monthly.payments.length} payment records this month`}
+            icon={TrendingUp}
+            color="green"
           />
 
-          <div className="space-y-5 sm:space-y-7">
-            {financialItems.map((item) => (
-              <ProgressItem
-                key={item.label}
-                label={item.label}
-                value={item.value}
-                percentage={(item.value / financialMax) * 100}
-                color={item.color}
-              />
-            ))}
-          </div>
+          <StatCard
+            title="Total Expenses"
+            value={money(monthly.expenseTotal)}
+            subtitle={`${monthly.expenses.length} expense records this month`}
+            icon={TrendingDown}
+            color="red"
+          />
 
-          {/* TWO COLUMN BILLING CARDS */}
-          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-8 sm:gap-3">
-            <div className="min-w-0 rounded-xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4">
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-700 sm:gap-2 sm:text-xs">
-                <IndianRupee size={14} className="shrink-0" />
-                Total Billing
+          <StatCard
+            title="Net Profit"
+            value={money(monthly.profit)}
+            subtitle="Revenue minus recorded expenses"
+            icon={IndianRupee}
+            color={monthly.profit >= 0 ? "blue" : "red"}
+          />
+
+          <StatCard
+            title="Pending Payments"
+            value={money(monthly.pendingAmount)}
+            subtitle={`${monthly.pendingCount} pending payment records`}
+            icon={Wallet}
+            color="purple"
+          />
+
+          <StatCard
+            title="Bookings"
+            value={numberFormat(monthly.bookings.length)}
+            subtitle={`${monthly.confirmedBookings} confirmed or completed`}
+            icon={Camera}
+            color="cyan"
+          />
+
+          <StatCard
+            title="New Customers"
+            value={numberFormat(monthly.customers.length)}
+            subtitle="Customer records created this month"
+            icon={Users}
+            color="blue"
+          />
+
+          <StatCard
+            title="Enquiries"
+            value={numberFormat(monthly.enquiries.length)}
+            subtitle="Enquiries received this month"
+            icon={ClipboardList}
+            color="amber"
+          />
+
+          <StatCard
+            title="Attendance Records"
+            value={numberFormat(monthly.attendance.length)}
+            subtitle="Attendance entries this month"
+            icon={Clock}
+            color="purple"
+          />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
+            <SectionTitle
+              icon={BarChart3}
+              title="Revenue & Expense Activity"
+              description={`Daily financial activity for ${formatMonth(
+                selectedMonth
+              )}`}
+            />
+
+            <div className="flex flex-wrap gap-4 pb-5">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="h-3 w-3 rounded-full bg-blue-600" />
+                Revenue
               </div>
-
-              <p className="mt-2 break-all text-base font-bold text-[#10264d] sm:mt-3 sm:text-xl">
-                {money(report.totalBilling)}
-              </p>
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="h-3 w-3 rounded-full bg-rose-400" />
+                Expenses
+              </div>
             </div>
 
-            <div className="min-w-0 rounded-xl border border-amber-100 bg-amber-50/60 p-3 sm:p-4">
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-amber-700 sm:gap-2 sm:text-xs">
-                <Clock3 size={14} className="shrink-0" />
-                Pending Balance
+            {monthlyActivity.length > 0 ? (
+              <div className="flex h-64 items-end gap-2 border-b border-l border-slate-200 px-2 pb-2 pt-4 sm:gap-4">
+                {monthlyActivity.map((item) => (
+                  <div
+                    key={item.day}
+                    className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
+                    title={`Day ${item.day}: Revenue ${money(
+                      item.revenue
+                    )}, Expenses ${money(item.expenses)}`}
+                  >
+                    <div className="flex h-full w-full items-end justify-center gap-1">
+                      <div
+                        className="w-[42%] max-w-5 rounded-t-md bg-blue-600 transition-all duration-500 hover:bg-blue-700"
+                        style={{
+                          height: `${Math.max(
+                            item.revenue > 0 ? 4 : 0,
+                            (item.revenue / maxActivity) * 100
+                          )}%`,
+                        }}
+                      />
+                      <div
+                        className="w-[42%] max-w-5 rounded-t-md bg-rose-400 transition-all duration-500 hover:bg-rose-500"
+                        style={{
+                          height: `${Math.max(
+                            item.expenses > 0 ? 4 : 0,
+                            (item.expenses / maxActivity) * 100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-500 sm:text-xs">
+                      {item.day}
+                    </span>
+                  </div>
+                ))}
               </div>
-
-              <p className="mt-2 break-all text-base font-bold text-[#10264d] sm:mt-3 sm:text-xl">
-                {money(report.pendingBalance)}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-[#f7f9fc] p-3 sm:mt-5 sm:gap-3 sm:p-4">
-            {report.profit >= 0 ? (
-              <ArrowUpRight
-                size={19}
-                className="shrink-0 text-emerald-600"
-              />
             ) : (
-              <ArrowDownRight
-                size={19}
-                className="shrink-0 text-red-600"
-              />
+              <div className="flex h-64 items-center justify-center text-sm text-slate-400">
+                No financial activity for this month.
+              </div>
             )}
 
-            <p className="text-[11px] leading-5 text-slate-500 sm:text-xs sm:leading-6">
-              Estimated profit for {formatMonth(month)} is{" "}
-              <span className="font-bold text-[#10264d]">
-                {money(report.profit)}
-              </span>
-              . This is based on recorded payment and expense values.
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              The chart uses the selected month's payment and expense records.
+              Hover over a bar to view its daily totals.
             </p>
           </div>
-        </section>
 
-        {/* EXPENSE BREAKDOWN */}
-        <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
-          <SectionTitle
-            icon={PieChart}
-            title="Expense Category Breakdown"
-            subtitle="Category-wise monthly spending analysis"
-          />
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <SectionTitle
+              icon={Wallet}
+              title="Payment Methods"
+              description="Revenue by payment method"
+            />
 
-          {categories.length === 0 ? (
-            <div className="flex min-h-[190px] flex-col items-center justify-center text-center sm:min-h-[250px]">
-              <div className="mb-4 rounded-2xl bg-slate-50 p-5">
-                <PieChart size={35} className="text-slate-300" />
+            {paymentMethodSummary.length > 0 ? (
+              <div className="space-y-5">
+                {paymentMethodSummary.map(([method, amount]) => {
+                  const percentage =
+                    monthly.revenue > 0
+                      ? Math.min(100, (amount / monthly.revenue) * 100)
+                      : 0;
+
+                  return (
+                    <div key={method}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="truncate text-sm font-semibold text-slate-700">
+                          {method}
+                        </span>
+                        <span className="shrink-0 text-sm font-bold text-slate-900">
+                          {money(amount)}
+                        </span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="mt-6 rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Collected revenue</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {money(monthly.revenue)}
+                  </p>
+                </div>
               </div>
+            ) : (
+              <div className="flex min-h-48 items-center justify-center text-center text-sm text-slate-400">
+                No payment method records found.
+              </div>
+            )}
+          </div>
+        </div>
 
-              <p className="text-sm font-semibold text-slate-500">
-                No expenses recorded
-              </p>
+        {/* Payments and expenses */}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 p-5 sm:p-6">
+              <SectionTitle
+                icon={Receipt}
+                title="Recent Payments"
+                description="Payments for the selected month"
+              />
+              <span className="shrink-0 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                {monthly.payments.length} records
+              </span>
+            </div>
 
-              <p className="mt-2 text-xs text-slate-400">
-                No expense data available for {formatMonth(month)}.
-              </p>
+            {monthly.payments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className={tableClass}>
+                  <thead>
+                    <tr>
+                      <th className={thClass}>Customer</th>
+                      <th className={thClass}>Date</th>
+                      <th className={thClass}>Amount</th>
+                      <th className={thClass}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[...monthly.payments]
+                      .sort(
+                        (a, b) =>
+                          new Date(getDate(b)) - new Date(getDate(a))
+                      )
+                      .slice(0, 8)
+                      .map((item, index) => {
+                        const status =
+                          item.status || item.paymentStatus || "Paid";
+
+                        return (
+                          <tr
+                            key={item.id || item._id || `payment-${index}`}
+                            className="transition hover:bg-slate-50"
+                          >
+                            <td className={`${tdClass} font-semibold text-slate-800`}>
+                              {getName(item)}
+                            </td>
+                            <td className={tdClass}>
+                              {formatDate(getDate(item))}
+                            </td>
+                            <td className={`${tdClass} font-bold text-slate-900`}>
+                              {money(getAmount(item))}
+                            </td>
+                            <td className={tdClass}>
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${badgeClass(
+                                  status
+                                )}`}
+                              >
+                                {status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-10 text-center text-sm text-slate-400">
+                No payments found for this month.
+              </div>
+            )}
+          </section>
+
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 p-5 sm:p-6">
+              <SectionTitle
+                icon={Receipt}
+                title="Recent Expenses"
+                description="Expenses for the selected month"
+              />
+              <span className="shrink-0 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700">
+                {monthly.expenses.length} records
+              </span>
+            </div>
+
+            {monthly.expenses.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className={tableClass}>
+                  <thead>
+                    <tr>
+                      <th className={thClass}>Expense</th>
+                      <th className={thClass}>Date</th>
+                      <th className={thClass}>Category</th>
+                      <th className={thClass}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[...monthly.expenses]
+                      .sort(
+                        (a, b) =>
+                          new Date(getDate(b)) - new Date(getDate(a))
+                      )
+                      .slice(0, 8)
+                      .map((item, index) => (
+                        <tr
+                          key={item.id || item._id || `expense-${index}`}
+                          className="transition hover:bg-slate-50"
+                        >
+                          <td className={`${tdClass} font-semibold text-slate-800`}>
+                            {getName(item)}
+                          </td>
+                          <td className={tdClass}>
+                            {formatDate(getDate(item))}
+                          </td>
+                          <td className={tdClass}>
+                            {item.category || item.type || "General"}
+                          </td>
+                          <td className={`${tdClass} font-bold text-rose-600`}>
+                            {money(getAmount(item))}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-10 text-center text-sm text-slate-400">
+                No expenses found for this month.
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Bookings */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <SectionTitle
+              icon={Camera}
+              title="Booking Report"
+              description="Photography projects and event bookings"
+            />
+            <div className="rounded-xl bg-blue-50 px-4 py-2">
+              <span className="text-sm font-bold text-blue-700">
+                {monthly.bookings.length} bookings
+              </span>
+            </div>
+          </div>
+
+          {monthly.bookings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className={tableClass}>
+                <thead>
+                  <tr>
+                    <th className={thClass}>Project / Customer</th>
+                    <th className={thClass}>Booking Date</th>
+                    <th className={thClass}>Event / Service</th>
+                    <th className={thClass}>Amount</th>
+                    <th className={thClass}>Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {[...monthly.bookings]
+                    .sort(
+                      (a, b) =>
+                        new Date(getDate(b)) - new Date(getDate(a))
+                    )
+                    .map((item, index) => {
+                      const status = item.status || "Pending";
+
+                      return (
+                        <tr
+                          key={item.id || item._id || `booking-${index}`}
+                          className="transition hover:bg-slate-50"
+                        >
+                          <td className={`${tdClass} font-semibold text-slate-800`}>
+                            {getName(item)}
+                          </td>
+                          <td className={tdClass}>
+                            {formatDate(getDate(item))}
+                          </td>
+                          <td className={tdClass}>
+                            {item.service ||
+                              item.eventType ||
+                              item.event_type ||
+                              item.title ||
+                              "Photography"}
+                          </td>
+                          <td className={`${tdClass} font-bold text-slate-900`}>
+                            {money(getAmount(item))}
+                          </td>
+                          <td className={tdClass}>
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${badgeClass(
+                                status
+                              )}`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="space-y-5 sm:space-y-6">
-              {categories.map(([category, amount]) => (
-                <ProgressItem
-                  key={category}
-                  label={category}
-                  value={amount}
-                  percentage={
-                    report.expenses > 0
-                      ? (amount / report.expenses) * 100
-                      : 0
-                  }
-                  color="bg-[#112e60]"
-                />
-              ))}
+            <div className="p-10 text-center text-sm text-slate-400">
+              No bookings found for this month.
             </div>
           )}
         </section>
-      </div>
 
-      {/* OPERATIONAL SUMMARY */}
-      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
-        <SectionTitle
-          icon={Activity}
-          title="Operational Summary"
-          subtitle="Business activity and resource overview"
-        />
-
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
-          {operations.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div
-                key={item.label}
-                className="group flex min-w-0 flex-col justify-between gap-3 rounded-xl border border-[#edf1f7] bg-[#f9fbfe] p-3 transition hover:border-blue-200 hover:bg-blue-50/50 sm:flex-row sm:items-center sm:p-5"
-              >
-                <div className="min-w-0">
-                  <p className="break-words text-[10px] font-medium leading-4 text-[#72819a] sm:text-xs sm:leading-5">
-                    {item.label}
-                  </p>
-
-                  <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
-                    {item.value}
-                  </p>
-                </div>
-
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700 shadow-sm sm:h-11 sm:w-11 sm:rounded-xl">
-                  <Icon size={18} />
-                </div>
+        {/* Business summary */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-cyan-50 p-3 text-cyan-600">
+                <Users size={21} />
               </div>
-            );
-          })}
+              <div>
+                <p className="text-sm text-slate-500">Customer Records</p>
+                <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                  {numberFormat(data.customers.length)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Total customer records available to the report.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
+                <ClipboardList size={21} />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Total Enquiries</p>
+                <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                  {numberFormat(data.enquiries.length)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Total enquiries available in the selected data source.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-violet-50 p-3 text-violet-600">
+                <Package size={21} />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Inventory Items</p>
+                <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                  {numberFormat(data.inventory.length)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Items recorded in the inventory list.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                <Building2 size={21} />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Branches</p>
+                <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                  {numberFormat(data.branches.length)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Branch records available in the system.
+            </p>
+          </div>
         </div>
-      </section>
 
-      {/* MONTHLY REPORT SUMMARY */}
-      <section className="min-w-0 rounded-2xl border border-[#e7edf6] bg-white p-4 shadow-sm sm:p-7">
-        <SectionTitle
-          icon={FileSpreadsheet}
-          title="Monthly Report Summary"
-          subtitle="Summary of records used for financial reporting"
-        />
-
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4">
-          <div className="min-w-0 rounded-xl bg-blue-50 p-3.5 sm:p-5">
-            <p className="text-[11px] font-medium text-blue-700 sm:text-xs">
-              Payment Records
-            </p>
-
-            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
-              {report.paymentCount}
-            </p>
-          </div>
-
-          <div className="min-w-0 rounded-xl bg-red-50 p-3.5 sm:p-5">
-            <p className="text-[11px] font-medium text-red-700 sm:text-xs">
-              Expense Records
-            </p>
-
-            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
-              {report.expenseCount}
-            </p>
-          </div>
-
-          <div className="col-span-2 min-w-0 rounded-xl bg-indigo-50 p-3.5 sm:col-span-1 sm:p-5">
-            <p className="text-[11px] font-medium text-indigo-700 sm:text-xs">
-              Monthly Bookings
-            </p>
-
-            <p className="mt-2 text-xl font-bold text-[#10264d] sm:mt-3 sm:text-2xl">
-              {report.bookings}
-            </p>
+        {/* Bottom info */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">
+                Report Information
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Financial totals are calculated from the payment and expense
+                records for the selected month. The profit shown is revenue
+                minus recorded expenses; it does not include unrecorded costs.
+                Customer, inventory, equipment and branch counts show the
+                records available in the selected data source. When a storage
+                collection is empty, demo preview records can be used to help
+                review the interface.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                Last refreshed: {lastUpdated.toLocaleString("en-IN")}
+              </p>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* REPORT NOTICE */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 p-3.5 sm:gap-3 sm:p-5">
-        <AlertTriangle
-          size={19}
-          className="mt-0.5 shrink-0 text-amber-700"
-        />
-
-        <p className="min-w-0 break-words text-[11px] leading-5 text-amber-900 sm:text-xs sm:leading-6">
-          These reports use data saved in this browser. Revenue
-          includes the received or advance amount recorded in
-          Payments. Additional payments are included in the
-          invoice's current received total, so they are
-          attributed to the invoice date rather than their
-          individual transaction dates. Estimated profit is
-          recorded income minus recorded expenses, not an
-          audited financial statement. Customer, lead,
-          equipment and branch counts are overall totals;
-          bookings and financial values use the selected month.
-        </p>
       </div>
     </div>
   );

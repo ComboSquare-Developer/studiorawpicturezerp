@@ -17,18 +17,9 @@ import {
 } from "lucide-react";
 
 const features = [
-  {
-    icon: CalendarDays,
-    title: "Bookings",
-  },
-  {
-    icon: UsersRound,
-    title: "Clients & Team",
-  },
-  {
-    icon: ChartNoAxesCombined,
-    title: "Analytics",
-  },
+  { icon: CalendarDays, title: "Bookings" },
+  { icon: UsersRound, title: "Clients & Team" },
+  { icon: ChartNoAxesCombined, title: "Analytics" },
 ];
 
 export default function Login({ onLogin }) {
@@ -55,29 +46,9 @@ export default function Login({ onLogin }) {
   return (
     <div className="h-[100dvh] w-full overflow-hidden bg-[#f6f8fc] font-sans text-[#142b4d]">
       <div className="flex h-full w-full">
+
         {/* LEFT BRAND SECTION */}
-        <section className="relative hidden h-full w-[52%] flex-col justify-between overflow-hidden bg-[#09172c] px-9 py-6 text-white lg:flex xl:px-14 xl:py-8 2xl:px-16">
-          {/* Background */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#142d4e] via-[#0b1b32] to-[#050c19]" />
-
-            <div className="absolute -right-40 -top-40 h-[450px] w-[450px] rounded-full bg-[#315d99]/20 blur-[100px]" />
-
-            <div className="absolute -bottom-40 -left-32 h-[400px] w-[400px] rounded-full bg-[#bda47b]/10 blur-[100px]" />
-
-            <div
-              className="absolute inset-0 opacity-[0.04]"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
-                backgroundSize: "65px 65px",
-              }}
-            />
-
-            <div className="absolute right-[-120px] top-[25%] h-[350px] w-[350px] rounded-full border border-white/[0.08]" />
-            <div className="absolute right-[-80px] top-[30%] h-[270px] w-[270px] rounded-full border border-white/[0.08]" />
-            <div className="absolute right-[-40px] top-[35%] h-[190px] w-[190px] rounded-full border border-white/[0.08]" />
-          </div>
+        <section className="relative hidden h-full w-[52%] flex-col justify-between overflow-hidden bg-[#0b1f3a] px-9 py-6 text-white lg:flex xl:px-14 xl:py-8 2xl:px-16">
 
           {/* Brand Header */}
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
@@ -92,14 +63,10 @@ export default function Login({ onLogin }) {
                 </h1>
 
                 <p className="mt-1 text-[9px] font-medium tracking-[0.25em] text-[#d5bb8e]">
-                  MANAGEMENT SUITE
+                  ERP &amp; CRM
                 </p>
               </div>
             </div>
-
-            <span className="hidden rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-medium tracking-wide text-white/60 xl:block">
-              ERP & CRM
-            </span>
           </div>
 
           {/* Main Content */}
@@ -110,15 +77,15 @@ export default function Login({ onLogin }) {
             </div>
 
             {/* Photography Icon */}
-            <div className="relative mb-5 flex h-16 w-16 items-center justify-center">
-              <div className="absolute inset-0 rounded-[20px] border border-[#d5bb8e]/20 bg-gradient-to-br from-white/10 to-white/[0.02]" />
+            {/* <div className="relative mb-5 flex h-16 w-16 items-center justify-center"> */}
+              <div className="absolute inset-0 rounded-[20px] border border-[#d5bb8e]/20 bg-white/[0.04]" />
 
-              <Aperture
+              {/* <Aperture
                 size={38}
                 strokeWidth={1.2}
                 className="relative text-[#e6d0a8]"
-              />
-            </div>
+              /> */}
+            {/* </div> */}
 
             <h2 className="text-[clamp(32px,3.2vw,54px)] font-semibold leading-[1.13] tracking-[-0.045em]">
               Behind Every
@@ -154,6 +121,7 @@ export default function Login({ onLogin }) {
               ))}
             </div>
 
+            {/* Benefits */}
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
               {[
                 "Unified Operations",
@@ -177,22 +145,20 @@ export default function Login({ onLogin }) {
           {/* Footer */}
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-4 text-[10px] text-[#8396b0]">
             <p>© 2026 Studio Raw Picturez</p>
-
-            <p className="hidden xl:block">
-              Crafted for creative professionals
-            </p>
           </div>
         </section>
 
         {/* RIGHT LOGIN SECTION */}
         <section className="relative flex h-full w-full items-center justify-center overflow-hidden px-4 py-3 sm:px-8 lg:w-[48%] lg:px-7 xl:px-12">
-          {/* Background */}
+
+          {/* Right Background - unchanged */}
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#e7edf7] blur-[80px]" />
             <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[#edf0f7] blur-[80px]" />
           </div>
 
           <div className="relative z-10 w-full max-w-[430px]">
+
             {/* Mobile Brand */}
             <div className="mb-4 flex items-center gap-3 lg:hidden">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102b53] text-white">
@@ -203,22 +169,15 @@ export default function Login({ onLogin }) {
                 <p className="text-sm font-bold tracking-[0.07em] text-[#102b53]">
                   STUDIO RAW PICTUREZ
                 </p>
-
-                <p className="mt-0.5 text-[9px] font-semibold tracking-[0.18em] text-[#b19464]">
-                  MANAGEMENT SUITE
-                </p>
               </div>
             </div>
 
             {/* Login Card */}
             <div className="rounded-[20px] border border-[#e7ebf2] bg-white p-5 shadow-[0_18px_65px_rgba(16,43,83,0.055)] sm:p-6 lg:p-7">
+
               {/* Login Heading */}
               <div className="mb-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf3fb] text-[#173b6d]">
-                    <Aperture size={22} strokeWidth={1.6} />
-                  </div>
-
                   <div className="flex items-center gap-1.5 rounded-full border border-[#e7ebf2] bg-[#f8fafc] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#65748a]">
                     <ShieldCheck size={13} />
                     Workspace
@@ -240,6 +199,7 @@ export default function Login({ onLogin }) {
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
+
                 {/* Email */}
                 <div>
                   <label
@@ -306,9 +266,7 @@ export default function Login({ onLogin }) {
                         setShowPassword((previous) => !previous)
                       }
                       aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
+                        showPassword ? "Hide password" : "Show password"
                       }
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9aa8ba] transition hover:text-[#102b53]"
                     >

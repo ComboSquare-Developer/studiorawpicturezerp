@@ -1,342 +1,188 @@
 
 import {
   LayoutDashboard,
-  Users,
   MessageSquare,
+  Users,
   CalendarDays,
-  CreditCard,
+  Wallet,
   ClipboardCheck,
   Camera,
-  Images,
-  BookOpen,
-  Truck,
-  HeartHandshake,
+  PackageCheck,
   Boxes,
-  Aperture,
-  UserCheck,
-  Wallet,
+  Wrench,
+  Receipt,
   Building2,
   BarChart3,
-  ShieldCheck,
   Bell,
-  ScrollText,
   Settings,
   LogOut,
   X,
-  Sparkles,
-  ChevronRight,
 } from "lucide-react";
+
+import studioRawLogo from "../assets/favicon.png";
 
 const menuGroups = [
   {
-    title: "OVERVIEW",
+    title: "WORKSPACE",
     items: [
-      {
-        label: "Dashboard",
-        key: "dashboard",
-        icon: LayoutDashboard,
-      },
+      { label: "Dashboard", id: "dashboard", icon: LayoutDashboard },
+      { label: "Enquiries", id: "enquiries", icon: MessageSquare },
+      { label: "Customers", id: "customers", icon: Users },
+      { label: "Booking Calendar", id: "bookings", icon: CalendarDays },
     ],
   },
   {
-    title: "CRM MANAGEMENT",
+    title: "STUDIO OPERATIONS",
     items: [
-      {
-        label: "Enquiries & Leads",
-        key: "enquiries",
-        icon: MessageSquare,
-      },
-      {
-        label: "Customers",
-        key: "customers",
-        icon: Users,
-      },
-      {
-        label: "Booking & Calendar",
-        key: "bookings",
-        icon: CalendarDays,
-      },
-      {
-        label: "Payment & Billing",
-        key: "payments",
-        icon: CreditCard,
-      },
+      { label: "Payments", id: "payments", icon: Wallet },
+      { label: "Shoot Readiness", id: "preshoot", icon: ClipboardCheck },
+      { label: "Media Tracer", id: "photoshoot", icon: Camera },
+      { label: "Delivery", id: "delivery", icon: PackageCheck },
     ],
   },
   {
-    title: "PHOTOGRAPHY WORKFLOW",
+    title: "RESOURCES",
     items: [
-      {
-        label: "Pre-Shoot Preparation",
-        key: "preshoot",
-        icon: ClipboardCheck,
-      },
-      {
-        label: "Photo Shoot & Data",
-        key: "photoshoot",
-        icon: Camera,
-      },
-      {
-        label: "Photo Selection & Editing",
-        key: "photoediting",
-        icon: Images,
-      },
-      {
-        label: "Album Design & Printing",
-        key: "albumprinting",
-        icon: BookOpen,
-      },
-      {
-        label: "Delivery Management",
-        key: "delivery",
-        icon: Truck,
-      },
-      {
-        label: "Follow-up & CRM",
-        key: "followup",
-        icon: HeartHandshake,
-      },
+      { label: "Inventory", id: "inventory", icon: Boxes },
+      { label: "Equipment", id: "equipment", icon: Wrench },
+      { label: "Expenses", id: "expenses", icon: Receipt },
+      { label: "Branches", id: "branches", icon: Building2 },
     ],
   },
   {
-    title: "ERP MANAGEMENT",
+    title: "INSIGHTS & SYSTEM",
     items: [
-      {
-        label: "Inventory Management",
-        key: "inventory",
-        icon: Boxes,
-      },
-      {
-        label: "Equipment Management",
-        key: "equipment",
-        icon: Aperture,
-      },
-      {
-        label: "Staff Attendance",
-        key: "attendance",
-        icon: UserCheck,
-      },
-      {
-        label: "Expense & Profit",
-        key: "expenses",
-        icon: Wallet,
-      },
-      {
-        label: "Multi-Branch Management",
-        key: "branches",
-        icon: Building2,
-      },
-    ],
-  },
-  {
-    title: "ADMINISTRATION",
-    items: [
-      {
-        label: "Reports & Analytics",
-        key: "reports",
-        icon: BarChart3,
-      },
-      {
-        label: "Roles & Permissions",
-        key: "roles",
-        icon: ShieldCheck,
-      },
-      {
-        label: "Notifications & Reminders",
-        key: "notifications",
-        icon: Bell,
-      },
-      {
-        label: "Audit Logs & Activity",
-        key: "auditlogs",
-        icon: ScrollText,
-      },
-      {
-        label: "Settings & Staff",
-        key: "settings",
-        icon: Settings,
-      },
+      { label: "Reports", id: "reports", icon: BarChart3 },
+      { label: "Notifications", id: "notifications", icon: Bell },
+      { label: "Settings", id: "settings", icon: Settings },
     ],
   },
 ];
 
 export default function Sidebar({
-  activePage,
-  setActivePage,
-  onNavigate,
-  sidebarOpen,
-  setSidebarOpen,
-  onLogout,
+  activePage = "dashboard",
+  setActivePage = () => {},
+  sidebarOpen = false,
+  setSidebarOpen = () => {},
+  onLogout = () => {},
 }) {
-  const navigate = (page) => {
-    if (typeof onNavigate === "function") {
-      onNavigate(page);
-    } else if (typeof setActivePage === "function") {
-      setActivePage(page);
-    }
+  const normalize = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/[-_\s]/g, "");
 
-    setSidebarOpen?.(false);
+  const isActive = (id) => normalize(activePage) === normalize(id);
+
+  const navigate = (id) => {
+    setActivePage(id);
+    setSidebarOpen(false);
   };
 
   return (
     <>
-      {/* MOBILE OVERLAY */}
+      {/* Mobile Overlay */}
       {sidebarOpen && (
         <button
           type="button"
           aria-label="Close sidebar overlay"
-          onClick={() => setSidebarOpen?.(false)}
-          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm lg:hidden"
         />
       )}
 
-      {/* MAIN SIDEBAR */}
+      {/* Dark Blue Sidebar */}
       <aside
-        aria-label="Main navigation"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(288px,85vw)] max-w-full flex-col overflow-hidden bg-[#10264d] text-white shadow-2xl transition-transform duration-300 ease-in-out lg:w-[280px] lg:translate-x-0 lg:bg-[#081a34] lg:shadow-[8px_0_40px_rgba(8,26,52,0.12)] ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col overflow-hidden border-r border-white/10 bg-[#08152F] text-white shadow-2xl transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } lg:translate-x-0`}
       >
-        {/* DESKTOP BACKGROUND DECORATION */}
-        <div className="pointer-events-none absolute inset-0 hidden lg:block">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#102b50] via-[#0a1e3b] to-[#061429]" />
+        {/* Decorative Background */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
 
-          <div className="absolute -right-32 -top-28 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
+      {/* Brand Header */}
+<div className="relative flex h-[86px] shrink-0 items-center justify-between border-b border-white/10 px-4">
+  <button
+    type="button"
+    onClick={() => navigate("dashboard")}
+    aria-label="Go to Dashboard"
+    className="flex min-w-0 items-center gap-2.5 text-left"
+  >
+    <img
+      src={studioRawLogo}
+      alt="Studio Raw Picturez Logo"
+      className="h-12 w-12 shrink-0 object-contain"
+    />
 
-          <div className="absolute -left-32 bottom-10 h-72 w-72 rounded-full bg-cyan-400/5 blur-3xl" />
-        </div>
+    <span className="whitespace-nowrap text-[15px] font-extrabold tracking-wide text-white">
+      STUDIO RAW PICTUREZ
+    </span>
+  </button>
 
-        {/* BRAND SECTION */}
-        <div className="relative z-10 flex h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/10 px-5 lg:h-[96px] lg:border-white/[0.08] lg:px-6">
+  <button
+    type="button"
+    aria-label="Close sidebar"
+    onClick={() => setSidebarOpen(false)}
+    className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden"
+  >
+    <X size={20} />
+  </button>
+</div>
 
-          {/* MOBILE BRAND - UNCHANGED */}
-          <div className="min-w-0 flex-1 lg:hidden">
-            <h1 className="truncate text-lg font-bold tracking-wide">
-              STUDIO RAW
-            </h1>
-
-            <p className="break-words text-[10px] tracking-[0.14em] text-blue-200">
-              PICTUREZ ERP & CRM
-            </p>
-          </div>
-
-          {/* PREMIUM DESKTOP BRAND */}
-          <div className="hidden min-w-0 items-center gap-3 lg:flex">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-white/20 to-white/5 shadow-lg shadow-black/10">
-              <Camera size={24} strokeWidth={1.6} />
-
-              <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-[3px] border-[#102b50] bg-blue-300" />
-            </div>
-
-            <div className="min-w-0">
-              <h1 className="truncate text-[17px] font-extrabold tracking-[0.045em] text-white">
-                STUDIO RAW
-              </h1>
-
-              <p className="mt-1 text-[9px] font-medium tracking-[0.17em] text-blue-200/65">
-                PICTUREZ ERP & CRM
-              </p>
-            </div>
-          </div>
-
-          {/* MOBILE CLOSE BUTTON */}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen?.(false)}
-            aria-label="Close sidebar"
-            className="shrink-0 rounded-lg p-2 transition hover:bg-white/10 lg:hidden"
-          >
-            <X size={21} />
-          </button>
-        </div>
-
-        {/* DESKTOP WORKSPACE CARD */}
-        <div className="relative z-10 hidden px-4 pb-1 pt-5 lg:block">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-400/15 text-blue-200">
-              <Sparkles size={17} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-white/90">
-                Studio Workspace
-              </p>
-
-              <p className="mt-0.5 text-[10px] text-blue-200/55">
-                Management Console
-              </p>
-            </div>
-
-            <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-          </div>
-        </div>
-
-        {/* NAVIGATION MENU */}
-        <nav className="relative z-10 min-h-0 w-full flex-1 space-y-6 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-5 lg:space-y-7 lg:px-3 lg:pb-5 lg:pt-6 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.2)_transparent]">
+        {/* Navigation */}
+        <nav className="relative flex-1 space-y-6 overflow-y-auto px-4 py-6 [scrollbar-color:#334766_transparent] [scrollbar-width:thin]">
           {menuGroups.map((group) => (
-            <div
-              key={group.title}
-              className="w-full min-w-0"
-            >
-              {/* GROUP TITLE */}
-              <p className="mb-3 px-4 text-[10px] font-bold tracking-[0.16em] text-blue-300/70 lg:mb-3.5 lg:text-[9px] lg:tracking-[0.2em] lg:text-blue-200/40">
-                {group.title}
-              </p>
+            <div key={group.title}>
+              <div className="mb-3 flex items-center gap-2 px-3">
+                <span className="h-1 w-1 rounded-full bg-blue-400" />
 
-              {/* GROUP ITEMS */}
-              <div className="flex w-full flex-col gap-1 lg:gap-1.5">
+                <p className="text-[10px] font-extrabold tracking-[1.8px] text-slate-400">
+                  {group.title}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = activePage === item.key;
+                  const active = isActive(item.id);
 
                   return (
                     <button
-                      key={item.key}
+                      key={item.id}
                       type="button"
-                      onClick={() => navigate(item.key)}
+                      onClick={() => navigate(item.id)}
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex min-h-12 w-full min-w-0 items-center gap-3 rounded-xl px-4 py-3 text-left text-[13px] font-medium transition lg:min-h-[45px] lg:rounded-xl lg:px-3.5 lg:py-2.5 lg:duration-200 ${
+                      className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3.5 py-3 transition-all duration-200 ${
                         active
-                          ? "bg-white text-[#10264d] shadow-sm lg:bg-gradient-to-r lg:from-[#f3f7ff] lg:to-white lg:text-[#10264d] lg:shadow-[0_6px_20px_rgba(0,0,0,0.12)]"
-                          : "text-blue-100 hover:bg-white/10 hover:text-white lg:text-blue-100/65 lg:hover:bg-white/[0.075] lg:hover:text-white"
+                          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-950/40"
+                          : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
                       }`}
                     >
-                      {/* DESKTOP ACTIVE INDICATOR */}
                       {active && (
-                        <span className="absolute bottom-2 left-0 top-2 hidden w-[3px] rounded-r-full bg-[#4979c5] lg:block" />
+                        <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full bg-blue-200" />
                       )}
 
-                      {/* DESKTOP ICON */}
-                      <span
-                        className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors lg:flex ${
-                          active
-                            ? "bg-[#10264d]/10 text-[#10264d]"
-                            : "bg-white/[0.045] text-blue-100/70 group-hover:bg-white/10 group-hover:text-white"
-                        }`}
-                      >
-                        <Icon size={17} strokeWidth={1.8} />
-                      </span>
-
-                      {/* MOBILE ICON - UNCHANGED */}
                       <Icon
-                        size={18}
-                        className="shrink-0 lg:hidden"
+                        size={19}
+                        strokeWidth={active ? 2.3 : 1.8}
+                        className={`shrink-0 transition-colors ${
+                          active
+                            ? "text-white"
+                            : "text-slate-400 group-hover:text-blue-300"
+                        }`}
                       />
 
-                      {/* MENU LABEL */}
-                      <span className="min-w-0 flex-1 break-words leading-5 lg:text-[12.5px] lg:font-medium">
+                      <span
+                        className={`text-left text-[12.5px] ${
+                          active ? "font-bold" : "font-medium"
+                        }`}
+                      >
                         {item.label}
                       </span>
 
-                      {/* DESKTOP ARROW */}
-                      <ChevronRight
-                        size={14}
-                        className={`hidden shrink-0 transition-all duration-200 lg:block ${
-                          active
-                            ? "text-[#315e9a] opacity-100"
-                            : "text-blue-200/50 opacity-0 group-hover:opacity-100"
-                        }`}
-                      />
+                      {active && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
+                      )}
                     </button>
                   );
                 })}
@@ -345,20 +191,25 @@ export default function Sidebar({
           ))}
         </nav>
 
-        {/* LOGOUT SECTION */}
-        <div className="relative z-10 w-full shrink-0 border-t border-white/10 bg-[#10264d] p-3 lg:border-white/[0.08] lg:bg-[#07172d]/80 lg:p-4">
+        {/* Logout and Footer */}
+        <div className="relative shrink-0 border-t border-white/10 p-4">
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/10 hover:text-red-100 lg:rounded-xl lg:border lg:border-transparent lg:px-3.5 lg:text-[13px] lg:hover:border-red-300/10"
+            className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3.5 py-3 text-sm font-semibold text-slate-300 transition-all duration-200 hover:border-red-400/10 hover:bg-red-500/10 hover:text-red-300"
           >
-            <LogOut
-              size={19}
-              className="shrink-0 lg:h-[18px] lg:w-[18px]"
-            />
-
+            <LogOut size={19} />
             <span>Logout</span>
           </button>
+
+          <div className="mt-4 border-t border-white/[0.07] pt-3 text-center">
+            <p className="text-[10px] font-medium tracking-wide text-white">
+              STUDIO RAW ERP
+            </p>
+            <p className="mt-1 text-[9px] text-slate-400">
+              © 2026 · All rights reserved
+            </p>
+          </div>
         </div>
       </aside>
     </>

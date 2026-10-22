@@ -9,7 +9,6 @@ import {
   Images,
   BookOpen,
   Truck,
-  HeartHandshake,
   TrendingUp,
   Wallet,
   Activity,
@@ -21,89 +20,172 @@ const STORAGE = {
   enquiries: "studio_raw_enquiries",
   bookings: "studioraw_bookings",
   payments: "studioraw_payments",
-  preshoot: "studioraw_preshoot",
   photoshoots: "studioraw_photoshoots",
   editing: "studioraw_photo_editing",
   albums: "studioraw_album_printing",
   deliveries: "studioraw_deliveries",
-  followups: "studioraw_followups",
 };
 
-const readData = (key) => {
+const DEMO_DATA = {
+  customers: [
+    { id: "demo-c1", name: "Arun Kumar", customerName: "Arun Kumar" },
+    { id: "demo-c2", name: "Priya", customerName: "Priya" },
+    { id: "demo-c3", name: "Karthik", customerName: "Karthik" },
+    { id: "demo-c4", name: "Divya", customerName: "Divya" },
+    { id: "demo-c5", name: "Vijay", customerName: "Vijay" },
+  ],
+  enquiries: [
+    { id: "demo-e1", name: "Wedding Photography" },
+    { id: "demo-e2", name: "Pre-Wedding Shoot" },
+    { id: "demo-e3", name: "Birthday Photography" },
+  ],
+  bookings: [
+    {
+      id: "demo-b1",
+      customer: "Arun Kumar",
+      event: "Wedding Photography",
+      eventDate: "2026-10-25",
+      bookingDate: "2026-10-18",
+      createdAt: "2026-10-18",
+      status: "Confirmed",
+    },
+    {
+      id: "demo-b2",
+      customer: "Priya",
+      event: "Pre-Wedding Shoot",
+      eventDate: "2026-10-28",
+      bookingDate: "2026-10-20",
+      createdAt: "2026-10-20",
+      status: "Confirmed",
+    },
+    {
+      id: "demo-b3",
+      customer: "Karthik",
+      event: "Birthday Photography",
+      eventDate: "2026-11-05",
+      bookingDate: "2026-10-21",
+      createdAt: "2026-10-21",
+      status: "Confirmed",
+    },
+  ],
+  payments: [
+    {
+      id: "demo-p1",
+      customerName: "Arun Kumar",
+      amount: 25000,
+      paidAmount: 15000,
+      paymentDate: "2026-10-18",
+      createdAt: "2026-10-18",
+      status: "Partial",
+    },
+    {
+      id: "demo-p2",
+      customerName: "Priya",
+      amount: 18000,
+      paidAmount: 18000,
+      paymentDate: "2026-10-20",
+      createdAt: "2026-10-20",
+      status: "Paid",
+    },
+    {
+      id: "demo-p3",
+      customerName: "Karthik",
+      amount: 12000,
+      paidAmount: 5000,
+      paymentDate: "2026-10-21",
+      createdAt: "2026-10-21",
+      status: "Partial",
+    },
+  ],
+  photoshoots: [
+    { id: "demo-s1", customerName: "Arun Kumar", status: "Scheduled" },
+    { id: "demo-s2", customerName: "Priya", status: "Completed" },
+    { id: "demo-s3", customerName: "Karthik", status: "Scheduled" },
+  ],
+  editing: [
+    { id: "demo-ed1", customerName: "Arun Kumar", editingStatus: "Pending" },
+    { id: "demo-ed2", customerName: "Priya", editingStatus: "Completed" },
+    { id: "demo-ed3", customerName: "Karthik", editingStatus: "In Progress" },
+  ],
+  albums: [
+    { id: "demo-a1", customerName: "Arun Kumar", printingStatus: "Pending" },
+    { id: "demo-a2", customerName: "Priya", printingStatus: "Printed" },
+    { id: "demo-a3", customerName: "Karthik", printingStatus: "In Progress" },
+  ],
+  deliveries: [
+    { id: "demo-d1", customerName: "Arun Kumar", status: "Pending" },
+    { id: "demo-d2", customerName: "Priya", status: "Delivered" },
+    { id: "demo-d3", customerName: "Karthik", status: "In Progress" },
+  ],
+};
+
+function readArray(key) {
   try {
-    const saved = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(saved) ? saved : [];
+    const value = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(value) ? value : [];
   } catch {
     return [];
   }
-};
+}
 
-const getAllData = () =>
-  Object.fromEntries(
+function getAllData() {
+  const actual = Object.fromEntries(
     Object.entries(STORAGE).map(([name, key]) => [
       name,
-      readData(key),
+      readArray(key),
     ])
   );
+
+  return Object.fromEntries(
+    Object.keys(STORAGE).map((name) => [
+      name,
+      actual[name].length > 0 ? actual[name] : DEMO_DATA[name],
+    ])
+  );
+}
 
 const money = (value) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(value || 0);
-
-const todayKey = () => {
-  const d = new Date();
-
-  return `${d.getFullYear()}-${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+  }).format(Number(value) || 0);
 
 const formatDate = (value) => {
   if (!value) return "Not scheduled";
 
   const datePart = String(value).slice(0, 10);
-  const d = new Date(`${datePart}T00:00:00`);
+  const date = new Date(`${datePart}T00:00:00`);
 
-  return Number.isNaN(d.getTime())
+  return Number.isNaN(date.getTime())
     ? String(value)
-    : d.toLocaleDateString("en-IN", {
+    : date.toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
         year: "numeric",
       });
 };
 
-const toNumber = (value) => {
-  const result = Number(
-    String(value ?? "0").replace(/[₹,\s]/g, "")
-  );
-
-  return Number.isFinite(result) ? result : 0;
-};
-
 const getAmount = (item) =>
-  toNumber(
-    item.amount ?? item.totalAmount ?? item.total ?? 0
-  );
+  Number(
+    String(item.amount ?? item.totalAmount ?? item.total ?? 0)
+      .replace(/[₹,\s]/g, "")
+  ) || 0;
 
 const getPaid = (item) =>
-  toNumber(
-    item.paidAmount ?? item.amountPaid ?? item.paid ?? 0
-  );
+  Number(
+    String(item.paidAmount ?? item.amountPaid ?? item.paid ?? 0)
+      .replace(/[₹,\s]/g, "")
+  ) || 0;
 
 const paidValue = (item) => {
   const status = String(
     item.paymentStatus ?? item.status ?? ""
   ).toLowerCase();
 
-  if (status === "paid" || status === "completed") {
-    return getPaid(item) || getAmount(item);
-  }
-
-  return getPaid(item);
+  return status === "paid" || status === "completed"
+    ? getPaid(item) || getAmount(item)
+    : getPaid(item);
 };
 
 const bookingDate = (item) =>
@@ -113,92 +195,60 @@ const bookingDate = (item) =>
   item.shootDate ||
   "";
 
-/* =========================
-   STATISTICS CARD
-========================= */
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-  subtitle,
-}) {
+function StatCard({ title, value, icon: Icon, color, subtitle }) {
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-200 hover:shadow-md lg:group lg:relative lg:overflow-hidden lg:rounded-[22px] lg:border-[#e6ecf5] lg:p-6 lg:shadow-[0_5px_24px_rgba(16,38,77,0.045)] lg:hover:-translate-y-1 lg:hover:border-[#cbd9ee] lg:hover:shadow-[0_15px_35px_rgba(16,38,77,0.10)]">
-
-      <div className="pointer-events-none absolute -right-10 -top-10 hidden h-32 w-32 rounded-full bg-blue-50/70 blur-2xl lg:block" />
+    <div className="group relative w-full min-w-0 overflow-hidden rounded-2xl border border-[#e6ecf5] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#cbd9ee] hover:shadow-lg lg:rounded-[22px] lg:p-6">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-50/70 blur-2xl" />
 
       <div className="relative flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-500 lg:text-[13px] lg:font-semibold lg:text-[#75839a]">
+          <p className="text-sm font-medium text-[#75839a]">
             {title}
           </p>
 
-          <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-[#10264d] lg:mt-4 lg:text-[clamp(19px,1.65vw,28px)] lg:font-extrabold">
+          <h2 className="mt-3 break-words text-2xl font-extrabold tracking-tight text-[#10264d] lg:mt-4 lg:text-[clamp(19px,1.65vw,28px)]">
             {value}
           </h2>
 
-          <p className="mt-2 text-xs leading-5 text-slate-400 lg:mt-3 lg:text-[11px] lg:text-[#98a4b7]">
+          <p className="mt-2 text-xs leading-5 text-[#98a4b7]">
             {subtitle}
           </p>
         </div>
 
-        <div
-          className={`shrink-0 rounded-xl p-3 lg:rounded-2xl lg:p-3.5 lg:transition-transform lg:duration-300 lg:group-hover:scale-110 ${color}`}
-        >
+        <div className={`shrink-0 rounded-2xl p-3.5 transition-transform duration-300 group-hover:scale-110 ${color}`}>
           <Icon size={21} />
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-6 right-6 hidden h-[2px] rounded-full bg-gradient-to-r from-[#244d8b]/50 to-transparent opacity-0 transition-opacity duration-300 lg:block lg:group-hover:opacity-100" />
+      <div className="absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#244d8b]/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
     </div>
   );
 }
 
-/* =========================
-   SECTION TITLE
-========================= */
-
-function SectionTitle({
-  title,
-  subtitle,
-  icon: Icon,
-}) {
+function SectionTitle({ title, subtitle, icon: Icon }) {
   return (
     <div className="mb-5 flex min-w-0 items-center gap-3 lg:mb-7 lg:gap-4">
-      <div className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-[#10264d] lg:rounded-2xl lg:bg-[#edf3fc] lg:p-3">
+      <div className="shrink-0 rounded-2xl bg-[#edf3fc] p-3 text-[#10264d]">
         <Icon size={20} />
       </div>
 
       <div className="min-w-0">
-        <h2 className="break-words text-base font-bold text-[#10264d] sm:text-lg lg:text-[18px] lg:font-extrabold lg:tracking-[-0.02em]">
+        <h2 className="break-words text-base font-extrabold tracking-tight text-[#10264d] sm:text-lg">
           {title}
         </h2>
-
-        <p className="mt-1 text-xs text-slate-400 lg:text-[#91a0b5]">
-          {subtitle}
-        </p>
+        <p className="mt-1 text-xs text-[#91a0b5]">{subtitle}</p>
       </div>
     </div>
   );
 }
 
-/* =========================
-   EMPTY STATE
-========================= */
-
 function EmptyState({ message }) {
   return (
-    <div className="py-10 text-center text-sm text-slate-400 lg:rounded-2xl lg:border lg:border-dashed lg:border-[#e2e9f3] lg:bg-[#fafcff] lg:py-14">
+    <div className="rounded-2xl border border-dashed border-[#e2e9f3] bg-[#fafcff] py-12 text-center text-sm text-slate-400">
       {message}
     </div>
   );
 }
-
-/* =========================
-   CHART PANEL
-========================= */
 
 function ChartPanel({
   title,
@@ -211,82 +261,57 @@ function ChartPanel({
   formatter,
 }) {
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
-      <SectionTitle
-        title={title}
-        subtitle={subtitle}
-        icon={icon}
-      />
+    <div className="w-full min-w-0 rounded-2xl border border-[#e6ecf5] bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:p-7">
+      <SectionTitle title={title} subtitle={subtitle} icon={icon} />
 
-      <div className="w-full min-w-0">
-        <div className="grid h-56 w-full grid-cols-6 items-end gap-1 border-b border-slate-200 pb-2 sm:gap-3 lg:h-64 lg:gap-4 lg:border-[#e9eef5] lg:pb-3">
-          {data.map((item) => {
-            const value = item[dataKey] || 0;
+      <div className="grid h-56 w-full grid-cols-6 items-end gap-2 border-b border-[#e9eef5] pb-3 sm:gap-3 lg:h-64 lg:gap-4">
+        {data.map((item) => {
+          const value = item[dataKey] || 0;
+          const height = value
+            ? Math.max(6, (value / maxValue) * 85)
+            : 2;
 
-            const height = value
-              ? Math.max(6, (value / maxValue) * 85)
-              : 2;
+          return (
+            <div
+              key={item.key}
+              className="flex h-full min-w-0 flex-col items-center justify-end gap-2 lg:gap-3"
+            >
+              <span className="w-full truncate text-center text-[9px] font-semibold text-[#10264d] sm:text-xs">
+                {formatter ? formatter(value) : value}
+              </span>
 
-            return (
               <div
-                key={item.key}
-                className="flex h-full min-w-0 flex-col items-center justify-end gap-2 lg:gap-3"
-              >
-                <span
-                  className="w-full truncate text-center text-[9px] font-semibold text-[#10264d] sm:text-xs lg:text-[12px]"
-                  title={String(value)}
-                >
-                  {formatter
-                    ? formatter(value)
-                    : value}
-                </span>
+                className={`w-full max-w-12 rounded-t-lg transition-all duration-300 hover:opacity-80 lg:max-w-14 lg:rounded-t-xl ${barColor}`}
+                style={{ height: `${height}%` }}
+              />
 
-                <div
-                  className={`w-full max-w-12 rounded-t-lg transition-all duration-300 lg:max-w-14 lg:rounded-t-xl lg:hover:opacity-80 ${barColor}`}
-                  style={{
-                    height: `${height}%`,
-                  }}
-                />
-
-                <span className="text-[10px] text-slate-500 sm:text-xs lg:font-medium lg:text-[#8190a6]">
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              <span className="text-[10px] font-medium text-[#8190a6] sm:text-xs">
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/* =========================
-   INFORMATION ROW
-========================= */
-
 function InfoRow({ label, value }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0 lg:border-[#e9eef5]">
-      <p className="text-xs font-medium text-slate-400 lg:text-[11px] lg:font-semibold lg:tracking-wide">
+    <div className="flex min-w-0 flex-col gap-1 border-b border-[#e9eef5] pb-3 last:border-b-0 last:pb-0">
+      <p className="text-[11px] font-semibold text-[#91a0b5]">
         {label}
       </p>
-
-      <p className="break-words text-sm font-semibold text-[#10264d] lg:text-[13px]">
+      <p className="break-words text-sm font-semibold text-[#10264d]">
         {value || "—"}
       </p>
     </div>
   );
 }
 
-/* =========================
-   DASHBOARD
-========================= */
-
 export default function Dashboard() {
-  const [data, setData] = useState(getAllData);
-  const [lastUpdated, setLastUpdated] = useState(
-    new Date()
-  );
+  const [data, setData] = useState(() => getAllData());
+  const [lastUpdated, setLastUpdated] = useState(() => new Date());
 
   const refresh = () => {
     setData(getAllData());
@@ -294,72 +319,55 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const onStorage = () => {
-      refresh();
-    };
+    const handleUpdate = () => refresh();
 
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", onStorage);
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
 
     return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", onStorage);
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
     };
   }, []);
 
-  const today = todayKey();
+  const today = new Date().toISOString().slice(0, 10);
 
   const stats = useMemo(() => {
-    const {
-      customers,
-      enquiries,
-      bookings,
-      payments,
-      photoshoots,
-      editing,
-      albums,
-      deliveries,
-      followups,
-    } = data;
-
-    const totalBilled = payments.reduce(
+    const totalBilled = data.payments.reduce(
       (sum, item) => sum + getAmount(item),
       0
     );
 
-    const totalPaid = payments.reduce(
+    const totalPaid = data.payments.reduce(
       (sum, item) => sum + paidValue(item),
       0
     );
 
     return {
-      customers: customers.length,
-      enquiries: enquiries.length,
-      bookings: bookings.length,
+      customers: data.customers.length,
+      enquiries: data.enquiries.length,
+      bookings: data.bookings.length,
       billed: totalBilled,
       paid: totalPaid,
-      pending: Math.max(
-        0,
-        totalBilled - totalPaid
-      ),
-      shoots: photoshoots.length,
-      editingPending: editing.filter(
+      pending: Math.max(0, totalBilled - totalPaid),
+      shoots: data.photoshoots.length,
+      editingPending: data.editing.filter(
         (item) =>
-          item.editingStatus !== "Completed"
+          !["completed", "complete"].includes(
+            String(item.editingStatus || item.status || "").toLowerCase()
+          )
       ).length,
-      albumsPending: albums.filter(
+      albumsPending: data.albums.filter(
         (item) =>
-          item.printingStatus !== "Printed"
+          !["printed", "delivered", "completed"].includes(
+            String(item.printingStatus || item.status || "").toLowerCase()
+          )
       ).length,
-      deliveriesPending: deliveries.filter(
+      deliveriesPending: data.deliveries.filter(
         (item) =>
-          item.status !== "Delivered" &&
-          item.status !== "Cancelled"
-      ).length,
-      followupsPending: followups.filter(
-        (item) =>
-          item.status !== "Completed" &&
-          item.status !== "Cancelled"
+          !["delivered", "cancelled"].includes(
+            String(item.status || "").toLowerCase()
+          )
       ).length,
     };
   }, [data]);
@@ -368,54 +376,22 @@ export default function Dashboard() {
     () =>
       data.bookings
         .filter((item) => {
-          const date = String(
-            bookingDate(item)
-          ).slice(0, 10);
-
+          const date = String(bookingDate(item)).slice(0, 10);
           return date && date >= today;
         })
         .sort((a, b) =>
-          String(bookingDate(a)).localeCompare(
-            String(bookingDate(b))
-          )
+          String(bookingDate(a)).localeCompare(String(bookingDate(b)))
         )
         .slice(0, 5),
     [data.bookings, today]
   );
 
-  const upcomingFollowups = useMemo(
-    () =>
-      data.followups
-        .filter(
-          (item) =>
-            item.status !== "Completed" &&
-            item.status !== "Cancelled"
-        )
-        .sort((a, b) =>
-          String(
-            a.followupDate || "9999"
-          ).localeCompare(
-            String(b.followupDate || "9999")
-          )
-        )
-        .slice(0, 5),
-    [data.followups]
-  );
-
   const recentActivities = useMemo(() => {
     const activities = [];
 
-    const addItems = (
-      items,
-      type,
-      icon,
-      dateFields
-    ) => {
+    const addItems = (items, type, icon, dateFields) => {
       items.forEach((item, index) => {
-        const date = dateFields
-          .map((key) => item[key])
-          .find(Boolean);
-
+        const date = dateFields.map((key) => item[key]).find(Boolean);
         if (!date) return;
 
         activities.push({
@@ -437,112 +413,60 @@ export default function Dashboard() {
       });
     };
 
-    addItems(
-      data.bookings,
-      "Booking",
-      CalendarDays,
-      [
-        "createdAt",
-        "bookingDate",
-        "eventDate",
-        "date",
-      ]
-    );
-
-    addItems(
-      data.payments,
-      "Payment",
-      Wallet,
-      [
-        "createdAt",
-        "paymentDate",
-        "date",
-      ]
-    );
-
-    addItems(
-      data.deliveries,
-      "Delivery",
-      Truck,
-      [
-        "deliveredDate",
-        "expectedDate",
-      ]
-    );
-
-    addItems(
-      data.followups,
-      "Follow-up",
-      HeartHandshake,
-      ["followupDate"]
-    );
+    addItems(data.bookings, "Booking", CalendarDays, [
+      "createdAt", "bookingDate", "eventDate", "date",
+    ]);
+    addItems(data.payments, "Payment", Wallet, [
+      "createdAt", "paymentDate", "date",
+    ]);
+    addItems(data.deliveries, "Delivery", Truck, [
+      "deliveredDate", "expectedDate", "createdAt", "date",
+    ]);
+    addItems(data.photoshoots, "Photo Shoot", Camera, [
+      "shootDate", "createdAt", "date",
+    ]);
+    addItems(data.editing, "Photo Editing", Images, [
+      "createdAt", "date", "updatedAt",
+    ]);
+    addItems(data.albums, "Album Project", BookOpen, [
+      "createdAt", "date", "updatedAt",
+    ]);
 
     return activities
-      .sort((a, b) =>
-        String(b.date).localeCompare(
-          String(a.date)
-        )
-      )
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
       .slice(0, 6);
   }, [data]);
 
   const monthlyChart = useMemo(() => {
-    const months = Array.from(
-      { length: 6 },
-      (_, index) => {
-        const d = new Date();
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date();
+      date.setDate(1);
+      date.setMonth(date.getMonth() - (5 - index));
 
-        d.setDate(1);
-        d.setMonth(
-          d.getMonth() - (5 - index)
-        );
-
-        return {
-          key: `${d.getFullYear()}-${String(
-            d.getMonth() + 1
-          ).padStart(2, "0")}`,
-          label: d.toLocaleDateString(
-            "en-IN",
-            { month: "short" }
-          ),
-          bookings: 0,
-          revenue: 0,
-        };
-      }
-    );
+      return {
+        key: `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")}`,
+        label: date.toLocaleDateString("en-IN", { month: "short" }),
+        bookings: 0,
+        revenue: 0,
+      };
+    });
 
     data.bookings.forEach((item) => {
-      const date =
-        item.bookingDate ||
-        item.createdAt ||
-        item.date;
-
+      const date = item.bookingDate || item.createdAt || item.date;
       const month = months.find(
-        (entry) =>
-          String(date || "").slice(0, 7) ===
-          entry.key
+        (entry) => String(date || "").slice(0, 7) === entry.key
       );
-
-      if (month) {
-        month.bookings += 1;
-      }
+      if (month) month.bookings += 1;
     });
 
     data.payments.forEach((item) => {
-      const date =
-        item.paymentDate ||
-        item.createdAt ||
-        item.date;
-
+      const date = item.paymentDate || item.createdAt || item.date;
       const month = months.find(
-        (entry) =>
-          String(date || "").slice(0, 7) ===
-          entry.key
+        (entry) => String(date || "").slice(0, 7) === entry.key
       );
-
-      if (month) {
-        month.revenue += paidValue(item);
-      }
+      if (month) month.revenue += paidValue(item);
     });
 
     return months;
@@ -550,16 +474,12 @@ export default function Dashboard() {
 
   const maxBookings = Math.max(
     1,
-    ...monthlyChart.map(
-      (item) => item.bookings
-    )
+    ...monthlyChart.map((item) => item.bookings)
   );
 
   const maxRevenue = Math.max(
     1,
-    ...monthlyChart.map(
-      (item) => item.revenue
-    )
+    ...monthlyChart.map((item) => item.revenue)
   );
 
   const cards = [
@@ -575,7 +495,7 @@ export default function Dashboard() {
       value: stats.enquiries,
       icon: MessageSquare,
       color: "bg-indigo-50 text-indigo-700",
-      subtitle: "Customer leads",
+      subtitle: "Customer enquiries",
     },
     {
       title: "Total Bookings",
@@ -626,49 +546,49 @@ export default function Dashboard() {
       color: "bg-rose-50 text-rose-700",
       subtitle: "Awaiting delivery",
     },
-    {
-      title: "Pending Follow-ups",
-      value: stats.followupsPending,
-      icon: HeartHandshake,
-      color: "bg-teal-50 text-teal-700",
-      subtitle: "Customer follow-ups",
-    },
   ];
 
-  return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-slate-50 px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:bg-[#f5f7fb] lg:px-8 lg:py-8 2xl:px-10">
+  const isDemo = Object.entries(STORAGE).some(
+    ([name, key]) =>
+      readArray(key).length === 0 && DEMO_DATA[name].length > 0
+  );
 
-      {/* DASHBOARD HEADING */}
+  return (
+    <div className="min-h-screen w-full min-w-0 max-w-full bg-[#f5f7fb] px-3 py-4 text-slate-800 sm:px-6 sm:py-6 lg:px-8 lg:py-8 2xl:px-10">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:mb-8">
         <div className="min-w-0">
           <p className="mb-2 hidden text-[11px] font-bold uppercase tracking-[0.18em] text-[#7690b2] lg:block">
             Studio Performance
           </p>
-
-          <h1 className="text-xl font-bold text-[#10264d] sm:text-2xl lg:text-[30px] lg:font-extrabold lg:tracking-[-0.04em]">
+          <h1 className="text-xl font-extrabold tracking-tight text-[#10264d] sm:text-2xl lg:text-[30px]">
             Dashboard Overview
           </h1>
-
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm lg:mt-2 lg:text-[#8290a5]">
-            Welcome to Studio Raw Picturez ERP & CRM
+          <p className="mt-2 text-xs text-[#8290a5] sm:text-sm">
+            Welcome to Studio Raw Picturez ERP &amp; CRM
+          </p>
+          <p className="mt-2 text-[11px] text-slate-400">
+            Last refreshed: {lastUpdated.toLocaleTimeString("en-IN")}
           </p>
         </div>
 
         <button
           type="button"
           onClick={refresh}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#10264d] hover:bg-blue-50 sm:w-auto lg:rounded-2xl lg:border-[#e2e8f2] lg:px-5 lg:shadow-[0_4px_16px_rgba(16,38,77,0.04)] lg:transition-all lg:duration-200 lg:hover:-translate-y-0.5 lg:hover:shadow-md"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#e2e8f2] bg-white px-4 py-3 text-sm font-semibold text-[#10264d] shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md sm:w-auto lg:rounded-2xl lg:px-5"
         >
           <RefreshCw size={17} />
           Refresh Dashboard
         </button>
       </div>
 
-      {/* BUSINESS OVERVIEW BANNER */}
-      <div className="mb-6 w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-r from-[#10264d] to-[#244d8b] p-5 text-white shadow-lg sm:p-8 lg:relative lg:mb-8 lg:rounded-[28px] lg:bg-gradient-to-br lg:from-[#091b36] lg:via-[#143662] lg:to-[#28548b] lg:p-9 lg:shadow-[0_18px_45px_rgba(16,38,77,0.15)]">
+      {isDemo && (
+        <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Demo preview is shown for sections with no saved records. Demo values are not saved to your browser.
+        </div>
+      )}
 
-        {/* DESKTOP DECORATION */}
-        <div className="pointer-events-none absolute inset-0 hidden overflow-hidden lg:block">
+      <div className="relative mb-6 w-full min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#091b36] via-[#143662] to-[#28548b] p-5 text-white shadow-lg sm:p-8 lg:mb-8 lg:rounded-[28px] lg:p-9">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/10" />
           <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/10" />
           <div className="absolute -right-32 bottom-[-170px] h-[350px] w-[350px] rounded-full bg-blue-300/10 blur-[70px]" />
@@ -676,26 +596,21 @@ export default function Dashboard() {
 
         <div className="relative flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-blue-200 sm:text-sm lg:text-[12px] lg:font-semibold lg:tracking-[0.12em]">
+            <p className="text-xs text-blue-200 sm:text-sm lg:font-semibold lg:tracking-[0.12em]">
               Studio Business Overview
             </p>
-
-            <h2 className="mt-2 break-words text-xl font-bold sm:text-2xl lg:mt-4 lg:text-[30px] lg:font-extrabold lg:tracking-[-0.035em]">
+            <h2 className="mt-3 break-words text-xl font-bold sm:text-2xl lg:mt-4 lg:text-[30px] lg:font-extrabold">
               Manage Your Studio Smarter
             </h2>
-
-            <p className="mt-2 max-w-xl text-xs leading-6 text-blue-100 sm:text-sm lg:mt-4 lg:max-w-2xl lg:leading-7 lg:text-blue-100/75">
-              Track customers, bookings, payments,
-              production and deliveries from one dashboard.
+            <p className="mt-3 max-w-2xl text-xs leading-6 text-blue-100/80 sm:text-sm lg:mt-4 lg:leading-7">
+              Track customers, bookings, payments, production and deliveries from one dashboard.
             </p>
           </div>
-
-          <div className="hidden shrink-0 rounded-2xl bg-white/10 p-4 sm:block lg:rounded-[22px] lg:border lg:border-white/15 lg:bg-white/10 lg:p-5 lg:backdrop-blur-sm">
+          <div className="hidden shrink-0 rounded-[22px] border border-white/15 bg-white/10 p-5 backdrop-blur-sm sm:block">
             <Activity size={36} />
           </div>
         </div>
 
-        {/* FINANCIAL DETAILS */}
         <div className="relative mt-6 grid grid-cols-1 gap-4 border-t border-white/20 pt-5 md:grid-cols-3 lg:mt-8 lg:gap-5 lg:pt-7">
           {[
             ["Total Billed", stats.billed],
@@ -704,13 +619,10 @@ export default function Dashboard() {
           ].map(([label, amount]) => (
             <div
               key={label}
-              className="min-w-0 rounded-xl bg-white/10 p-4 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-white/[0.09] lg:p-5 lg:backdrop-blur-sm lg:transition-all lg:duration-300 lg:hover:bg-white/[0.15]"
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.09] p-4 backdrop-blur-sm transition hover:bg-white/[0.15] lg:p-5"
             >
-              <p className="text-xs text-blue-200 lg:text-[12px] lg:font-medium">
-                {label}
-              </p>
-
-              <p className="mt-2 break-words text-xl font-bold lg:mt-3 lg:text-[clamp(19px,1.7vw,27px)] lg:font-extrabold">
+              <p className="text-xs text-blue-200">{label}</p>
+              <p className="mt-3 break-words text-xl font-extrabold lg:text-[clamp(19px,1.7vw,27px)]">
                 {money(amount)}
               </p>
             </div>
@@ -718,17 +630,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ALL STATISTICS */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 lg:mb-8 lg:gap-5">
         {cards.map((card) => (
-          <StatCard
-            key={card.title}
-            {...card}
-          />
+          <StatCard key={card.title} {...card} />
         ))}
       </div>
 
-      {/* CHARTS */}
       <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 lg:mb-8 lg:gap-5">
         <ChartPanel
           title="Booking Overview"
@@ -739,7 +646,6 @@ export default function Dashboard() {
           maxValue={maxBookings}
           barColor="bg-[#244d8b]"
         />
-
         <ChartPanel
           title="Revenue Overview"
           subtitle="Recorded receipts by month"
@@ -749,18 +655,13 @@ export default function Dashboard() {
           maxValue={maxRevenue}
           barColor="bg-emerald-500"
           formatter={(value) =>
-            value >= 1000
-              ? `${(value / 1000).toFixed(1)}k`
-              : value
+            value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value
           }
         />
       </div>
 
-      {/* UPCOMING BOOKINGS AND FOLLOW-UPS */}
       <div className="mb-6 grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 lg:mb-8 lg:gap-5">
-
-        {/* UPCOMING BOOKINGS */}
-        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
+        <div className="min-w-0 rounded-2xl border border-[#e6ecf5] bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:p-7">
           <SectionTitle
             title="Upcoming Bookings"
             subtitle="Scheduled customer events"
@@ -774,27 +675,16 @@ export default function Dashboard() {
               {upcomingBookings.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
+                  className="flex min-w-0 flex-col gap-3 rounded-2xl border border-[#e9eef6] bg-[#f8faff] p-4 transition hover:border-[#cbd9ee] hover:bg-white hover:shadow-sm lg:p-5"
                 >
                   <InfoRow
                     label="Customer"
-                    value={
-                      item.customer ||
-                      item.customerName ||
-                      item.name ||
-                      "Customer"
-                    }
+                    value={item.customer || item.customerName || item.name || "Customer"}
                   />
-
                   <InfoRow
                     label="Event"
-                    value={
-                      item.event ||
-                      item.eventType ||
-                      "Photography Booking"
-                    }
+                    value={item.event || item.eventType || "Photography Booking"}
                   />
-
                   <InfoRow
                     label="Event Date"
                     value={formatDate(bookingDate(item))}
@@ -805,104 +695,50 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* FOLLOW-UP REMINDERS */}
-        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
+        <div className="min-w-0 rounded-2xl border border-[#e6ecf5] bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:p-7">
           <SectionTitle
-            title="Customer Follow-up Reminders"
-            subtitle="Pending customer communications"
-            icon={HeartHandshake}
+            title="Recent Activities"
+            subtitle="Latest recorded studio workflow items"
+            icon={Activity}
           />
 
-          {upcomingFollowups.length === 0 ? (
-            <EmptyState message="No pending follow-ups" />
+          {recentActivities.length === 0 ? (
+            <EmptyState message="No recent activities available" />
           ) : (
             <div className="flex flex-col gap-3 lg:gap-4">
-              {upcomingFollowups.map((item, index) => (
-                <div
-                  key={item.id || index}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
-                >
-                  <InfoRow
-                    label="Customer"
-                    value={
-                      item.customer ||
-                      item.customerName ||
-                      "Customer"
-                    }
-                  />
+              {recentActivities.map((item) => {
+                const Icon = item.icon;
 
-                  <InfoRow
-                    label="Follow-up Type"
-                    value={item.type || "Follow-up"}
-                  />
-
-                  <InfoRow
-                    label="Follow-up Date"
-                    value={formatDate(item.followupDate)}
-                  />
-                </div>
-              ))}
+                return (
+                  <div
+                    key={item.id}
+                    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-[#e9eef6] bg-[#f8faff] p-4 transition hover:border-[#cbd9ee] hover:bg-white hover:shadow-sm lg:p-5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 rounded-2xl bg-blue-50 p-3 text-blue-700">
+                        <Icon size={19} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-semibold text-[#10264d]">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {item.type}
+                        </p>
+                      </div>
+                    </div>
+                    <InfoRow label="Date" value={formatDate(item.date)} />
+                    <InfoRow label="Status" value={item.status} />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* RECENT ACTIVITIES */}
-      <div className="w-full min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 lg:rounded-[24px] lg:border-[#e6ecf5] lg:p-7 lg:shadow-[0_6px_28px_rgba(16,38,77,0.045)]">
-        <SectionTitle
-          title="Recent Activities"
-          subtitle="Latest recorded studio workflow items"
-          icon={Activity}
-        />
-
-        {recentActivities.length === 0 ? (
-          <EmptyState message="No recent activities available" />
-        ) : (
-          <div className="flex flex-col gap-3 lg:gap-4">
-            {recentActivities.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 lg:rounded-2xl lg:border-[#e9eef6] lg:bg-[#f8faff] lg:p-5 lg:transition-all lg:hover:border-[#cbd9ee] lg:hover:bg-white lg:hover:shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-700 lg:rounded-2xl">
-                      <Icon size={19} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="break-words text-sm font-semibold text-[#10264d]">
-                        {item.name}
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.type}
-                      </p>
-                    </div>
-                  </div>
-
-                  <InfoRow
-                    label="Date"
-                    value={formatDate(item.date)}
-                  />
-
-                  <InfoRow
-                    label="Status"
-                    value={item.status}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER */}
       <p className="mt-6 text-center text-xs leading-5 text-slate-400 lg:mt-8">
-        StudioRaw Picturez ERP & CRM · Dashboard data
-        stored locally in this browser
+        Studio Raw Picturez ERP &amp; CRM · Dashboard data stored locally in this browser
       </p>
     </div>
   );

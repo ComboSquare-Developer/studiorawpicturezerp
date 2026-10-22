@@ -1,6 +1,5 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   Package,
   Plus,
@@ -22,7 +21,6 @@ import {
   Building2,
   Hash,
   StickyNote,
-  Clock3,
   ArrowRightLeft,
 } from "lucide-react";
 
@@ -41,6 +39,81 @@ const categories = [
 
 const units = ["Pieces", "Boxes", "Rolls", "Packs", "Sets"];
 
+const demoInventory = [
+  {
+    id: "DEMO-001",
+    name: "Wedding Album 12x36",
+    category: "Albums",
+    sku: "ALB-001",
+    quantity: 25,
+    minimumStock: 5,
+    unit: "Pieces",
+    unitCost: 850,
+    supplier: "Classic Album Suppliers",
+    notes: "Premium wedding album",
+  },
+  {
+    id: "DEMO-002",
+    name: "Premium Photo Frame",
+    category: "Frames",
+    sku: "FRM-002",
+    quantity: 18,
+    minimumStock: 5,
+    unit: "Pieces",
+    unitCost: 450,
+    supplier: "Royal Frame Works",
+    notes: "12x18 inch photo frame",
+  },
+  {
+    id: "DEMO-003",
+    name: "Photo Printing Paper",
+    category: "Printing Materials",
+    sku: "PRT-003",
+    quantity: 42,
+    minimumStock: 10,
+    unit: "Packs",
+    unitCost: 320,
+    supplier: "Digital Print Solutions",
+    notes: "Glossy printing paper",
+  },
+  {
+    id: "DEMO-004",
+    name: "Album Packaging Box",
+    category: "Packaging",
+    sku: "PKG-004",
+    quantity: 3,
+    minimumStock: 5,
+    unit: "Boxes",
+    unitCost: 120,
+    supplier: "SafePack Traders",
+    notes: "Protective album packaging",
+  },
+  {
+    id: "DEMO-005",
+    name: "USB Drive 64GB",
+    category: "Storage Devices",
+    sku: "USB-005",
+    quantity: 12,
+    minimumStock: 4,
+    unit: "Pieces",
+    unitCost: 550,
+    supplier: "Tech World",
+    notes: "Client photo delivery",
+  },
+  {
+    id: "DEMO-006",
+    name: "Office Paper Pack",
+    category: "Office Supplies",
+    sku: "OFF-006",
+    quantity: 20,
+    minimumStock: 5,
+    unit: "Packs",
+    unitCost: 280,
+    supplier: "City Office Supplies",
+    notes: "A4 office paper",
+  },
+];
+
 const createEmptyForm = () => ({
   name: "",
   category: "Albums",
@@ -53,16 +126,11 @@ const createEmptyForm = () => ({
   notes: "",
 });
 
-const inputClass =
-  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
-
-function readArray(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
+function makeId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `INV-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 }
 
 function currency(value) {
@@ -71,137 +139,57 @@ function currency(value) {
   })}`;
 }
 
-function createId() {
-  return (
-    globalThis.crypto?.randomUUID?.() ||
-    `INV-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  );
-}
-
 function formatDate(value) {
   if (!value) return "—";
 
   const date = new Date(value);
 
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-const typeColors = {
-  IN: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  OUT: "bg-amber-50 text-amber-700 ring-amber-200",
-  OPENING: "bg-blue-50 text-blue-700 ring-blue-200",
-  ADJUSTMENT: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-  DELETED: "bg-red-50 text-red-700 ring-red-200",
-};
-
-function CustomDropdown({ value, options, onChange }) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const normalizedOptions = options.map((option) =>
-    typeof option === "string"
-      ? { label: option, value: option }
-      : option
-  );
-
-  const selected = normalizedOptions.find(
-    (option) => String(option.value) === String(value)
-  );
-
-  useEffect(() => {
-    const handleOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  return (
-    <div ref={dropdownRef} className="relative w-full min-w-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((previous) => !previous)}
-        className={`${inputClass} flex items-center justify-between gap-3 text-left font-medium`}
-      >
-        <span className="min-w-0 flex-1 truncate">
-          {selected?.label || "Select"}
-        </span>
-
-        <ChevronDown
-          size={17}
-          className={`shrink-0 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
-        >
-          {normalizedOptions.map((option) => {
-            const isSelected =
-              String(option.value) === String(value);
-
-            return (
-              <button
-                key={String(option.value)}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                  isSelected
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  {option.label}
-                </span>
-
-                {isSelected && (
-                  <Check size={16} className="shrink-0" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+function makeOpeningHistory(items) {
+  return items.map((item, index) => ({
+    id: `OPENING-${item.id || index}`,
+    itemId: item.id,
+    itemName: item.name,
+    type: "OPENING",
+    quantity: Number(item.quantity || 0),
+    note: "Demo opening stock",
+    date: new Date().toISOString(),
+  }));
 }
 
-function FormField({ label, children, required = false }) {
+// Missing or empty saved data-ku demo data use pannum.
+function readInitial(key, fallback) {
+  try {
+    const saved = localStorage.getItem(key);
+
+    if (saved === null) return fallback;
+
+    const parsed = JSON.parse(saved);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return fallback;
+    }
+
+    return parsed;
+  } catch {
+    return fallback;
+  }
+}
+
+const inputClass =
+  "block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+
+function Field({ label, children, required = false }) {
   return (
     <div className="min-w-0">
       <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -213,7 +201,146 @@ function FormField({ label, children, required = false }) {
   );
 }
 
-function DetailBox({ label, value, icon: Icon, full = false }) {
+function CustomDropdown({
+  value,
+  options,
+  onChange,
+  placeholder = "Select",
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const normalized = options.map((option) =>
+    typeof option === "string"
+      ? { label: option, value: option }
+      : option
+  );
+
+  useEffect(() => {
+    const close = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    const escape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+
+  const selected = normalized.find(
+    (option) => String(option.value) === String(value)
+  );
+
+  return (
+    <div ref={ref} className="relative w-full min-w-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((previous) => !previous)}
+        className={`${inputClass} flex items-center justify-between gap-3 text-left`}
+      >
+        <span className="min-w-0 flex-1 truncate">
+          {selected?.label || placeholder}
+        </span>
+        <ChevronDown
+          size={17}
+          className={`shrink-0 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+          {normalized.map((option) => (
+            <button
+              key={String(option.value)}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm ${
+                String(option.value) === String(value)
+                  ? "bg-blue-50 font-semibold text-blue-700"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span>{option.label}</span>
+              {String(option.value) === String(value) && (
+                <Check size={16} />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SuggestionInput({
+  value,
+  onChange,
+  options = [],
+  placeholder,
+  type = "text",
+  min,
+  step,
+  required = false,
+}) {
+  const [open, setOpen] = useState(false);
+
+  const filtered = [...new Set(options.map(String))].filter((option) =>
+    option.toLowerCase().includes(String(value || "").toLowerCase())
+  );
+
+  return (
+    <div className="relative min-w-0">
+      <input
+        type={type}
+        min={min}
+        step={step}
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+
+      {open && filtered.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+          {filtered.map((option) => (
+            <button
+              type="button"
+              key={option}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+              className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#10264d] hover:bg-blue-50"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Detail({ label, value, icon: Icon, full = false }) {
   return (
     <div
       className={`min-w-0 rounded-xl border border-slate-100 bg-[#f7f9fc] p-3 ${
@@ -224,16 +351,12 @@ function DetailBox({ label, value, icon: Icon, full = false }) {
         {Icon && (
           <Icon size={13} className="shrink-0 text-slate-400" />
         )}
-
         <p className="text-[11px] font-medium text-slate-500">
           {label}
         </p>
       </div>
-
-      <p className="min-w-0 whitespace-pre-wrap break-words text-sm font-bold text-[#10264d]">
-        {value === undefined ||
-        value === null ||
-        value === ""
+      <p className="break-words whitespace-pre-wrap text-sm font-bold text-[#10264d]">
+        {value === undefined || value === null || value === ""
           ? "—"
           : value}
       </p>
@@ -244,10 +367,10 @@ function DetailBox({ label, value, icon: Icon, full = false }) {
 function StatusBadge({ low }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
         low
-          ? "bg-red-50 text-red-700 ring-red-200"
-          : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          ? "bg-red-50 text-red-700"
+          : "bg-emerald-50 text-emerald-700"
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -256,12 +379,19 @@ function StatusBadge({ low }) {
   );
 }
 
-function MovementBadge({ type }) {
+function TypeBadge({ type }) {
+  const colors = {
+    IN: "bg-emerald-50 text-emerald-700",
+    OUT: "bg-amber-50 text-amber-700",
+    OPENING: "bg-blue-50 text-blue-700",
+    ADJUSTMENT: "bg-indigo-50 text-indigo-700",
+    DELETED: "bg-red-50 text-red-700",
+  };
+
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-inset ${
-        typeColors[type] ||
-        "bg-slate-100 text-slate-600 ring-slate-200"
+      className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${
+        colors[type] || "bg-slate-100 text-slate-600"
       }`}
     >
       {type}
@@ -269,21 +399,11 @@ function MovementBadge({ type }) {
   );
 }
 
-function IconButton({
-  icon: Icon,
-  title,
-  onClick,
-  color = "blue",
-}) {
+function IconButton({ icon: Icon, title, onClick, color = "blue" }) {
   const colors = {
     blue: "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100",
     red: "border-red-100 bg-red-50 text-red-600 hover:bg-red-100",
-    slate:
-      "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
-    green:
-      "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-    amber:
-      "border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    slate: "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
   };
 
   return (
@@ -306,33 +426,32 @@ function Modal({
   children,
   width = "max-w-[780px]",
 }) {
-  const modalRef = useRef(null);
-
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const handleEscape = (event) => {
+    const escape = (event) => {
       if (event.key === "Escape") onClose();
     };
 
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", escape);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", escape);
     };
   }, [onClose]);
 
-  return createPortal(
+  return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
-      <div
+      <button
+        type="button"
+        aria-label="Close modal overlay"
         className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-sm"
         onClick={onClose}
       />
 
       <div
-        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -343,21 +462,17 @@ function Modal({
             <p className="mb-1 text-xs font-bold uppercase tracking-widest text-blue-600">
               Studio Raw / Inventory
             </p>
-
             <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
               {title}
             </h2>
-
-            <p className="mt-1 break-words text-sm text-slate-500">
-              {subtitle}
-            </p>
+            <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close modal"
-            className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 transition hover:bg-slate-100"
+            aria-label="Close"
+            className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-500 hover:bg-slate-100"
           >
             <X size={20} />
           </button>
@@ -365,8 +480,7 @@ function Modal({
 
         {children}
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
 
@@ -377,13 +491,11 @@ function InventoryCard({
   onDelete,
   onStock,
 }) {
-  const quantity = Number(item.quantity || 0);
-  const minimumStock = Number(item.minimumStock || 0);
-  const isLowStock = quantity <= minimumStock;
+  const qty = Number(item.quantity || 0);
+  const low = qty <= Number(item.minimumStock || 0);
 
   return (
-    <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:border-blue-200 hover:shadow-md sm:p-5">
-      {/* CARD HEADER */}
+    <article className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
@@ -394,76 +506,62 @@ function InventoryCard({
             <h3 className="break-words text-sm font-extrabold text-[#10264d] sm:text-base">
               {item.name}
             </h3>
-
             <p className="mt-1 break-all text-xs text-slate-400">
               {item.sku || "No SKU"}
             </p>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 gap-1">
           <IconButton
             icon={Eye}
-            title="View Inventory"
-            onClick={() => onView(item)}
+            title="View"
             color="slate"
+            onClick={() => onView(item)}
           />
-
           <IconButton
             icon={Pencil}
-            title="Edit Inventory"
+            title="Edit"
             onClick={() => onEdit(item)}
           />
-
           <IconButton
             icon={Trash2}
-            title="Delete Inventory"
-            onClick={() => onDelete(item)}
+            title="Delete"
             color="red"
+            onClick={() => onDelete(item)}
           />
         </div>
       </div>
 
-      {/* CATEGORY AND STATUS */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
-          {item.category || "Other"}
+          {item.category}
         </span>
-
-        <StatusBadge low={isLowStock} />
+        <StatusBadge low={low} />
       </div>
 
-      {/* DETAILS */}
       <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <DetailBox
+        <Detail
           label="Available Stock"
-          value={`${quantity.toLocaleString("en-IN")} ${
-            item.unit || "Pieces"
-          }`}
+          value={`${qty} ${item.unit || "Pieces"}`}
           icon={Boxes}
         />
-
-        <DetailBox
+        <Detail
           label="Minimum Stock"
-          value={minimumStock}
+          value={item.minimumStock}
           icon={AlertTriangle}
         />
-
-        <DetailBox
+        <Detail
           label="Unit Cost"
           value={currency(item.unitCost)}
           icon={IndianRupee}
         />
-
-        <DetailBox
+        <Detail
           label="Stock Value"
-          value={currency(
-            quantity * Number(item.unitCost || 0)
-          )}
+          value={currency(qty * Number(item.unitCost || 0))}
           icon={IndianRupee}
         />
-
-        <DetailBox
+        <Detail
           label="Supplier"
           value={item.supplier || "Not specified"}
           icon={Building2}
@@ -471,24 +569,20 @@ function InventoryCard({
         />
       </div>
 
-      {/* ACTIONS */}
       <div className="mt-auto grid grid-cols-2 gap-2.5 border-t border-slate-100 pt-4">
         <button
           type="button"
           onClick={() => onStock(item, "IN")}
-          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 sm:text-sm"
+          className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100 sm:text-sm"
         >
-          <ArrowDownToLine size={17} />
-          Stock In
+          <ArrowDownToLine size={17} /> Stock In
         </button>
-
         <button
           type="button"
           onClick={() => onStock(item, "OUT")}
-          className="flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-3 text-xs font-bold text-amber-700 transition hover:bg-amber-100 sm:text-sm"
+          className="flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-3 text-xs font-bold text-amber-700 hover:bg-amber-100 sm:text-sm"
         >
-          <ArrowUpFromLine size={17} />
-          Stock Out
+          <ArrowUpFromLine size={17} /> Stock Out
         </button>
       </div>
     </article>
@@ -496,51 +590,47 @@ function InventoryCard({
 }
 
 function HistoryCard({ record }) {
-  const quantity = Number(record.quantity || 0);
-
   return (
-    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="rounded-xl bg-indigo-50 p-3 text-indigo-700">
             <History size={20} />
           </div>
-
-          <div className="min-w-0 flex-1">
-            <h3 className="break-words text-sm font-extrabold text-[#10264d] sm:text-base">
+          <div className="min-w-0">
+            <h3 className="break-words text-sm font-extrabold text-[#10264d]">
               {record.itemName}
             </h3>
-
             <p className="mt-1 text-xs text-slate-400">
-              Stock Movement
+              Stock movement
             </p>
           </div>
         </div>
-
-        <MovementBadge type={record.type} />
+        <TypeBadge type={record.type} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2.5">
-        <DetailBox
+        <Detail
           label="Movement"
           value={record.type}
           icon={ArrowRightLeft}
         />
-
-        <DetailBox
+        <Detail
           label="Stock Change"
-          value={quantity > 0 ? `+${quantity}` : quantity}
+          value={
+            Number(record.quantity) > 0
+              ? `+${record.quantity}`
+              : record.quantity
+          }
           icon={Boxes}
         />
-
-        <DetailBox
+        <Detail
           label="Date & Time"
           value={formatDate(record.date)}
           icon={CalendarDays}
           full
         />
-
-        <DetailBox
+        <Detail
           label="Notes"
           value={record.note || "No notes"}
           icon={StickyNote}
@@ -553,11 +643,11 @@ function HistoryCard({ record }) {
 
 export default function Inventory() {
   const [items, setItems] = useState(() =>
-    readArray(INVENTORY_KEY)
+    readInitial(INVENTORY_KEY, demoInventory)
   );
 
   const [history, setHistory] = useState(() =>
-    readArray(HISTORY_KEY)
+    readInitial(HISTORY_KEY, makeOpeningHistory(demoInventory))
   );
 
   const [tab, setTab] = useState("inventory");
@@ -569,7 +659,6 @@ export default function Inventory() {
   const [form, setForm] = useState(createEmptyForm);
 
   const [viewItem, setViewItem] = useState(null);
-
   const [stockItem, setStockItem] = useState(null);
   const [stockType, setStockType] = useState("IN");
   const [stockQty, setStockQty] = useState("");
@@ -579,23 +668,17 @@ export default function Inventory() {
   const [stockError, setStockError] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(
-      INVENTORY_KEY,
-      JSON.stringify(items)
-    );
+    localStorage.setItem(INVENTORY_KEY, JSON.stringify(items));
   }, [items]);
 
   useEffect(() => {
-    localStorage.setItem(
-      HISTORY_KEY,
-      JSON.stringify(history)
-    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
 
   const addHistory = (record) => {
     setHistory((previous) => [
       {
-        id: createId(),
+        id: makeId(),
         date: new Date().toISOString(),
         ...record,
       },
@@ -604,27 +687,20 @@ export default function Inventory() {
   };
 
   const update = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-
-    if (error) setError("");
+    setForm((previous) => ({ ...previous, [key]: value }));
+    setError("");
   };
 
   const openAdd = () => {
-    setTab("inventory");
     setForm(createEmptyForm());
     setEditingId(null);
-    setStockItem(null);
     setViewItem(null);
+    setStockItem(null);
     setError("");
     setShowForm(true);
   };
 
   const openEdit = (item) => {
-    setTab("inventory");
-
     setForm({
       ...createEmptyForm(),
       ...item,
@@ -634,8 +710,8 @@ export default function Inventory() {
     });
 
     setEditingId(item.id);
-    setStockItem(null);
     setViewItem(null);
+    setStockItem(null);
     setError("");
     setShowForm(true);
   };
@@ -645,6 +721,13 @@ export default function Inventory() {
     setEditingId(null);
     setForm(createEmptyForm());
     setError("");
+  };
+
+  const closeStock = () => {
+    setStockItem(null);
+    setStockQty("");
+    setStockNote("");
+    setStockError("");
   };
 
   const saveItem = (event) => {
@@ -669,9 +752,20 @@ export default function Inventory() {
       !Number.isFinite(unitCost) ||
       unitCost < 0
     ) {
-      setError(
-        "Enter valid quantity, minimum stock and unit cost."
-      );
+      setError("Enter valid quantity, minimum stock and unit cost.");
+      return;
+    }
+
+    const duplicateSku = items.some(
+      (item) =>
+        item.id !== editingId &&
+        form.sku.trim() &&
+        String(item.sku || "").toLowerCase() ===
+          form.sku.trim().toLowerCase()
+    );
+
+    if (duplicateSku) {
+      setError("This SKU already exists. Please use a different SKU.");
       return;
     }
 
@@ -682,13 +776,11 @@ export default function Inventory() {
       quantity,
       minimumStock,
       unitCost,
-      id: editingId || createId(),
+      id: editingId || makeId(),
     };
 
     if (editingId) {
-      const old = items.find(
-        (item) => item.id === editingId
-      );
+      const old = items.find((item) => item.id === editingId);
 
       setItems((previous) =>
         previous.map((item) =>
@@ -701,8 +793,7 @@ export default function Inventory() {
           itemId: record.id,
           itemName: record.name,
           type: "ADJUSTMENT",
-          quantity:
-            quantity - Number(old.quantity || 0),
+          quantity: quantity - Number(old.quantity || 0),
           note: "Quantity adjusted while editing",
         });
       }
@@ -722,14 +813,10 @@ export default function Inventory() {
   };
 
   const deleteItem = (item) => {
-    if (!window.confirm(`Delete ${item.name}?`)) {
-      return;
-    }
+    if (!window.confirm(`Delete ${item.name}?`)) return;
 
     setItems((previous) =>
-      previous.filter(
-        (record) => record.id !== item.id
-      )
+      previous.filter((record) => record.id !== item.id)
     );
 
     addHistory({
@@ -740,25 +827,16 @@ export default function Inventory() {
       note: "Inventory item deleted",
     });
 
-    if (editingId === item.id) closeForm();
-    if (stockItem?.id === item.id) closeStock();
     if (viewItem?.id === item.id) setViewItem(null);
+    if (stockItem?.id === item.id) closeStock();
+    if (editingId === item.id) closeForm();
   };
 
   const openStock = (item, type) => {
-    setTab("inventory");
     closeForm();
     setViewItem(null);
-
     setStockItem(item);
     setStockType(type);
-    setStockQty("");
-    setStockNote("");
-    setStockError("");
-  };
-
-  const closeStock = () => {
-    setStockItem(null);
     setStockQty("");
     setStockNote("");
     setStockError("");
@@ -774,9 +852,7 @@ export default function Inventory() {
       !Number.isInteger(quantity) ||
       quantity <= 0
     ) {
-      setStockError(
-        "Please enter a valid stock quantity."
-      );
+      setStockError("Please enter a valid stock quantity.");
       return;
     }
 
@@ -797,16 +873,14 @@ export default function Inventory() {
       return;
     }
 
-    const change =
-      stockType === "IN" ? quantity : -quantity;
+    const change = stockType === "IN" ? quantity : -quantity;
 
     setItems((previous) =>
       previous.map((item) =>
         item.id === current.id
           ? {
               ...item,
-              quantity:
-                Number(item.quantity || 0) + change,
+              quantity: Number(item.quantity || 0) + change,
             }
           : item
       )
@@ -827,19 +901,17 @@ export default function Inventory() {
     const query = search.toLowerCase().trim();
 
     return items.filter((item) => {
-      const matchesSearch = [
+      const matches = [
         item.name,
         item.sku,
         item.supplier,
         item.category,
       ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(query)
+        String(value || "").toLowerCase().includes(query)
       );
 
       return (
-        matchesSearch &&
+        matches &&
         (categoryFilter === "All" ||
           item.category === categoryFilter)
       );
@@ -906,17 +978,14 @@ export default function Inventory() {
 
   return (
     <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
-      {/* HEADER */}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
             Studio Raw / Stock Control
           </p>
-
           <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Inventory Management
           </h1>
-
           <p className="mt-2 text-sm text-slate-500">
             Manage studio materials, stock and supplies.
           </p>
@@ -925,14 +994,12 @@ export default function Inventory() {
         <button
           type="button"
           onClick={openAdd}
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 transition hover:bg-blue-900"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-900"
         >
-          <Plus size={18} />
-          Add Inventory
+          <Plus size={18} /> Add Inventory
         </button>
       </div>
 
-      {/* STATISTICS */}
       <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -940,18 +1007,17 @@ export default function Inventory() {
           return (
             <div
               key={stat.title}
-              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div
                 className={`absolute left-0 top-0 h-1 w-full ${stat.accent}`}
               />
 
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div>
                   <p className="text-sm font-medium text-slate-500">
                     {stat.title}
                   </p>
-
                   <h2
                     className={`mt-3 break-words text-3xl font-extrabold ${stat.color}`}
                   >
@@ -959,9 +1025,7 @@ export default function Inventory() {
                   </h2>
                 </div>
 
-                <div
-                  className={`shrink-0 rounded-2xl p-3 ${stat.bg}`}
-                >
+                <div className={`rounded-2xl p-3 ${stat.bg}`}>
                   <Icon size={23} className={stat.color} />
                 </div>
               </div>
@@ -974,46 +1038,40 @@ export default function Inventory() {
         })}
       </div>
 
-      {/* MAIN SECTION */}
       <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-        {/* TABS */}
         <div className="flex flex-wrap gap-3 border-b border-slate-100 p-4 sm:p-6">
           <button
             type="button"
             onClick={() => setTab("inventory")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
               tab === "inventory"
                 ? "bg-[#10264d] text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <Package size={17} />
-            Inventory
+            <Package size={17} /> Inventory
           </button>
 
           <button
             type="button"
             onClick={() => setTab("history")}
-            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+            className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold ${
               tab === "history"
                 ? "bg-[#10264d] text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            <History size={17} />
-            Stock History
+            <History size={17} /> Stock History
           </button>
         </div>
 
         {tab === "inventory" ? (
           <>
-            {/* FILTERS */}
             <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[#10264d]">
                   Inventory Items
                 </h2>
-
                 <p className="mt-1 text-xs text-slate-400">
                   Showing {filteredItems.length} of {items.length} items
                 </p>
@@ -1025,13 +1083,10 @@ export default function Inventory() {
                     size={17}
                     className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                   />
-
                   <input
                     type="search"
                     value={search}
-                    onChange={(event) =>
-                      setSearch(event.target.value)
-                    }
+                    onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search name, SKU or supplier..."
                     className={`${inputClass} pl-10`}
                   />
@@ -1052,34 +1107,23 @@ export default function Inventory() {
 
             {filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
-                <div className="mb-4 rounded-2xl bg-slate-50 p-5">
-                  <Package
-                    size={36}
-                    className="text-slate-300"
-                  />
-                </div>
-
+                <Package size={40} className="mb-4 text-slate-300" />
                 <h3 className="font-bold text-[#10264d]">
                   No inventory items found
                 </h3>
-
                 <p className="mt-2 text-sm text-slate-400">
-                  {items.length === 0
-                    ? "Start by adding your first inventory item."
-                    : "Try changing your search or category filter."}
+                  Try changing the search or add an inventory item.
                 </p>
-
                 <button
                   type="button"
                   onClick={openAdd}
                   className="mt-5 flex items-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white"
                 >
-                  <Plus size={16} />
-                  Add Inventory
+                  <Plus size={16} /> Add Inventory
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:p-6">
+              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3 2xl:grid-cols-4">
                 {filteredItems.map((item) => (
                   <InventoryCard
                     key={item.id}
@@ -1095,40 +1139,33 @@ export default function Inventory() {
           </>
         ) : (
           <>
-            {/* HISTORY HEADER */}
             <div className="border-b border-slate-100 p-4 sm:p-6">
               <h2 className="flex items-center gap-2 text-lg font-bold text-[#10264d]">
                 <History size={20} className="text-blue-700" />
                 Stock History
               </h2>
-
               <p className="mt-1 text-xs text-slate-400">
                 {history.length} stock movement records
               </p>
             </div>
 
             {history.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
+              <div className="px-4 py-20 text-center">
                 <History
                   size={42}
-                  className="mb-4 text-slate-300"
+                  className="mx-auto mb-4 text-slate-300"
                 />
-
                 <h3 className="font-bold text-[#10264d]">
                   No stock history available
                 </h3>
-
                 <p className="mt-2 text-sm text-slate-400">
                   Stock movements will appear here.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:p-6">
+              <div className="grid grid-cols-1 gap-4 bg-[#fbfcff] p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3 2xl:grid-cols-4">
                 {history.map((record) => (
-                  <HistoryCard
-                    key={record.id}
-                    record={record}
-                  />
+                  <HistoryCard key={record.id} record={record} />
                 ))}
               </div>
             )}
@@ -1136,7 +1173,6 @@ export default function Inventory() {
         )}
       </section>
 
-      {/* VIEW INVENTORY MODAL */}
       {viewItem && (
         <Modal
           title="Inventory Details"
@@ -1150,16 +1186,13 @@ export default function Inventory() {
                 <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
                   <Package size={24} />
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <h3 className="break-words text-lg font-extrabold text-[#10264d]">
                     {viewItem.name}
                   </h3>
-
                   <p className="mt-1 text-sm text-slate-500">
                     {viewItem.category}
                   </p>
-
                   <div className="mt-3">
                     <StatusBadge
                       low={
@@ -1172,36 +1205,28 @@ export default function Inventory() {
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3">
-                <DetailBox
+                <Detail
                   label="SKU / Item Code"
-                  value={viewItem.sku || "Not specified"}
+                  value={viewItem.sku}
                   icon={Hash}
                   full
                 />
-
-                <DetailBox
+                <Detail
                   label="Available Stock"
-                  value={`${Number(
-                    viewItem.quantity || 0
-                  ).toLocaleString("en-IN")} ${
-                    viewItem.unit || "Pieces"
-                  }`}
+                  value={`${viewItem.quantity} ${viewItem.unit}`}
                   icon={Boxes}
                 />
-
-                <DetailBox
+                <Detail
                   label="Minimum Stock"
                   value={viewItem.minimumStock}
                   icon={AlertTriangle}
                 />
-
-                <DetailBox
+                <Detail
                   label="Unit Cost"
                   value={currency(viewItem.unitCost)}
                   icon={IndianRupee}
                 />
-
-                <DetailBox
+                <Detail
                   label="Total Value"
                   value={currency(
                     Number(viewItem.quantity || 0) *
@@ -1209,17 +1234,15 @@ export default function Inventory() {
                   )}
                   icon={IndianRupee}
                 />
-
-                <DetailBox
+                <Detail
                   label="Supplier"
-                  value={viewItem.supplier || "Not specified"}
+                  value={viewItem.supplier}
                   icon={Building2}
                   full
                 />
-
-                <DetailBox
+                <Detail
                   label="Notes"
-                  value={viewItem.notes || "No notes"}
+                  value={viewItem.notes}
                   icon={StickyNote}
                   full
                 />
@@ -1232,178 +1255,140 @@ export default function Inventory() {
               <button
                 type="button"
                 onClick={() => setViewItem(null)}
-                className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Close
               </button>
-
               <button
                 type="button"
                 onClick={() => openEdit(viewItem)}
                 className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-900"
               >
-                <Pencil size={16} />
-                Edit Inventory
+                <Pencil size={16} /> Edit Inventory
               </button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* ADD / EDIT INVENTORY MODAL */}
       {showForm && (
         <Modal
           title={editingId ? "Edit Inventory" : "Add Inventory"}
-          subtitle="Enter stock item information."
+          subtitle="Enter stock item information. Select a suggestion or type your own value."
           onClose={closeForm}
         >
-          <form
-            onSubmit={saveItem}
-            className="flex min-h-0 flex-1 flex-col"
-          >
+          <form onSubmit={saveItem} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-7">
-              {/* ITEM INFORMATION */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
-                  <Package
-                    size={18}
-                    className="text-blue-600"
-                  />
+                  <Package size={18} className="text-blue-600" />
                   Item Information
                 </h3>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Item Name" required>
-                    <input
-                      type="text"
-                      required
+                  <Field label="Item Name" required>
+                    <SuggestionInput
                       value={form.name}
-                      onChange={(event) =>
-                        update("name", event.target.value)
-                      }
+                      onChange={(value) => update("name", value)}
+                      options={demoInventory.map((item) => item.name)}
                       placeholder="Enter item name"
-                      className={inputClass}
+                      required
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="SKU / Item Code">
-                    <input
-                      type="text"
+                  <Field label="SKU / Item Code">
+                    <SuggestionInput
                       value={form.sku}
-                      onChange={(event) =>
-                        update("sku", event.target.value)
-                      }
+                      onChange={(value) => update("sku", value)}
+                      options={demoInventory.map((item) => item.sku)}
                       placeholder="Enter SKU or item code"
-                      className={inputClass}
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="Category">
+                  <Field label="Category">
                     <CustomDropdown
                       value={form.category}
                       options={categories}
-                      onChange={(value) =>
-                        update("category", value)
-                      }
+                      onChange={(value) => update("category", value)}
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="Unit">
+                  <Field label="Unit">
                     <CustomDropdown
                       value={form.unit}
                       options={units}
-                      onChange={(value) =>
-                        update("unit", value)
-                      }
+                      onChange={(value) => update("unit", value)}
                     />
-                  </FormField>
+                  </Field>
                 </div>
               </div>
 
-              {/* STOCK & PRICING */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <h3 className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4 text-sm font-bold text-[#10264d]">
-                  <Boxes
-                    size={18}
-                    className="text-blue-600"
-                  />
+                  <Boxes size={18} className="text-blue-600" />
                   Stock & Pricing
                 </h3>
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Quantity" required>
-                    <input
+                  <Field label="Quantity" required>
+                    <SuggestionInput
                       type="number"
                       min="0"
                       step="1"
-                      required
                       value={form.quantity}
-                      onChange={(event) =>
-                        update("quantity", event.target.value)
-                      }
+                      onChange={(value) => update("quantity", value)}
+                      options={["0", "5", "10", "20", "25", "50", "100"]}
                       placeholder="Enter quantity"
-                      className={inputClass}
+                      required
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="Minimum Stock" required>
-                    <input
+                  <Field label="Minimum Stock" required>
+                    <SuggestionInput
                       type="number"
                       min="0"
                       step="1"
-                      required
                       value={form.minimumStock}
-                      onChange={(event) =>
-                        update(
-                          "minimumStock",
-                          event.target.value
-                        )
-                      }
-                      className={inputClass}
+                      onChange={(value) => update("minimumStock", value)}
+                      options={["0", "5", "10", "15", "20"]}
+                      placeholder="Minimum stock"
+                      required
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="Unit Cost (₹)">
-                    <input
+                  <Field label="Unit Cost (₹)">
+                    <SuggestionInput
                       type="number"
                       min="0"
                       step="0.01"
                       value={form.unitCost}
-                      onChange={(event) =>
-                        update("unitCost", event.target.value)
-                      }
+                      onChange={(value) => update("unitCost", value)}
+                      options={["120", "280", "320", "450", "550", "850"]}
                       placeholder="Enter unit cost"
-                      className={inputClass}
                     />
-                  </FormField>
+                  </Field>
 
-                  <FormField label="Supplier">
-                    <input
-                      type="text"
+                  <Field label="Supplier">
+                    <SuggestionInput
                       value={form.supplier}
-                      onChange={(event) =>
-                        update("supplier", event.target.value)
-                      }
+                      onChange={(value) => update("supplier", value)}
+                      options={demoInventory.map((item) => item.supplier)}
                       placeholder="Enter supplier name"
-                      className={inputClass}
                     />
-                  </FormField>
+                  </Field>
                 </div>
               </div>
 
-              {/* NOTES */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <FormField label="Notes">
+                <Field label="Notes">
                   <textarea
-                    rows={4}
+                    rows={3}
                     value={form.notes}
-                    onChange={(event) =>
-                      update("notes", event.target.value)
-                    }
-                    placeholder="Additional item details..."
+                    onChange={(event) => update("notes", event.target.value)}
+                    placeholder="Enter item notes"
                     className={`${inputClass} resize-y`}
                   />
-                </FormField>
+                </Field>
               </div>
 
               {error && (
@@ -1411,34 +1396,27 @@ export default function Inventory() {
                   role="alert"
                   className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
                 >
-                  <AlertTriangle
-                    size={18}
-                    className="shrink-0"
-                  />
+                  <AlertTriangle size={18} className="shrink-0" />
                   {error}
                 </div>
               )}
             </div>
 
-            {/* FIXED FOOTER */}
             <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeForm}
-                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-semibold text-white hover:bg-blue-900"
                 >
                   <Save size={17} />
-                  {editingId
-                    ? "Update Inventory"
-                    : "Save Inventory"}
+                  {editingId ? "Update Inventory" : "Save Inventory"}
                 </button>
               </div>
             </div>
@@ -1446,7 +1424,6 @@ export default function Inventory() {
         </Modal>
       )}
 
-      {/* STOCK IN / OUT MODAL */}
       {stockItem && (
         <Modal
           title={`Stock ${stockType === "IN" ? "In" : "Out"}`}
@@ -1463,74 +1440,67 @@ export default function Inventory() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Currently Available
                 </p>
-
-                <p className="mt-3 break-words text-3xl font-extrabold text-[#10264d]">
-                  {Number(
-                    currentStockItem?.quantity || 0
-                  ).toLocaleString("en-IN")}{" "}
+                <p className="mt-3 text-3xl font-extrabold text-[#10264d]">
+                  {Number(currentStockItem?.quantity || 0).toLocaleString(
+                    "en-IN"
+                  )}{" "}
                   <span className="text-base font-semibold text-slate-500">
                     {stockItem.unit || "Pieces"}
                   </span>
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <div className="space-y-5">
-                  <FormField label="Quantity" required>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                      value={stockQty}
-                      onChange={(event) => {
-                        setStockQty(event.target.value);
-                        setStockError("");
-                      }}
-                      placeholder="Enter stock quantity"
-                      className={inputClass}
-                    />
-                  </FormField>
+              <div className="space-y-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <Field label="Quantity" required>
+                  <SuggestionInput
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={stockQty}
+                    onChange={(value) => {
+                      setStockQty(value);
+                      setStockError("");
+                    }}
+                    options={["1", "2", "5", "10", "20", "50"]}
+                    placeholder="Enter stock quantity"
+                    required
+                  />
+                </Field>
 
-                  <FormField label="Stock Note">
-                    <textarea
-                      rows={4}
-                      value={stockNote}
-                      onChange={(event) =>
-                        setStockNote(event.target.value)
-                      }
-                      placeholder="Reason for stock movement..."
-                      className={`${inputClass} resize-y`}
-                    />
-                  </FormField>
-                </div>
+                <Field label="Stock Note">
+                  <SuggestionInput
+                    value={stockNote}
+                    onChange={setStockNote}
+                    options={[
+                      "New stock received",
+                      "Materials used for client order",
+                      "Damaged items",
+                      "Supplier delivery",
+                    ]}
+                    placeholder="Reason for stock movement"
+                  />
+                </Field>
               </div>
 
               {stockError && (
                 <div
                   role="alert"
-                  className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                  className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
                 >
-                  <AlertTriangle
-                    size={18}
-                    className="shrink-0"
-                  />
                   {stockError}
                 </div>
               )}
             </div>
 
-            {/* FIXED FOOTER */}
             <div className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-7">
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeStock}
-                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   className={`flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white ${
@@ -1544,9 +1514,7 @@ export default function Inventory() {
                   ) : (
                     <ArrowUpFromLine size={17} />
                   )}
-
-                  Confirm Stock{" "}
-                  {stockType === "IN" ? "In" : "Out"}
+                  Confirm Stock {stockType === "IN" ? "In" : "Out"}
                 </button>
               </div>
             </div>

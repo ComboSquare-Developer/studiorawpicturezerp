@@ -18,23 +18,57 @@ import {
   ChevronDown,
   Save,
   Users,
-  ClipboardList,
   Check,
+  PackageCheck,
+  CalendarClock,
 } from "lucide-react";
 
-const STORAGE_KEY = "studioraw_preshoot";
+const STORAGE_KEY = "studioraw_shoot_readiness";
+
+const photographers = [
+  "Arun Kumar",
+  "Praveen Raj",
+  "Karthik S",
+  "Vignesh Kumar",
+  "Sanjay R",
+  "Rahul Photography",
+  "Divya Photography",
+];
+
+const equipmentOptions = [
+  "Sony A7 IV + 24-70mm Lens",
+  "Canon EOS R6 + 50mm Lens",
+  "Nikon Z6 II + 24-120mm Lens",
+  "Camera + Portrait Lens Kit",
+  "Wedding Photography Kit",
+  "Studio Lighting + Softbox Kit",
+  "Gimbal + Camera Stabilizer",
+  "Drone + Aerial Photography Kit",
+  "Tripod + External Flash Kit",
+  "Complete Photography Equipment Kit",
+];
+
+const teamOptions = [
+  "Photographer + 1 Assistant",
+  "Photographer + 2 Assistants",
+  "Photographer + Videographer",
+  "Photographer + Videographer + Editor",
+  "2 Photographers + 1 Videographer",
+  "Full Wedding Photography Team",
+  "Studio Photography Team",
+];
 
 const checklistItems = [
   "Client requirements confirmed",
-  "Shoot schedule confirmed",
-  "Photographer assigned",
-  "Camera equipment checked",
-  "Lenses and lighting ready",
-  "Batteries fully charged",
-  "Memory cards prepared",
-  "Location confirmed",
-  "Transport arranged",
-  "Client reminder sent",
+  "Shoot date and schedule confirmed",
+  "Photographer and team assigned",
+  "Camera body and backup camera checked",
+  "Lenses cleaned and tested",
+  "Lighting and flash equipment checked",
+  "Batteries charged and spares packed",
+  "Memory cards formatted and ready",
+  "Shoot location and travel confirmed",
+  "Client reminder and call completed",
 ];
 
 const createEmptyForm = () => ({
@@ -46,7 +80,6 @@ const createEmptyForm = () => ({
   photographer: "",
   team: "",
   equipment: "",
-  notes: "",
   checklist: [],
 });
 
@@ -58,6 +91,8 @@ const eventOptions = [
   "Baby Shoot",
   "Portrait",
   "Corporate",
+  "Fashion Shoot",
+  "Product Photography",
   "Other",
 ];
 
@@ -95,6 +130,15 @@ const statusStyle = {
   Pending: "border-amber-100 bg-amber-50 text-amber-700",
 };
 
+const dateOffset = (offset) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+
+  return `${date.getFullYear()}-${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
 const formatDate = (value) => {
   if (!value) return "—";
 
@@ -128,7 +172,77 @@ const formatTime = (value) => {
   );
 };
 
-function CustomDropdown({ value, options, onChange }) {
+/* SAMPLE SHOOT DATA */
+
+const createDemoShoots = () => [
+  {
+    id: "SHOOT-1001",
+    customer: "Arun & Priya",
+    event: "Wedding",
+    shootDate: dateOffset(2),
+    shootTime: "06:30",
+    location: "Taj Wedding Hall, Nagercoil",
+    photographer: "Arun Kumar",
+    team: "Full Wedding Photography Team",
+    equipment: "Wedding Photography Kit",
+    checklist: checklistItems.slice(0, 8),
+  },
+  {
+    id: "SHOOT-1002",
+    customer: "Rahul & Divya",
+    event: "Engagement",
+    shootDate: dateOffset(4),
+    shootTime: "10:00",
+    location: "Ocean View Convention Centre",
+    photographer: "Praveen Raj",
+    team: "Photographer + Videographer",
+    equipment: "Sony A7 IV + 24-70mm Lens",
+    checklist: checklistItems.slice(0, 5),
+  },
+  {
+    id: "SHOOT-1003",
+    customer: "Kavin Birthday Shoot",
+    event: "Birthday",
+    shootDate: dateOffset(6),
+    shootTime: "16:00",
+    location: "Happy Moments Party Hall",
+    photographer: "Divya Photography",
+    team: "Studio Photography Team",
+    equipment: "Studio Lighting + Softbox Kit",
+    checklist: checklistItems.slice(0, 3),
+  },
+  {
+    id: "SHOOT-1004",
+    customer: "Vijay & Nisha",
+    event: "Pre-Wedding",
+    shootDate: dateOffset(8),
+    shootTime: "07:00",
+    location: "Muttom Beach",
+    photographer: "Karthik S",
+    team: "Photographer + 2 Assistants",
+    equipment: "Drone + Aerial Photography Kit",
+    checklist: [],
+  },
+  {
+    id: "SHOOT-1005",
+    customer: "Meera Portrait Session",
+    event: "Portrait",
+    shootDate: dateOffset(10),
+    shootTime: "11:30",
+    location: "Studio Raw Picturez",
+    photographer: "Sanjay R",
+    team: "Photographer + 1 Assistant",
+    equipment: "Camera + Portrait Lens Kit",
+    checklist: checklistItems.slice(0, 10),
+  },
+];
+
+function CustomDropdown({
+  value,
+  options,
+  onChange,
+  placeholder = "Select an option",
+}) {
   return (
     <div className="relative w-full min-w-0">
       <select
@@ -136,6 +250,8 @@ function CustomDropdown({ value, options, onChange }) {
         onChange={(event) => onChange(event.target.value)}
         className={`${inputClass} appearance-none pr-11`}
       >
+        <option value="">{placeholder}</option>
+
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -174,12 +290,9 @@ function SectionHeading({ icon: Icon, title, description }) {
         <h3 className="text-sm font-bold text-[#10264d]">
           {title}
         </h3>
-
-        {description && (
-          <p className="mt-1 text-xs text-slate-400">
-            {description}
-          </p>
-        )}
+        <p className="mt-1 text-xs text-slate-400">
+          {description}
+        </p>
       </div>
     </div>
   );
@@ -197,22 +310,18 @@ function StatusBadge({ status }) {
   );
 }
 
-function MobileDetail({ label, value, icon: Icon, span = false }) {
+function MobileDetail({ label, value, icon: Icon }) {
   return (
-    <div className={`min-w-0 ${span ? "col-span-2" : ""}`}>
+    <div className="min-w-0">
       <p className="text-[10px] font-medium text-[#91a0b5] sm:text-xs">
         {label}
       </p>
 
       <div className="mt-1 flex min-w-0 items-start gap-1.5">
         {Icon && (
-          <Icon
-            size={13}
-            className="mt-0.5 shrink-0 text-[#4972a8]"
-          />
+          <Icon size={13} className="mt-0.5 shrink-0 text-[#4972a8]" />
         )}
-
-        <p className="min-w-0 whitespace-pre-wrap break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
+        <p className="min-w-0 break-words text-[12px] font-semibold leading-5 text-[#10264d] sm:text-[13px]">
           {value || "—"}
         </p>
       </div>
@@ -230,19 +339,10 @@ function ProgressBar({ progress, completed, compact = false }) {
       }
     >
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p
-          className={`font-medium text-slate-500 ${
-            compact ? "text-[11px]" : "text-xs"
-          }`}
-        >
+        <p className={`font-medium text-slate-500 ${compact ? "text-[11px]" : "text-xs"}`}>
           Preparation Progress
         </p>
-
-        <p
-          className={`font-bold text-[#10264d] ${
-            compact ? "text-xs" : "text-sm"
-          }`}
-        >
+        <p className={`font-bold text-[#10264d] ${compact ? "text-xs" : "text-sm"}`}>
           {progress}%
         </p>
       </div>
@@ -265,11 +365,7 @@ function ProgressBar({ progress, completed, compact = false }) {
         />
       </div>
 
-      <p
-        className={`mt-2 text-slate-400 ${
-          compact ? "text-[10px]" : "text-xs"
-        }`}
-      >
+      <p className={`mt-2 text-slate-400 ${compact ? "text-[10px]" : "text-xs"}`}>
         {completed} of {checklistItems.length} tasks completed
       </p>
     </div>
@@ -313,10 +409,9 @@ function ModalShell({
         aria-label={title}
         className="flex max-h-[96dvh] w-full max-w-[980px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-[22px]"
       >
-        {/* MODAL HEADER */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-7">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] bg-white px-5 py-4 sm:px-9 sm:py-6">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12 sm:rounded-2xl">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#112e60] text-white sm:h-12 sm:w-12">
               <ClipboardCheck size={22} />
             </div>
 
@@ -324,7 +419,6 @@ function ModalShell({
               <h2 className="break-words text-lg font-bold text-[#10264d] sm:text-[23px]">
                 {title}
               </h2>
-
               <p className="mt-1 text-xs text-[#8090aa] sm:text-sm">
                 {description}
               </p>
@@ -341,17 +435,12 @@ function ModalShell({
           </button>
         </div>
 
-        {/* FORM */}
-        <form
-          onSubmit={onSubmit}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-9 sm:py-7">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-9 sm:py-6">
             {children}
           </div>
 
-          {/* MODAL FOOTER */}
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9 sm:py-5">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e5ebf3] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-9">
             <button
               type="button"
               onClick={onClose}
@@ -375,20 +464,22 @@ function ModalShell({
   );
 }
 
-export default function PreShoot() {
+export default function ShootReadiness() {
   const [shoots, setShoots] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return Array.isArray(saved) ? saved : [];
+
+      return Array.isArray(saved) && saved.length > 0
+        ? saved
+        : createDemoShoots();
     } catch {
-      return [];
+      return createDemoShoots();
     }
   });
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(createEmptyForm);
   const [editingId, setEditingId] = useState(null);
-
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
@@ -398,10 +489,7 @@ export default function PreShoot() {
   }, [shoots]);
 
   const update = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+    setForm((previous) => ({ ...previous, [key]: value }));
     setError("");
   };
 
@@ -416,11 +504,8 @@ export default function PreShoot() {
     setForm({
       ...createEmptyForm(),
       ...item,
-      checklist: Array.isArray(item.checklist)
-        ? [...item.checklist]
-        : [],
+      checklist: Array.isArray(item.checklist) ? [...item.checklist] : [],
     });
-
     setEditingId(item.id);
     setError("");
     setShowForm(true);
@@ -452,14 +537,12 @@ export default function PreShoot() {
       id:
         editingId ||
         globalThis.crypto?.randomUUID?.() ||
-        `PRE-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `SHOOT-${Date.now()}`,
     };
 
     if (editingId) {
       setShoots((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? data : item
-        )
+        previous.map((item) => item.id === editingId ? data : item)
       );
     } else {
       setShoots((previous) => [data, ...previous]);
@@ -469,15 +552,9 @@ export default function PreShoot() {
   };
 
   const deleteShoot = (id) => {
-    if (!window.confirm("Delete this shoot preparation?")) {
-      return;
-    }
+    if (!window.confirm("Delete this shoot preparation?")) return;
 
-    setShoots((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
-
-    if (editingId === id) closeForm();
+    setShoots((previous) => previous.filter((item) => item.id !== id));
   };
 
   const toggleChecklist = (task) => {
@@ -506,14 +583,9 @@ export default function PreShoot() {
         item.location,
         item.team,
         item.equipment,
-      ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
+      ].some((value) => String(value || "").toLowerCase().includes(query));
 
-      return (
-        matches &&
-        (filter === "All" || getStatus(item) === filter)
-      );
+      return matches && (filter === "All" || getStatus(item) === filter);
     });
   }, [shoots, search, filter]);
 
@@ -527,27 +599,21 @@ export default function PreShoot() {
     },
     {
       label: "Ready for Shoot",
-      value: shoots.filter(
-        (item) => getStatus(item) === "Ready"
-      ).length,
+      value: shoots.filter((item) => getStatus(item) === "Ready").length,
       icon: CheckCircle2,
       color: "text-green-700",
       bg: "bg-green-50",
     },
     {
       label: "In Progress",
-      value: shoots.filter(
-        (item) => getStatus(item) === "In Progress"
-      ).length,
+      value: shoots.filter((item) => getStatus(item) === "In Progress").length,
       icon: Clock3,
       color: "text-amber-600",
       bg: "bg-amber-50",
     },
     {
       label: "Pending",
-      value: shoots.filter(
-        (item) => getStatus(item) === "Pending"
-      ).length,
+      value: shoots.filter((item) => getStatus(item) === "Pending").length,
       icon: AlertCircle,
       color: "text-red-600",
       bg: "bg-red-50",
@@ -564,11 +630,11 @@ export default function PreShoot() {
           </p>
 
           <h1 className="text-xl font-bold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px] lg:font-extrabold">
-            Pre-Shoot Preparation
+            Shoot Readiness & Equipment
           </h1>
 
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Organize shoot schedules, teams, equipment and checklists.
+            Manage shoot schedules, photography teams, equipment and readiness checklists.
           </p>
         </div>
 
@@ -582,7 +648,7 @@ export default function PreShoot() {
         </button>
       </div>
 
-      {/* COMPACT SUMMARY CARDS */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -597,17 +663,12 @@ export default function PreShoot() {
                   <p className="text-[10px] font-semibold leading-4 text-slate-500 sm:text-sm">
                     {stat.label}
                   </p>
-
-                  <h2
-                    className={`mt-2 text-xl font-extrabold sm:mt-3 sm:text-3xl ${stat.color}`}
-                  >
+                  <h2 className={`mt-2 text-xl font-extrabold sm:mt-3 sm:text-3xl ${stat.color}`}>
                     {stat.value}
                   </h2>
                 </div>
 
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}
-                >
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-11 sm:w-11 sm:rounded-xl ${stat.bg}`}>
                   <Icon size={17} className={stat.color} />
                 </div>
               </div>
@@ -616,33 +677,27 @@ export default function PreShoot() {
         })}
       </div>
 
-      {/* PREPARATION LIST */}
+      {/* SHOOT READINESS LIST */}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm lg:rounded-[22px]">
-        {/* TOOLBAR */}
         <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:px-6 lg:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#10264d]">
-                Shoot Preparation List
+                Shoot Readiness List
               </h2>
-
               <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-                Track and manage pre-shoot preparations.
+                Monitor upcoming shoots and preparation progress.
               </p>
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <div className="relative w-full lg:w-72">
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
+                <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search preparations..."
+                  placeholder="Search customer, event, team..."
                   className={`${inputClass} pl-10`}
                 />
               </div>
@@ -652,6 +707,7 @@ export default function PreShoot() {
                   value={filter}
                   options={filterOptions}
                   onChange={setFilter}
+                  placeholder="Filter status"
                 />
               </div>
             </div>
@@ -660,14 +716,9 @@ export default function PreShoot() {
 
         {filtered.length === 0 ? (
           <div className="px-4 py-16 text-center">
-            <ClipboardCheck
-              size={42}
-              className="mx-auto mb-3 text-slate-300"
-            />
-
-            <p className="text-sm text-slate-400">
-              No shoot preparations found
-            </p>
+            <ClipboardCheck size={42} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-sm text-slate-400">No shoot preparations found</p>
+            <p className="mt-1 text-xs text-slate-400">Try another search or create a new preparation.</p>
           </div>
         ) : (
           <>
@@ -685,9 +736,7 @@ export default function PreShoot() {
                       "Status",
                       "Actions",
                     ].map((heading) => (
-                      <th key={heading} className="px-5 py-4">
-                        {heading}
-                      </th>
+                      <th key={heading} className="px-5 py-4">{heading}</th>
                     ))}
                   </tr>
                 </thead>
@@ -698,68 +747,42 @@ export default function PreShoot() {
                     const status = getStatus(item);
 
                     return (
-                      <tr
-                        key={item.id}
-                        className="transition hover:bg-[#f8faff]"
-                      >
+                      <tr key={item.id} className="transition hover:bg-[#f8faff]">
                         <td className="px-5 py-5">
-                          <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">
-                            {item.customer}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {item.event}
-                          </p>
+                          <p className="max-w-44 break-words text-sm font-semibold text-[#10264d]">{item.customer}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.event}</p>
                         </td>
 
                         <td className="px-5 py-5">
-                          <p className="whitespace-nowrap text-sm text-[#10264d]">
-                            {item.shootDate || "—"}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {item.shootTime || "—"}
-                          </p>
+                          <p className="whitespace-nowrap text-sm text-[#10264d]">{formatDate(item.shootDate)}</p>
+                          <p className="mt-1 text-xs text-slate-500">{formatTime(item.shootTime)}</p>
                         </td>
 
                         <td className="px-5 py-5">
-                          <p className="max-w-40 break-words text-sm text-slate-700">
-                            {item.location || "Not assigned"}
-                          </p>
+                          <p className="max-w-40 break-words text-sm text-slate-700">{item.location || "Not assigned"}</p>
                         </td>
 
                         <td className="px-5 py-5">
-                          <p className="max-w-40 break-words text-sm text-slate-700">
-                            {item.photographer || "Not assigned"}
-                          </p>
+                          <p className="max-w-40 break-words text-sm text-slate-700">{item.photographer || "Not assigned"}</p>
+                          <p className="mt-1 max-w-44 break-words text-xs text-slate-400">{item.equipment || "Equipment not selected"}</p>
                         </td>
 
                         <td className="px-5 py-5">
                           <div className="w-32">
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="text-xs text-slate-500">
-                                {getCompletedTasks(item)}/
-                                {checklistItems.length}
-                              </span>
-                              <span className="text-xs font-bold text-[#10264d]">
-                                {progress}%
-                              </span>
+                              <span className="text-xs text-slate-500">{getCompletedTasks(item)}/{checklistItems.length}</span>
+                              <span className="text-xs font-bold text-[#10264d]">{progress}%</span>
                             </div>
-
                             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                               <div
-                                className={`h-full rounded-full ${
-                                  progress === 100
-                                    ? "bg-green-500"
-                                    : "bg-blue-700"
-                                }`}
+                                className={`h-full rounded-full ${progress === 100 ? "bg-green-500" : "bg-blue-700"}`}
                                 style={{ width: `${progress}%` }}
                               />
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-5 py-5">
-                          <StatusBadge status={status} />
-                        </td>
+                        <td className="px-5 py-5"><StatusBadge status={status} /></td>
 
                         <td className="px-5 py-5">
                           <div className="flex items-center gap-2">
@@ -772,7 +795,6 @@ export default function PreShoot() {
                             >
                               <Pencil size={17} />
                             </button>
-
                             <button
                               type="button"
                               onClick={() => deleteShoot(item.id)}
@@ -791,7 +813,7 @@ export default function PreShoot() {
               </table>
             </div>
 
-            {/* PREMIUM COMPACT MOBILE / TABLET CARDS */}
+            {/* MOBILE / TABLET CARDS */}
             <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:hidden">
               {filtered.map((item) => {
                 const progress = getProgress(item);
@@ -799,92 +821,33 @@ export default function PreShoot() {
                 const completed = getCompletedTasks(item);
 
                 return (
-                  <article
-                    key={item.id}
-                    className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4"
-                  >
-                    {/* CARD HEADER */}
+                  <article key={item.id} className="min-w-0 rounded-2xl border border-[#e3eaf4] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,38,77,0.04)] sm:p-4">
                     <div className="flex min-w-0 items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
                       <div className="flex min-w-0 items-center gap-2.5">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
                           <UserRound size={18} />
                         </div>
-
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-bold text-[#10264d]">
-                            {item.customer}
-                          </h3>
-                          <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                            {item.event}
-                          </p>
+                          <h3 className="truncate text-sm font-bold text-[#10264d]">{item.customer}</h3>
+                          <p className="mt-0.5 truncate text-[11px] text-slate-500">{item.event}</p>
                         </div>
                       </div>
-
                       <StatusBadge status={status} />
                     </div>
 
-                    {/* TWO-COLUMN DETAILS */}
                     <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-3.5">
-                      <MobileDetail
-                        label="Shoot Date"
-                        value={formatDate(item.shootDate)}
-                        icon={CalendarDays}
-                      />
-
-                      <MobileDetail
-                        label="Shoot Time"
-                        value={formatTime(item.shootTime)}
-                        icon={Clock3}
-                      />
-
-                      <MobileDetail
-                        label="Location"
-                        value={item.location || "Not assigned"}
-                        icon={MapPin}
-                      />
-
-                      <MobileDetail
-                        label="Photographer"
-                        value={item.photographer || "Not assigned"}
-                        icon={UserRound}
-                      />
-
-                      <MobileDetail
-                        label="Team Members"
-                        value={item.team || "Not assigned"}
-                        icon={Users}
-                      />
-
-                      <MobileDetail
-                        label="Equipment"
-                        value={item.equipment || "Not specified"}
-                        icon={Camera}
-                      />
+                      <MobileDetail label="Shoot Date" value={formatDate(item.shootDate)} icon={CalendarDays} />
+                      <MobileDetail label="Shoot Time" value={formatTime(item.shootTime)} icon={Clock3} />
+                      <MobileDetail label="Location" value={item.location || "Not assigned"} icon={MapPin} />
+                      <MobileDetail label="Photographer" value={item.photographer || "Not assigned"} icon={UserRound} />
+                      <MobileDetail label="Team Members" value={item.team || "Not assigned"} icon={Users} />
+                      <MobileDetail label="Equipment" value={item.equipment || "Not selected"} icon={Camera} />
                     </div>
 
-                    {/* NOTES */}
-                    {item.notes && (
-                      <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                        <p className="text-[10px] font-medium text-slate-400">
-                          Additional Notes
-                        </p>
-
-                        <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-[#52627b]">
-                          {item.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* COMPACT PROGRESS */}
                     <div className="mt-3">
-                      <ProgressBar
-                        progress={progress}
-                        completed={completed}
-                        compact
-                      />
+                      <ProgressBar progress={progress} completed={completed} compact />
                     </div>
 
-                    {/* SIDE-BY-SIDE ACTIONS */}
                     <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-t border-[#edf1f6] pt-3">
                       <button
                         type="button"
@@ -892,16 +855,12 @@ export default function PreShoot() {
                         className="flex min-w-0 items-center justify-center gap-2 rounded-lg bg-[#112e60] px-3 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#1a4384] sm:text-xs"
                       >
                         <Pencil size={15} className="shrink-0" />
-                        <span className="truncate">
-                          Manage Preparation
-                        </span>
+                        <span className="truncate">Manage Preparation</span>
                       </button>
-
                       <button
                         type="button"
                         onClick={() => deleteShoot(item.id)}
                         aria-label={`Delete preparation for ${item.customer}`}
-                        title="Delete Preparation"
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
                       >
                         <Trash2 size={16} />
@@ -918,30 +877,20 @@ export default function PreShoot() {
           <p className="text-xs text-[#8290a5]">
             Showing {filtered.length} of {shoots.length} preparations
           </p>
-          <span className="text-xs text-[#8290a5]">
-            Studio Raw Picturez ERP
-          </span>
+          <span className="text-xs text-[#8290a5]">Studio Raw Picturez ERP</span>
         </div>
       </section>
 
-      {/* CREATE / EDIT PREPARATION MODAL */}
+      {/* CREATE / EDIT MODAL */}
       {showForm && (
         <ModalShell
-          title={
-            editingId
-              ? "Manage Shoot Preparation"
-              : "New Shoot Preparation"
-          }
-          description="Complete preparation details and checklist"
+          title={editingId ? "Manage Shoot Preparation" : "New Shoot Preparation"}
+          description="Assign your photography team and prepare the shoot equipment"
           onClose={closeForm}
           onSubmit={saveShoot}
-          submitLabel={
-            editingId
-              ? "Update Preparation"
-              : "Save Preparation"
-          }
+          submitLabel={editingId ? "Update Preparation" : "Save Preparation"}
         >
-          <div className="space-y-8">
+          <div className="space-y-7">
             {/* SHOOT INFORMATION */}
             <section>
               <SectionHeading
@@ -957,9 +906,7 @@ export default function PreShoot() {
                     required
                     autoFocus
                     value={form.customer}
-                    onChange={(event) =>
-                      update("customer", event.target.value)
-                    }
+                    onChange={(event) => update("customer", event.target.value)}
                     placeholder="Enter customer name"
                     className={inputClass}
                   />
@@ -978,9 +925,7 @@ export default function PreShoot() {
                     type="date"
                     required
                     value={form.shootDate}
-                    onChange={(event) =>
-                      update("shootDate", event.target.value)
-                    }
+                    onChange={(event) => update("shootDate", event.target.value)}
                     className={inputClass}
                   />
                 </FormField>
@@ -990,9 +935,7 @@ export default function PreShoot() {
                     type="time"
                     required
                     value={form.shootTime}
-                    onChange={(event) =>
-                      update("shootTime", event.target.value)
-                    }
+                    onChange={(event) => update("shootTime", event.target.value)}
                     className={inputClass}
                   />
                 </FormField>
@@ -1002,10 +945,8 @@ export default function PreShoot() {
                     <input
                       type="text"
                       value={form.location}
-                      onChange={(event) =>
-                        update("location", event.target.value)
-                      }
-                      placeholder="Enter shoot location"
+                      onChange={(event) => update("location", event.target.value)}
+                      placeholder="e.g. Wedding hall, beach or studio"
                       className={inputClass}
                     />
                   </FormField>
@@ -1013,69 +954,85 @@ export default function PreShoot() {
               </div>
             </section>
 
-            {/* TEAM AND EQUIPMENT */}
+            {/* PHOTOGRAPHY TEAM */}
             <section>
               <SectionHeading
                 icon={Users}
-                title="Team & Equipment"
-                description="Assign team members and required equipment"
+                title="Photography Team"
+                description="Choose an assigned photographer and crew"
               />
 
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
                 <FormField label="Photographer">
-                  <input
-                    type="text"
+                  <CustomDropdown
                     value={form.photographer}
-                    onChange={(event) =>
-                      update("photographer", event.target.value)
-                    }
-                    placeholder="Enter photographer name"
-                    className={inputClass}
+                    options={photographers}
+                    onChange={(value) => update("photographer", value)}
+                    placeholder="Choose photographer"
                   />
                 </FormField>
 
                 <FormField label="Team Members">
-                  <input
-                    type="text"
+                  <CustomDropdown
                     value={form.team}
-                    onChange={(event) =>
-                      update("team", event.target.value)
-                    }
-                    placeholder="Enter team members"
-                    className={inputClass}
+                    options={teamOptions}
+                    onChange={(value) => update("team", value)}
+                    placeholder="Choose photography team"
                   />
                 </FormField>
-
-                <div className="md:col-span-2">
-                  <FormField label="Required Equipment">
-                    <input
-                      type="text"
-                      value={form.equipment}
-                      onChange={(event) =>
-                        update("equipment", event.target.value)
-                      }
-                      placeholder="Enter required equipment"
-                      className={inputClass}
-                    />
-                  </FormField>
-                </div>
               </div>
             </section>
 
-            {/* PREPARATION CHECKLIST */}
+            {/* EQUIPMENT */}
+            <section>
+              <SectionHeading
+                icon={Camera}
+                title="Equipment Assignment"
+                description="Select the camera and equipment kit needed for this shoot"
+              />
+
+              <FormField label="Required Equipment">
+                <CustomDropdown
+                  value={form.equipment}
+                  options={equipmentOptions}
+                  onChange={(value) => update("equipment", value)}
+                  placeholder="Choose equipment kit"
+                />
+              </FormField>
+
+              {form.equipment && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700">
+                    <PackageCheck size={21} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                      Selected Equipment
+                    </p>
+                    <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
+                      {form.equipment}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Include this kit in the equipment check before leaving for the shoot.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* CHECKLIST */}
             <section>
               <SectionHeading
                 icon={ClipboardCheck}
-                title="Preparation Checklist"
-                description="Track every task before the shoot"
+                title="Shoot Preparation Checklist"
+                description="Tick each task when it has been completed"
               />
 
-              <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8faff] p-4 sm:p-6">
+              <div className="rounded-2xl border border-[#dbe4f0] bg-[#f8faff] p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-[#10264d]">
-                    Checklist Progress
+                    Readiness Progress
                   </p>
-
                   <span className="text-sm font-bold text-blue-700">
                     {getProgress(form)}%
                   </span>
@@ -1088,9 +1045,8 @@ export default function PreShoot() {
 
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                   {checklistItems.map((task) => {
-                    const checked = Array.isArray(form.checklist)
-                      ? form.checklist.includes(task)
-                      : false;
+                    const checked = Array.isArray(form.checklist) &&
+                      form.checklist.includes(task);
 
                     return (
                       <label
@@ -1128,33 +1084,11 @@ export default function PreShoot() {
 
                 <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3">
                   <p className="text-xs font-medium text-slate-500">
-                    Preparation Status
+                    Current Status
                   </p>
-
                   <StatusBadge status={getStatus(form)} />
                 </div>
               </div>
-            </section>
-
-            {/* ADDITIONAL NOTES */}
-            <section>
-              <SectionHeading
-                icon={ClipboardList}
-                title="Additional Information"
-                description="Special instructions and shoot notes"
-              />
-
-              <FormField label="Additional Notes">
-                <textarea
-                  rows={4}
-                  value={form.notes}
-                  onChange={(event) =>
-                    update("notes", event.target.value)
-                  }
-                  placeholder="Special instructions..."
-                  className={`${inputClass} resize-y`}
-                />
-              </FormField>
             </section>
 
             {error && (
@@ -1162,10 +1096,7 @@ export default function PreShoot() {
                 role="alert"
                 className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
               >
-                <AlertCircle
-                  size={18}
-                  className="mt-0.5 shrink-0"
-                />
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
                 <span className="break-words">{error}</span>
               </div>
             )}
