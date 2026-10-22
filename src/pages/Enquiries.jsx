@@ -23,9 +23,16 @@ import {
   ArrowUpRight,
   Filter,
   Inbox,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 const KEY = "studio_raw_enquiries";
+const SOUND_KEY = "studioraw_enquiry_sounds";
+const DEMO_VERSION_KEY = "studioraw_enquiry_demo_version";
+const DEMO_VERSION = "100-v1";
+
+const NAVY = "#10264d";
 
 const stages = [
   "New",
@@ -70,100 +77,177 @@ const emptyForm = {
   notes: "",
 };
 
-// DUMMY DATA
-const dummyEnquiries = [
-  {
-    id: "ENQ-1001",
-    customer: "Arun Kumar",
-    phone: "9876543210",
-    service: "Wedding Photography",
-    eventDate: "2026-11-15",
-    budget: "45000",
-    source: "Instagram",
-    stage: "New",
-    owner: "Ravi",
-    nextFollowUp: "2026-10-25",
-    notes: "Wedding photography and candid coverage required.",
-  },
-  {
-    id: "ENQ-1002",
-    customer: "Priya S",
-    phone: "9876543211",
-    service: "Pre-Wedding Shoot",
-    eventDate: "2026-11-20",
-    budget: "25000",
-    source: "Referral",
-    stage: "Contacted",
-    owner: "Karthik",
-    nextFollowUp: "2026-10-26",
-    notes: "Outdoor pre-wedding shoot.",
-  },
-  {
-    id: "ENQ-1003",
-    customer: "Vijay Raj",
-    phone: "9876543212",
-    service: "Event Photography",
-    eventDate: "2026-12-05",
-    budget: "18000",
-    source: "WhatsApp",
-    stage: "Qualified",
-    owner: "Ravi",
-    nextFollowUp: "2026-10-27",
-    notes: "Birthday event photography.",
-  },
-  {
-    id: "ENQ-1004",
-    customer: "Meena Devi",
-    phone: "9876543213",
-    service: "Maternity Photography",
-    eventDate: "2026-11-28",
-    budget: "12000",
-    source: "Website",
-    stage: "Quoted",
-    owner: "Priya",
-    nextFollowUp: "2026-10-28",
-    notes: "Indoor maternity photoshoot.",
-  },
-  {
-    id: "ENQ-1005",
-    customer: "Sanjay Kumar",
-    phone: "9876543214",
-    service: "Studio Portrait",
-    eventDate: "2026-11-10",
-    budget: "5000",
-    source: "Walk-in",
-    stage: "Follow-up",
-    owner: "Karthik",
-    nextFollowUp: "2026-10-24",
-    notes: "Family portrait session.",
-  },
-  {
-    id: "ENQ-1006",
-    customer: "Divya R",
-    phone: "9876543215",
-    service: "Wedding Photography",
-    eventDate: "2026-12-12",
-    budget: "65000",
-    source: "Instagram",
-    stage: "Won/Converted",
-    owner: "Ravi",
-    nextFollowUp: "",
-    notes: "Wedding package confirmed.",
-  },
-  {
-    id: "ENQ-1007",
-    customer: "Karthik M",
-    phone: "9876543216",
-    service: "Videography",
-    eventDate: "2026-12-18",
-    budget: "30000",
-    source: "Referral",
-    stage: "Lost",
-    owner: "Priya",
-    nextFollowUp: "",
-    notes: "Customer chose another provider.",
-  },
+const dummyNames = [
+  "Arun Kumar",
+  "Priya S",
+  "Vijay Raj",
+  "Meena Devi",
+  "Sanjay Kumar",
+  "Divya R",
+  "Karthik M",
+  "Anitha R",
+  "Rahul S",
+  "Keerthana",
+  "Ajay Kumar",
+  "Nithya",
+  "Suresh B",
+  "Harini",
+  "Dinesh Raj",
+  "Swetha",
+  "Manoj Kumar",
+  "Aishwarya",
+  "Praveen",
+  "Deepika",
+  "Bala Murugan",
+  "Sneha",
+  "Aravind",
+  "Pavithra",
+  "Saravanan",
+  "Janani",
+  "Gokul",
+  "Ramya",
+  "Naveen Kumar",
+  "Abinaya",
+  "Ramesh",
+  "Kavya",
+  "Ashwin",
+  "Lakshmi",
+  "Mohan",
+  "Gayathri",
+  "Sathish",
+  "Reshma",
+  "Vignesh",
+  "Monisha",
+  "Prakash",
+  "Shalini",
+  "Kishore",
+  "Sandhiya",
+  "Ranjith",
+  "Varsha",
+  "Hari Prasad",
+  "Yamini",
+  "Muthu Kumar",
+  "Dhanya",
 ];
+
+const dummyBudgets = [
+  5000,
+  8000,
+  10000,
+  12000,
+  15000,
+  18000,
+  20000,
+  25000,
+  30000,
+  35000,
+  40000,
+  45000,
+  50000,
+  60000,
+  65000,
+  75000,
+  85000,
+  100000,
+  120000,
+  150000,
+];
+
+const dummyStaff = [
+  "Ravi",
+  "Karthik",
+  "Priya",
+  "Arun",
+  "Divya",
+  "Vignesh",
+];
+
+const dummyNotes = [
+  "Customer requested full event coverage.",
+  "Need candid and traditional photography.",
+  "Interested in premium wedding photography package.",
+  "Requested quotation through WhatsApp.",
+  "Customer prefers outdoor photography.",
+  "Need cinematic video and photography.",
+  "Discussing package details with customer.",
+  "Customer requested album design and printing.",
+  "Follow-up required for booking confirmation.",
+  "Customer requested budget-friendly package.",
+  "Interested in drone photography coverage.",
+  "Family event photography enquiry.",
+  "Customer requested sample albums.",
+  "Waiting for customer confirmation.",
+  "Photography package details shared.",
+];
+
+function makeDummyDate(index, startMonth = 10) {
+  const date = new Date(2026, startMonth, 1 + index * 3);
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+const dummyEnquiries = Array.from(
+  { length: 100 },
+  (_, index) => {
+    const customer = dummyNames[index % dummyNames.length];
+    const stage = stages[index % stages.length];
+
+    return {
+      id: `ENQ-${index + 1001}`,
+      customer:
+        index < dummyNames.length
+          ? customer
+          : `${customer} ${Math.floor(index / dummyNames.length) + 1}`,
+      phone: String(9000000000 + index * 137),
+      service: services[index % services.length],
+      eventDate: makeDummyDate(index),
+      budget: String(dummyBudgets[index % dummyBudgets.length]),
+      source: sources[index % sources.length],
+      stage,
+      owner: dummyStaff[index % dummyStaff.length],
+      nextFollowUp:
+        stage === "Lost" || stage === "Won/Converted"
+          ? ""
+          : makeDummyDate(index % 20, 9),
+      notes: dummyNotes[index % dummyNotes.length],
+      createdAt: makeDummyDate(index % 20, 8),
+      isDemo: true,
+    };
+  }
+);
+
+function loadEnquiries() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const existing = Array.isArray(parsed) ? parsed : [];
+
+    if (localStorage.getItem(DEMO_VERSION_KEY) === DEMO_VERSION) {
+      return existing;
+    }
+
+    const existingIds = new Set(
+      existing.map((item) => String(item.id))
+    );
+
+    const missing = dummyEnquiries.filter(
+      (item) => !existingIds.has(item.id)
+    );
+
+    const merged = [...existing, ...missing];
+
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    localStorage.setItem(DEMO_VERSION_KEY, DEMO_VERSION);
+
+    return merged;
+  } catch {
+    return dummyEnquiries;
+  }
+}
 
 const fieldClass =
   "block w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
@@ -173,10 +257,12 @@ const formatMoney = (value) =>
     ? "—"
     : `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
-const formatDate = (value) => {
+function formatDate(value) {
   if (!value) return "—";
 
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  const date = new Date(
+    `${String(value).slice(0, 10)}T00:00:00`
+  );
 
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -185,20 +271,122 @@ const formatDate = (value) => {
     month: "short",
     year: "numeric",
   });
-};
+}
 
 const stageStyles = {
-  New: "bg-blue-50 text-blue-700 border-blue-100",
-  Contacted: "bg-sky-50 text-sky-700 border-sky-100",
-  Qualified: "bg-violet-50 text-violet-700 border-violet-100",
-  Quoted: "bg-amber-50 text-amber-700 border-amber-100",
-  "Follow-up": "bg-orange-50 text-orange-700 border-orange-100",
-  "Won/Converted": "bg-emerald-50 text-emerald-700 border-emerald-100",
-  Lost: "bg-red-50 text-red-700 border-red-100",
+  New: "border-blue-100 bg-blue-50 text-blue-700",
+  Contacted: "border-sky-100 bg-sky-50 text-sky-700",
+  Qualified: "border-violet-100 bg-violet-50 text-violet-700",
+  Quoted: "border-amber-100 bg-amber-50 text-amber-700",
+  "Follow-up": "border-orange-100 bg-orange-50 text-orange-700",
+  "Won/Converted":
+    "border-emerald-100 bg-emerald-50 text-emerald-700",
+  Lost: "border-red-100 bg-red-50 text-red-700",
 };
 
-const getStageStyle = (stage) =>
-  stageStyles[stage] || "bg-slate-50 text-slate-600 border-slate-200";
+function getStageStyle(stage) {
+  return (
+    stageStyles[stage] ||
+    "border-slate-200 bg-slate-50 text-slate-600"
+  );
+}
+
+function useEnquirySounds() {
+  const [enabled, setEnabled] = useState(
+    () => localStorage.getItem(SOUND_KEY) !== "false"
+  );
+
+  const audioRef = useRef(null);
+
+  const play = (type = "click") => {
+    if (!enabled) return;
+
+    try {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      if (!audioRef.current) {
+        audioRef.current = new AudioContextClass();
+      }
+
+      const ctx = audioRef.current;
+
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      const patterns = {
+        click: [520],
+        open: [420, 580],
+        success: [440, 660, 880],
+        delete: [440, 310],
+        error: [260, 220],
+        filter: [480, 620],
+      };
+
+      const notes = patterns[type] || patterns.click;
+
+      notes.forEach((frequency, index) => {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        const start = ctx.currentTime + index * 0.075;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(frequency, start);
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(
+          0.025,
+          start + 0.012
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + 0.14
+        );
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+
+        oscillator.start(start);
+        oscillator.stop(start + 0.15);
+      });
+    } catch {
+      // Sound is optional.
+    }
+  };
+
+  const toggle = () => {
+    const next = !enabled;
+    localStorage.setItem(SOUND_KEY, String(next));
+    setEnabled(next);
+
+    if (next) {
+      try {
+        const AudioContextClass =
+          window.AudioContext || window.webkitAudioContext;
+
+        if (AudioContextClass) {
+          const ctx = audioRef.current || new AudioContextClass();
+          audioRef.current = ctx;
+          ctx.resume().catch(() => {});
+        }
+      } catch {
+        // Audio is optional.
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.close?.().catch(() => {});
+    };
+  }, []);
+
+  return { enabled, toggle, play };
+}
 
 function CustomDropdown({
   value,
@@ -207,6 +395,7 @@ function CustomDropdown({
   placeholder = "Select option",
   compact = false,
   status = false,
+  playSound,
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -245,12 +434,20 @@ function CustomDropdown({
   }, [open]);
 
   const toggle = () => {
+    playSound?.("click");
+
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const menuHeight = Math.min(options.length * 41 + 12, 230);
+
       const openUp =
         window.innerHeight - rect.bottom < menuHeight &&
         rect.top > menuHeight;
+
+      const width = Math.min(
+        Math.max(rect.width, 175),
+        window.innerWidth - 16
+      );
 
       setMenuPosition({
         top: openUp
@@ -258,12 +455,9 @@ function CustomDropdown({
           : rect.bottom + 6,
         left: Math.max(
           8,
-          Math.min(
-            rect.left,
-            window.innerWidth - Math.max(rect.width, 175) - 8
-          )
+          Math.min(rect.left, window.innerWidth - width - 8)
         ),
-        width: Math.max(rect.width, 175),
+        width,
       });
     }
 
@@ -289,6 +483,7 @@ function CustomDropdown({
         <span className="min-w-0 flex-1 truncate">
           {value || placeholder}
         </span>
+
         <ChevronDown
           size={14}
           className={`shrink-0 transition-transform ${
@@ -320,6 +515,7 @@ function CustomDropdown({
                 role="option"
                 aria-selected={value === option}
                 onClick={() => {
+                  playSound?.("filter");
                   onChange(option);
                   setOpen(false);
                 }}
@@ -342,15 +538,17 @@ function CustomDropdown({
 
 function SummaryCard({ title, value, icon: Icon, color }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:shadow-md sm:p-5">
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:-translate-y-1 hover:shadow-md sm:p-5">
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-500 sm:text-sm">
           {title}
         </p>
-        <h3 className="mt-2 text-2xl font-bold text-[#10264d]">
+
+        <h3 className="mt-2 text-2xl font-extrabold text-[#10264d]">
           {value}
         </h3>
       </div>
+
       <div className={`shrink-0 rounded-xl p-3 ${color}`}>
         <Icon size={20} />
       </div>
@@ -365,6 +563,7 @@ function FormField({ label, required = false, children }) {
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
+
       {children}
     </div>
   );
@@ -376,7 +575,10 @@ function FormSectionTitle({ icon: Icon, title }) {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
         <Icon size={17} />
       </div>
-      <h4 className="text-[13px] font-bold text-[#10264d]">{title}</h4>
+
+      <h4 className="text-[13px] font-bold text-[#10264d]">
+        {title}
+      </h4>
     </div>
   );
 }
@@ -388,6 +590,7 @@ function DetailItem({ icon: Icon, label, value }) {
         <Icon size={13} />
         {label}
       </div>
+
       <p className="break-words text-xs font-semibold text-[#243b60]">
         {value || "—"}
       </p>
@@ -396,33 +599,16 @@ function DetailItem({ icon: Icon, label, value }) {
 }
 
 export default function Enquiries() {
-  const [enquiries, setEnquiries] = useState(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-
-        // Existing non-empty data is preserved.
-        // Empty or invalid data is replaced with dummy data.
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-
-      localStorage.setItem(KEY, JSON.stringify(dummyEnquiries));
-      return dummyEnquiries;
-    } catch {
-      return dummyEnquiries;
-    }
-  });
-
+  const [enquiries, setEnquiries] = useState(loadEnquiries);
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [error, setError] = useState("");
+
+  const { enabled: soundEnabled, toggle: toggleSound, play } =
+    useEnquirySounds();
 
   const modalRef = useRef(null);
   const customerInputRef = useRef(null);
@@ -441,7 +627,10 @@ export default function Enquiries() {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    customerInputRef.current?.focus();
+
+    const focusTimer = window.setTimeout(() => {
+      customerInputRef.current?.focus();
+    }, 30);
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -474,6 +663,7 @@ export default function Enquiries() {
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      window.clearTimeout(focusTimer);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
       previousFocusRef.current?.focus?.();
@@ -490,6 +680,7 @@ export default function Enquiries() {
         item.service,
         item.id,
         item.source,
+        item.owner,
       ].some((value) =>
         String(value || "").toLowerCase().includes(query)
       );
@@ -510,7 +701,9 @@ export default function Enquiries() {
     },
     {
       title: "Follow-ups",
-      value: enquiries.filter((item) => item.stage === "Follow-up").length,
+      value: enquiries.filter(
+        (item) => item.stage === "Follow-up"
+      ).length,
       icon: CalendarDays,
       color: "bg-amber-50 text-amber-700",
     },
@@ -525,7 +718,9 @@ export default function Enquiries() {
   ];
 
   const openForm = (item = null) => {
+    play("open");
     previousFocusRef.current = document.activeElement;
+
     setEditing(item?.id || null);
     setForm(item ? { ...emptyForm, ...item } : { ...emptyForm });
     setError("");
@@ -533,6 +728,7 @@ export default function Enquiries() {
   };
 
   const closeForm = () => {
+    play("click");
     setShowForm(false);
     setEditing(null);
     setForm({ ...emptyForm });
@@ -553,7 +749,10 @@ export default function Enquiries() {
     const phone = String(form.phone || "").trim();
 
     if (!customer || !/^\d{10}$/.test(phone)) {
-      setError("Enter customer name and valid 10-digit mobile number.");
+      setError(
+        "Enter customer name and valid 10-digit mobile number."
+      );
+      play("error");
       return;
     }
 
@@ -562,7 +761,9 @@ export default function Enquiries() {
     if (editing) {
       setEnquiries((previous) =>
         previous.map((item) =>
-          item.id === editing ? { ...item, ...updatedForm } : item
+          item.id === editing
+            ? { ...item, ...updatedForm }
+            : item
         )
       );
     } else {
@@ -570,21 +771,35 @@ export default function Enquiries() {
         {
           ...updatedForm,
           id: `ENQ-${Date.now()}`,
+          createdAt: new Date().toISOString(),
         },
         ...previous,
       ]);
     }
 
-    closeForm();
+    play("success");
+    setShowForm(false);
+    setEditing(null);
+    setForm({ ...emptyForm });
+    setError("");
   };
 
   const remove = (id) => {
-    if (window.confirm("Are you sure you want to delete this enquiry?")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this enquiry?"
+      )
+    ) {
       setEnquiries((previous) =>
         previous.filter((item) => item.id !== id)
       );
 
-      if (editing === id) closeForm();
+      play("delete");
+
+      if (editing === id) {
+        setShowForm(false);
+        setEditing(null);
+      }
     }
   };
 
@@ -594,37 +809,56 @@ export default function Enquiries() {
         item.id === id ? { ...item, stage } : item
       )
     );
+
+    play("success");
   };
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
-      {/* PAGE HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-5 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:space-y-6 sm:px-6 lg:px-8 lg:py-8">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
           <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#7e93af]">
             Customer Relationship Management
           </p>
+
           <h2 className="text-2xl font-extrabold text-[#10264d] lg:text-[29px]">
             Enquiries & Leads
           </h2>
+
           <p className="mt-1 text-sm text-slate-500">
             Manage enquiries, follow-ups and lead conversions.
           </p>
         </div>
 
-        {/* Existing Add Enquiry button remains unchanged */}
-        {/* <button
-          type="button"
-          onClick={() => openForm()}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4274]"
-        >
-          <Plus size={18} />
-          Add Enquiry
-        </button> */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={toggleSound}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] shadow-sm transition hover:bg-blue-50 sm:text-sm"
+          >
+            {soundEnabled ? (
+              <Volume2 size={17} />
+            ) : (
+              <VolumeX size={17} />
+            )}
+
+            Sound {soundEnabled ? "ON" : "OFF"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openForm()}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1d4274] sm:text-sm"
+          >
+            <Plus size={18} />
+            Add Enquiry
+          </button>
+        </div>
       </div>
 
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-5">
         {counts.map((item) => (
           <SummaryCard key={item.title} {...item} />
         ))}
@@ -637,6 +871,7 @@ export default function Enquiries() {
             <h3 className="text-lg font-bold text-[#10264d]">
               Enquiries List
             </h3>
+
             <p className="mt-1 text-xs text-[#8b99ae]">
               {filtered.length} enquiries found
             </p>
@@ -648,6 +883,7 @@ export default function Enquiries() {
                 size={17}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
               />
+
               <input
                 type="search"
                 value={search}
@@ -662,12 +898,14 @@ export default function Enquiries() {
                 size={16}
                 className="shrink-0 text-slate-400 sm:hidden"
               />
+
               <div className="min-w-0 flex-1">
                 <CustomDropdown
                   value={stageFilter}
                   options={["All", ...stages]}
                   onChange={setStageFilter}
                   compact
+                  playSound={play}
                 />
               </div>
             </div>
@@ -703,7 +941,9 @@ export default function Enquiries() {
                   <th
                     key={heading}
                     className={`break-words px-2 py-3 text-[10px] font-bold uppercase tracking-[0.02em] text-[#8290a5] xl:px-3 xl:text-[11px] ${
-                      heading === "Actions" ? "text-center" : ""
+                      heading === "Actions"
+                        ? "text-center"
+                        : ""
                     }`}
                   >
                     {heading}
@@ -717,8 +957,13 @@ export default function Enquiries() {
                 <tr>
                   <td colSpan={8}>
                     <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                      <Inbox size={36} className="mb-3 text-slate-300" />
-                      <p className="text-sm font-medium">No enquiries found</p>
+                      <Inbox
+                        size={36}
+                        className="mb-3 text-slate-300"
+                      />
+                      <p className="text-sm font-medium">
+                        No enquiries found
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -739,6 +984,7 @@ export default function Enquiries() {
                         <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a] xl:flex">
                           <UserRound size={16} />
                         </div>
+
                         <div className="min-w-0">
                           <p
                             className="truncate text-xs font-bold text-[#10264d] xl:text-[13px]"
@@ -746,6 +992,7 @@ export default function Enquiries() {
                           >
                             {item.customer}
                           </p>
+
                           <p className="mt-1 truncate text-[10px] text-[#8b99ae] xl:text-[11px]">
                             {item.phone}
                           </p>
@@ -784,13 +1031,16 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={item.stage || "New"}
                         options={stages}
-                        onChange={(stage) => changeStage(item.id, stage)}
+                        onChange={(stage) =>
+                          changeStage(item.id, stage)
+                        }
                         status
+                        playSound={play}
                       />
                     </td>
 
                     <td className="px-0.5 py-3 align-middle">
-                      <div className="flex items-center justify-center gap-0">
+                      <div className="flex items-center justify-center">
                         <button
                           type="button"
                           onClick={() => openForm(item)}
@@ -800,6 +1050,7 @@ export default function Enquiries() {
                         >
                           <Pencil size={14} />
                         </button>
+
                         <button
                           type="button"
                           onClick={() => remove(item.id)}
@@ -822,7 +1073,10 @@ export default function Enquiries() {
         <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
           {filtered.length === 0 ? (
             <div className="col-span-full flex flex-col items-center py-12 text-slate-400">
-              <Inbox size={34} className="mb-3 text-slate-300" />
+              <Inbox
+                size={34}
+                className="mb-3 text-slate-300"
+              />
               <p className="text-sm">No enquiries found</p>
             </div>
           ) : (
@@ -836,10 +1090,12 @@ export default function Enquiries() {
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-[#315f9a]">
                       <UserRound size={19} />
                     </div>
+
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-[#10264d]">
                         {item.customer}
                       </p>
+
                       <p className="mt-1 text-[11px] font-semibold text-[#4972a8]">
                         {item.id}
                       </p>
@@ -855,6 +1111,7 @@ export default function Enquiries() {
                     >
                       <Pencil size={15} />
                     </button>
+
                     <button
                       type="button"
                       onClick={() => remove(item.id)}
@@ -867,41 +1124,54 @@ export default function Enquiries() {
                 </div>
 
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  <span className="text-lg font-bold text-[#10264d]">
+                  <span className="break-words text-lg font-bold text-[#10264d]">
                     {formatMoney(item.budget)}
                   </span>
+
                   <div className="w-[145px] max-w-[55%]">
                     <CustomDropdown
                       value={item.stage || "New"}
                       options={stages}
-                      onChange={(stage) => changeStage(item.id, stage)}
+                      onChange={(stage) =>
+                        changeStage(item.id, stage)
+                      }
                       status
+                      playSound={play}
                     />
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
-                  <DetailItem icon={Phone} label="Phone" value={item.phone} />
+                  <DetailItem
+                    icon={Phone}
+                    label="Phone"
+                    value={item.phone}
+                  />
+
                   <DetailItem
                     icon={CalendarDays}
                     label="Event Date"
                     value={formatDate(item.eventDate)}
                   />
+
                   <DetailItem
                     icon={Camera}
                     label="Service"
                     value={item.service}
                   />
+
                   <DetailItem
                     icon={ArrowUpRight}
                     label="Lead Source"
                     value={item.source}
                   />
+
                   <DetailItem
                     icon={UserRound}
                     label="Assigned Staff"
                     value={item.owner}
                   />
+
                   <DetailItem
                     icon={CalendarClock}
                     label="Follow-up"
@@ -928,6 +1198,7 @@ export default function Enquiries() {
           <p>
             Showing {filtered.length} of {enquiries.length} enquiries
           </p>
+
           <span>Studio Raw Picturez CRM</span>
         </div>
       </section>
@@ -938,7 +1209,9 @@ export default function Enquiries() {
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/65 p-3 backdrop-blur-[3px] sm:p-5"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) closeForm();
+              if (event.target === event.currentTarget) {
+                closeForm();
+              }
             }}
           >
             <section
@@ -951,15 +1224,23 @@ export default function Enquiries() {
               <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e9eef5] px-5 py-4 sm:px-7">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                    {editing ? <Pencil size={19} /> : <Plus size={21} />}
+                    {editing ? (
+                      <Pencil size={19} />
+                    ) : (
+                      <Plus size={21} />
+                    )}
                   </div>
+
                   <div className="min-w-0">
                     <h3
                       id="enquiry-modal-title"
                       className="text-lg font-bold text-[#10264d]"
                     >
-                      {editing ? "Edit Enquiry" : "Add New Enquiry"}
+                      {editing
+                        ? "Edit Enquiry"
+                        : "Add New Enquiry"}
                     </h3>
+
                     <p className="mt-1 text-xs text-[#8491a5]">
                       {editing
                         ? "Update customer enquiry information"
@@ -978,8 +1259,12 @@ export default function Enquiries() {
                 </button>
               </div>
 
-              <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
+              <form
+                onSubmit={save}
+                className="flex min-h-0 flex-1 flex-col"
+              >
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
+                  {/* CUSTOMER INFORMATION */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Users}
@@ -992,7 +1277,10 @@ export default function Enquiries() {
                         type="text"
                         value={form.customer}
                         onChange={(event) =>
-                          updateField("customer", event.target.value)
+                          updateField(
+                            "customer",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter customer name"
                         className={fieldClass}
@@ -1022,7 +1310,10 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.source}
                         options={sources}
-                        onChange={(value) => updateField("source", value)}
+                        onChange={(value) =>
+                          updateField("source", value)
+                        }
+                        playSound={play}
                       />
                     </FormField>
 
@@ -1031,7 +1322,10 @@ export default function Enquiries() {
                         type="text"
                         value={form.owner}
                         onChange={(event) =>
-                          updateField("owner", event.target.value)
+                          updateField(
+                            "owner",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter staff name"
                         className={fieldClass}
@@ -1039,6 +1333,7 @@ export default function Enquiries() {
                     </FormField>
                   </div>
 
+                  {/* EVENT DETAILS */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={Camera}
@@ -1049,7 +1344,10 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.service}
                         options={services}
-                        onChange={(value) => updateField("service", value)}
+                        onChange={(value) =>
+                          updateField("service", value)
+                        }
+                        playSound={play}
                       />
                     </FormField>
 
@@ -1058,7 +1356,10 @@ export default function Enquiries() {
                         type="date"
                         value={form.eventDate}
                         onChange={(event) =>
-                          updateField("eventDate", event.target.value)
+                          updateField(
+                            "eventDate",
+                            event.target.value
+                          )
                         }
                         className={fieldClass}
                       />
@@ -1070,7 +1371,10 @@ export default function Enquiries() {
                         min="0"
                         value={form.budget}
                         onChange={(event) =>
-                          updateField("budget", event.target.value)
+                          updateField(
+                            "budget",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter estimated budget"
                         className={fieldClass}
@@ -1082,13 +1386,17 @@ export default function Enquiries() {
                         type="date"
                         value={form.nextFollowUp}
                         onChange={(event) =>
-                          updateField("nextFollowUp", event.target.value)
+                          updateField(
+                            "nextFollowUp",
+                            event.target.value
+                          )
                         }
                         className={fieldClass}
                       />
                     </FormField>
                   </div>
 
+                  {/* LEAD MANAGEMENT */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormSectionTitle
                       icon={ClipboardList}
@@ -1099,7 +1407,10 @@ export default function Enquiries() {
                       <CustomDropdown
                         value={form.stage}
                         options={stages}
-                        onChange={(value) => updateField("stage", value)}
+                        onChange={(value) =>
+                          updateField("stage", value)
+                        }
+                        playSound={play}
                       />
                     </FormField>
 
@@ -1111,7 +1422,10 @@ export default function Enquiries() {
                           rows={3}
                           value={form.notes}
                           onChange={(event) =>
-                            updateField("notes", event.target.value)
+                            updateField(
+                              "notes",
+                              event.target.value
+                            )
                           }
                           placeholder="Enter enquiry requirements or special notes..."
                           className={`${fieldClass} min-h-[85px] resize-y`}
@@ -1130,6 +1444,7 @@ export default function Enquiries() {
                   )}
                 </div>
 
+                {/* MODAL FOOTER */}
                 <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
                   <button
                     type="button"
@@ -1138,12 +1453,15 @@ export default function Enquiries() {
                   >
                     Cancel
                   </button>
+
                   <button
                     type="submit"
                     className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e]"
                   >
                     <Save size={17} />
-                    {editing ? "Update Enquiry" : "Save Enquiry"}
+                    {editing
+                      ? "Update Enquiry"
+                      : "Save Enquiry"}
                   </button>
                 </div>
               </form>

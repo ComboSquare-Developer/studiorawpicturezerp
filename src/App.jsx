@@ -1,610 +1,205 @@
 
-import { useEffect, useRef, useState } from "react";
-
+import { useEffect, useState, lazy, Suspense } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Enquiries from "./pages/Enquiries";
-import Customers from "./pages/Customers";
-import BookingCalendar from "./pages/BookingCalendar";
-import Payments from "./pages/Payments";
-import PreShoot from "./pages/PreShoot";
-import PhotoShoot from "./pages/PhotoShoot";
-import Delivery from "./pages/Delivery";
-import Inventory from "./pages/Inventory";
-import Equipment from "./pages/Equipment";
-import Expenses from "./pages/Expenses";
-import Branches from "./pages/Branches";
-import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import AuditLogs from "./pages/AuditLogs";
-import Settings from "./pages/Settings";
+const files = import.meta.glob("./pages/*.jsx");
 
-const SOUND_KEY = "studioraw_dashboard_sound";
+const pageNames = {
+  // OVERVIEW
+  dashboard: "Dashboard",
+  enquiries: "Enquiries",
+  customers: "Customers",
 
-function createSoundEngine() {
-  let ctx = null;
-  let output = null;
-  let noiseBuffer = null;
+  // SHOOT BOOKINGS & EVENTS
+  bookings: "BookingCalendar",
+  "booking-calendar": "BookingCalendar",
+  "wedding-photography": "WeddingPhotography",
+  "wedding-videography": "WeddingVideography",
+  "functions-we-arrange": "FunctionsWeArrange",
+  "event-management": "EventManagement",
+  "customized-gifts": "CustomizedGifts",
 
-  function getContext() {
-    try {
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
+  // OPERATIONS
+  payments: "Payments",
+  deliveries: "Delivery",
+  delivery: "Delivery",
+  inventory: "Inventory",
+  equipment: "Equipment",
+  expenses: "Expenses",
 
-      if (!AudioContextClass) return null;
+  // MANAGEMENT
+  staff: "Staff",
+  branches: "Branches",
+  reports: "Reports",
+  notifications: "Notifications",
+  settings: "Settings",
+};
 
-      if (!ctx || ctx.state === "closed") {
-        ctx = new AudioContextClass();
+const getPage = (name) => {
+  const file = Object.keys(files).find((path) => {
+    const filename = path
+      .split("/")
+      .pop()
+      .replace(".jsx", "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
 
-        const compressor =
-          ctx.createDynamicsCompressor();
+    const target = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
 
-        compressor.threshold.value = -16;
-        compressor.knee.value = 10;
-        compressor.ratio.value = 5;
-        compressor.attack.value = 0.003;
-        compressor.release.value = 0.18;
+    return filename === target;
+  });
 
-        output = ctx.createGain();
-        output.gain.value = 0.75;
+  return file ? lazy(files[file]) : null;
+};
 
-        output.connect(compressor);
-        compressor.connect(ctx.destination);
+const components = Object.fromEntries(
+  Object.entries(pageNames).map(([key, value]) => [
+    key,
+    getPage(value),
+  ])
+);
 
-        noiseBuffer = null;
-      }
+const Login = getPage("Login");
 
-      if (ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
-      }
-
-      return ctx;
-    } catch {
-      return null;
-    }
-  }
-
-  function tone({
-    frequency = 180,
-    endFrequency = 60,
-    duration = 0.2,
-    volume = 0.25,
-    delay = 0,
-    type = "triangle",
-  } = {}) {
-    const audio = getContext();
-    if (!audio || !output) return;
-
-    const start = audio.currentTime + delay + 0.005;
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-
-    oscillator.type = type;
-
-    oscillator.frequency.setValueAtTime(
-      Math.max(20, frequency),
-      start
-    );
-
-    oscillator.frequency.exponentialRampToValueAtTime(
-      Math.max(20, endFrequency),
-      start + duration
-    );
-
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(
-      volume,
-      start + Math.min(0.012, duration / 4)
-    );
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      start + duration
-    );
-
-    oscillator.connect(gain);
-    gain.connect(output);
-
-    oscillator.start(start);
-    oscillator.stop(start + duration + 0.02);
-  }
-
-  function whoosh(delay = 0) {
-    const audio = getContext();
-    if (!audio || !output) return;
-
-    if (!noiseBuffer) {
-      noiseBuffer = audio.createBuffer(
-        1,
-        Math.floor(audio.sampleRate * 0.4),
-        audio.sampleRate
-      );
-
-      const samples = noiseBuffer.getChannelData(0);
-
-      for (let i = 0; i < samples.length; i++) {
-        samples[i] = Math.random() * 2 - 1;
-      }
-    }
-
-    const source = audio.createBufferSource();
-    const filter = audio.createBiquadFilter();
-    const gain = audio.createGain();
-
-    const start = audio.currentTime + delay + 0.005;
-    const duration = 0.24;
-
-    source.buffer = noiseBuffer;
-
-    filter.type = "bandpass";
-    filter.Q.value = 0.8;
-
-    filter.frequency.setValueAtTime(380, start);
-    filter.frequency.exponentialRampToValueAtTime(
-      2600,
-      start + duration * 0.7
-    );
-
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(
-      0.15,
-      start + duration * 0.3
-    );
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      start + duration
-    );
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(output);
-
-    source.start(start);
-    source.stop(start + duration);
-  }
-
-  function bass(strength = 0.36, delay = 0) {
-    tone({
-      frequency: 175,
-      endFrequency: 55,
-      duration: 0.23,
-      volume: strength,
-      delay,
-      type: "triangle",
-    });
-  }
-
-  function click(delay = 0) {
-    tone({
-      frequency: 1250,
-      endFrequency: 390,
-      duration: 0.085,
-      volume: 0.13,
-      delay,
-      type: "square",
-    });
-  }
-
-  function play(type = "click") {
-    switch (type) {
-      case "navigate":
-        bass(0.4);
-        whoosh(0.02);
-        click(0.13);
-        break;
-
-      case "success":
-        bass(0.32);
-
-        [523, 659, 784, 1046].forEach(
-          (frequency, index) => {
-            tone({
-              frequency,
-              endFrequency: frequency * 1.03,
-              duration: 0.2,
-              volume: 0.15,
-              delay: 0.05 + index * 0.08,
-              type: "sine",
-            });
-          }
-        );
-        break;
-
-      case "delete":
-        bass(0.45);
-
-        tone({
-          frequency: 450,
-          endFrequency: 130,
-          duration: 0.3,
-          volume: 0.25,
-          delay: 0.04,
-          type: "sawtooth",
-        });
-
-        click(0.07);
-        break;
-
-      case "open":
-        bass(0.3);
-        whoosh(0.03);
-
-        tone({
-          frequency: 430,
-          endFrequency: 850,
-          duration: 0.2,
-          volume: 0.13,
-          delay: 0.07,
-        });
-        break;
-
-      case "close":
-        tone({
-          frequency: 680,
-          endFrequency: 230,
-          duration: 0.2,
-          volume: 0.23,
-        });
-
-        bass(0.24, 0.04);
-        break;
-
-      case "select":
-        click();
-
-        tone({
-          frequency: 550,
-          endFrequency: 850,
-          duration: 0.12,
-          volume: 0.11,
-          delay: 0.02,
-        });
-        break;
-
-      case "welcome":
-        bass(0.4);
-        whoosh(0.04);
-
-        [392, 523, 659, 784, 1046].forEach(
-          (frequency, index) => {
-            tone({
-              frequency,
-              endFrequency: frequency * 1.02,
-              duration: 0.24,
-              volume: 0.14,
-              delay: 0.08 + index * 0.1,
-              type: "sine",
-            });
-          }
-        );
-        break;
-
-      default:
-        bass(0.35);
-        click(0.012);
-        break;
-    }
-  }
-
-  return {
-    play,
-    unlock: getContext,
-  };
+function Loader() {
+  return (
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <div className="h-9 w-9 animate-spin rounded-full border-4 border-[#dce6f4] border-t-[#10264d]" />
+    </div>
+  );
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return (
-      localStorage.getItem("studioraw_logged_in") === "true"
-    );
-  });
-
+  const [loggedIn, setLoggedIn] = useState(false);
   const [activePage, setActivePage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    return localStorage.getItem(SOUND_KEY) !== "false";
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("studioraw_theme") || "dark";
+    } catch {
+      return "dark";
+    }
   });
 
-  const soundEngineRef = useRef(null);
-  const lastSoundRef = useRef(0);
-  const soundEnabledRef = useRef(soundEnabled);
-
-  if (!soundEngineRef.current) {
-    soundEngineRef.current = createSoundEngine();
-  }
-
   useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
+    const handleThemeChange = (event) => {
+      const nextTheme = event.detail?.theme;
 
-    localStorage.setItem(
-      SOUND_KEY,
-      String(soundEnabled)
-    );
-  }, [soundEnabled]);
+      if (nextTheme === "dark" || nextTheme === "light") {
+        setTheme(nextTheme);
+      }
+    };
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      localStorage.setItem(
-        "studioraw_logged_in",
-        "true"
-      );
-    } else {
-      localStorage.removeItem("studioraw_logged_in");
-    }
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    function syncSound() {
-      const enabled =
-        localStorage.getItem(SOUND_KEY) === "true";
-
-      soundEnabledRef.current = enabled;
-      setSoundEnabled(enabled);
-    }
-
-    window.addEventListener("storage", syncSound);
     window.addEventListener(
-      "studioraw-sound-change",
-      syncSound
+      "studioraw-theme-change",
+      handleThemeChange
     );
 
     return () => {
-      window.removeEventListener("storage", syncSound);
       window.removeEventListener(
-        "studioraw-sound-change",
-        syncSound
+        "studioraw-theme-change",
+        handleThemeChange
       );
     };
   }, []);
 
-  useEffect(() => {
-    function playLimited(type) {
-      if (!soundEnabledRef.current) return;
-
-      const now = Date.now();
-
-      if (now - lastSoundRef.current < 85) {
-        return;
-      }
-
-      lastSoundRef.current = now;
-      soundEngineRef.current?.play(type);
-    }
-
-    function detectType(element) {
-      const text = [
-        element.getAttribute("aria-label"),
-        element.getAttribute("title"),
-        element.getAttribute("data-sound"),
-        element.textContent,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      if (/delete|remove|discard|clear/i.test(text)) {
-        return "delete";
-      }
-
-      if (
-        /save|submit|confirm|update|complete|approve/i.test(
-          text
-        )
-      ) {
-        return "success";
-      }
-
-      if (/cancel|close|dismiss/i.test(text)) {
-        return "close";
-      }
-
-      if (/add|create|new|open|edit|view/i.test(text)) {
-        return "open";
-      }
-
-      if (
-        element.matches(
-          'select, [role="option"], [role="combobox"]'
-        )
-      ) {
-        return "select";
-      }
-
-      return "click";
-    }
-
-    function handleClick(event) {
-      const target = event.target;
-
-      if (!(target instanceof Element)) return;
-
-      const element = target.closest(
-        'button, a, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="combobox"], input, select, textarea, label, summary'
-      );
-
-      if (!element) return;
-
-      if (
-        element.hasAttribute("disabled") ||
-        element.getAttribute("aria-disabled") === "true"
-      ) {
-        return;
-      }
-
-      soundEngineRef.current?.unlock();
-      playLimited(detectType(element));
-    }
-
-    function handleChange(event) {
-      const target = event.target;
-
-      if (
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLInputElement &&
-          ["checkbox", "radio", "range"].includes(
-            target.type
-          ))
-      ) {
-        playLimited("select");
-      }
-    }
-
-    document.addEventListener("click", handleClick, true);
-    document.addEventListener("change", handleChange, true);
-
-    return () => {
-      document.removeEventListener(
-        "click",
-        handleClick,
-        true
-      );
-      document.removeEventListener(
-        "change",
-        handleChange,
-        true
-      );
-    };
-  }, []);
+  const ActivePage = components[activePage];
 
   const handleLogin = () => {
-    localStorage.setItem(
-      "studioraw_logged_in",
-      "true"
-    );
-
-    setIsLoggedIn(true);
+    setLoggedIn(true);
     setActivePage("dashboard");
-
-    if (soundEnabledRef.current) {
-      soundEngineRef.current?.play("welcome");
-    }
+    setSidebarOpen(false);
   };
 
   const handleLogout = () => {
-    if (soundEnabledRef.current) {
-      soundEngineRef.current?.play("close");
-    }
-
-    localStorage.removeItem(
-      "studioraw_logged_in"
-    );
-
-    setIsLoggedIn(false);
-    setSidebarOpen(false);
+    setLoggedIn(false);
     setActivePage("dashboard");
-  };
-
-  const handleNavigate = (page) => {
-    const nextPage = String(page).toLowerCase();
-
-    if (
-      nextPage !== activePage &&
-      soundEnabledRef.current
-    ) {
-      soundEngineRef.current?.play("navigate");
-      lastSoundRef.current = Date.now();
-    }
-
-    setActivePage(nextPage);
     setSidebarOpen(false);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   };
 
-  const renderPage = () => {
-    switch (activePage) {
-      case "dashboard":
-        return (
-          <Dashboard setActivePage={handleNavigate} />
-        );
-
-      case "enquiries":
-      case "leads":
-        return <Enquiries />;
-
-      case "customers":
-        return <Customers />;
-
-      case "bookings":
-      case "bookingcalendar":
-      case "calendar":
-        return <BookingCalendar />;
-
-      case "payments":
-      case "billing":
-        return <Payments />;
-
-      case "preshoot":
-      case "shootreadiness":
-        return <PreShoot />;
-
-      case "photoshoot":
-        return <PhotoShoot />;
-
-      case "delivery":
-        return <Delivery />;
-
-      case "inventory":
-        return <Inventory />;
-
-      case "equipment":
-        return <Equipment />;
-
-      case "expenses":
-        return <Expenses />;
-
-      case "branches":
-        return <Branches />;
-
-      case "reports":
-        return <Reports />;
-
-      case "notifications":
-        return <Notifications />;
-
-      case "auditlogs":
-      case "audit-logs":
-        return <AuditLogs />;
-
-      case "settings":
-        return <Settings />;
-
-      default:
-        return (
-          <Dashboard setActivePage={handleNavigate} />
-        );
-    }
+  const handleNavigation = (page) => {
+    setActivePage(page);
+    setSidebarOpen(false);
   };
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} />;
+  if (!loggedIn) {
+    return (
+      <Suspense fallback={<Loader />}>
+        {Login ? (
+          <Login onLogin={handleLogin} />
+        ) : (
+          <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
+            <button
+              type="button"
+              onClick={handleLogin}
+              className="rounded-xl bg-[#10264d] px-6 py-3 font-semibold text-white"
+            >
+              Login
+            </button>
+          </div>
+        )}
+      </Suspense>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div
+      className={`flex min-h-screen min-w-0 transition-colors duration-300 ${
+        theme === "dark"
+          ? "bg-[#0b1730]"
+          : "bg-[#f5f7fb]"
+      }`}
+    >
       <Sidebar
         activePage={activePage}
-        setActivePage={handleNavigate}
+        setActivePage={handleNavigation}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         onLogout={handleLogout}
       />
 
-      <div className="min-h-screen min-w-0 lg:ml-[280px]">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Header
           activePage={activePage}
           setSidebarOpen={setSidebarOpen}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
 
-        <main className="min-w-0 p-3 sm:p-5 lg:p-6">
-          {renderPage()}
+        <main className="min-w-0 flex-1">
+          <Suspense fallback={<Loader />}>
+            {ActivePage ? (
+              <ActivePage />
+            ) : (
+              <div className="flex min-h-[70vh] items-center justify-center p-5">
+                <div
+                  className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-sm ${
+                    theme === "dark"
+                      ? "border-[#284267] bg-[#132746] text-white"
+                      : "border-[#e2e9f3] bg-white text-[#10264d]"
+                  }`}
+                >
+                  <h2 className="text-xl font-bold">
+                    {pageNames[activePage] || activePage}
+                  </h2>
+
+                  <p
+                    className={`mt-2 text-sm ${
+                      theme === "dark"
+                        ? "text-[#b5c8e3]"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    Page file not found in src/pages.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Suspense>
         </main>
       </div>
     </div>

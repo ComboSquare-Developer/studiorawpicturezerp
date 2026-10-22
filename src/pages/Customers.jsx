@@ -1,14 +1,34 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
-  Plus, Search, X, Users, UserCheck, UserX, Pencil,
-  Trash2, Phone, Mail, MapPin, CalendarDays,
-  ChevronDown, UserRound, CheckCircle2, AlertCircle,
+  Plus,
+  Search,
+  X,
+  Users,
+  UserCheck,
+  UserX,
+  Pencil,
+  Trash2,
+  Phone,
+  Mail,
+  MapPin,
+  CalendarDays,
+  ChevronDown,
+  UserRound,
+  CheckCircle2,
+  AlertCircle,
   ShieldCheck,
+  Volume2,
+  VolumeX,
+  Save,
+  Filter,
+  ContactRound,
 } from "lucide-react";
 
 const STORAGE_KEY = "studio_raw_customers";
-const DEMO_SEED_KEY = "studio_raw_customers_demo_v3";
+const DEMO_SEED_KEY = "studio_raw_customers_demo_v4_100";
+const SOUND_KEY = "studioraw_customers_sounds";
 
 const sampleNames = [
   ["Arun Kumar", "Male", "Nagercoil", "Instagram"],
@@ -41,36 +61,121 @@ const sampleNames = [
   ["Gayathri P", "Female", "Nagercoil", "Facebook"],
   ["Naveen Raj", "Male", "Chennai", "Instagram"],
   ["Monisha R", "Female", "Colachel", "Walk-in"],
+  ["Ashwin Kumar", "Male", "Nagercoil", "Instagram"],
+  ["Reshma P", "Female", "Tirunelveli", "Referral"],
+  ["Gokul Raj", "Male", "Marthandam", "Facebook"],
+  ["Abinaya S", "Female", "Kanyakumari", "Website"],
+  ["Mohan Raj", "Male", "Chennai", "Walk-in"],
+  ["Lakshmi P", "Female", "Nagercoil", "Instagram"],
+  ["Sathish Kumar", "Male", "Thuckalay", "Referral"],
+  ["Shalini R", "Female", "Colachel", "Facebook"],
+  ["Vignesh S", "Male", "Nagercoil", "Instagram"],
+  ["Yamini P", "Female", "Kuzhithurai", "Website"],
+  ["Prakash Raj", "Male", "Tirunelveli", "Walk-in"],
+  ["Varsha S", "Female", "Chennai", "Referral"],
+  ["Kishore Kumar", "Male", "Nagercoil", "Instagram"],
+  ["Sandhiya R", "Female", "Kanyakumari", "Facebook"],
+  ["Ranjith Kumar", "Male", "Marthandam", "Walk-in"],
+  ["Sneha P", "Female", "Thuckalay", "Instagram"],
+  ["Hari Prasad", "Male", "Nagercoil", "Referral"],
+  ["Dhanya S", "Female", "Tirunelveli", "Website"],
+  ["Muthu Kumar", "Male", "Colachel", "Facebook"],
+  ["Kavya R", "Female", "Chennai", "Instagram"],
 ];
 
-const initialCustomers = sampleNames.map((item, index) => {
-  const number = index + 1;
-  const day = String((index % 28) + 1).padStart(2, "0");
-  const month = String((index % 9) + 1).padStart(2, "0");
+const customerNotes = [
+  "Wedding photography enquiry",
+  "Pre-wedding photography customer",
+  "Birthday event photography",
+  "Family portrait booking",
+  "Album printing enquiry",
+  "Regular studio customer",
+  "Engagement photography enquiry",
+  "Maternity photoshoot enquiry",
+  "Traditional wedding coverage",
+  "Candid photography package",
+  "Outdoor photoshoot booking",
+  "Wedding videography enquiry",
+];
 
-  return {
-    id: `CUS${String(number).padStart(3, "0")}`,
-    name: item[0],
-    phone: `90000${String(10000 + index)}`,
-    email: `${item[0]
-      .toLowerCase()
-      .replace(/[^a-z]/g, "")}${number}@example.com`,
-    address: `${item[2]}, Tamil Nadu`,
-    gender: item[1],
-    status: index % 7 === 0 ? "Inactive" : "Active",
-    language: index % 5 === 0 ? "Tamil & English" : "Tamil",
-    source: item[3],
-    notes: [
-      "Wedding photography enquiry",
-      "Pre-wedding photography customer",
-      "Birthday event photography",
-      "Family portrait booking",
-      "Album printing enquiry",
-      "Regular studio customer",
-    ][index % 6],
-    createdAt: `2026-${month}-${day}`,
-  };
-});
+function createDummyCustomers() {
+  return Array.from({ length: 100 }, (_, index) => {
+    const person = sampleNames[index % sampleNames.length];
+
+    const date = new Date(
+      2026,
+      index % 10,
+      (index % 28) + 1
+    );
+
+    const number = index + 1;
+
+    const name =
+      index < sampleNames.length
+        ? person[0]
+        : `${person[0]} ${Math.floor(index / sampleNames.length) + 1}`;
+
+    return {
+      id: `CUS${String(number).padStart(3, "0")}`,
+      name,
+      phone: String(9000010000 + index * 173),
+      email: `${name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")}${number}@example.com`,
+      address: `${person[2]}, Tamil Nadu`,
+      gender: person[1],
+      status: index % 7 === 0 ? "Inactive" : "Active",
+      language:
+        index % 5 === 0 ? "Tamil & English" : "Tamil",
+      source: person[3],
+      notes: customerNotes[index % customerNotes.length],
+      createdAt: [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-"),
+      isDemo: true,
+    };
+  });
+}
+
+const initialCustomers = createDummyCustomers();
+
+function loadCustomers() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+
+    const existing = Array.isArray(parsed) ? parsed : [];
+
+    if (localStorage.getItem(DEMO_SEED_KEY) === "true") {
+      return existing;
+    }
+
+    const existingIds = new Set(
+      existing.map((item) => String(item.id))
+    );
+
+    const existingPhones = new Set(
+      existing.map((item) => String(item.phone))
+    );
+
+    const missingDemo = initialCustomers.filter(
+      (item) =>
+        !existingIds.has(String(item.id)) &&
+        !existingPhones.has(String(item.phone))
+    );
+
+    const merged = [...existing, ...missingDemo];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    localStorage.setItem(DEMO_SEED_KEY, "true");
+
+    return merged;
+  } catch {
+    return initialCustomers;
+  }
+}
 
 const emptyForm = {
   name: "",
@@ -85,34 +190,121 @@ const emptyForm = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+  "w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
 
-const formatDate = (date) => {
-  if (!date) return "-";
+function formatDate(date) {
+  if (!date) return "—";
+
   const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return "-";
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
   return parsed.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-};
+}
+
+function useCustomerSounds() {
+  const [enabled, setEnabled] = useState(
+    () => localStorage.getItem(SOUND_KEY) !== "false"
+  );
+
+  const audioRef = useRef(null);
+
+  const play = (type = "click") => {
+    if (!enabled) return;
+
+    try {
+      const AudioClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioClass) return;
+
+      if (!audioRef.current) {
+        audioRef.current = new AudioClass();
+      }
+
+      const ctx = audioRef.current;
+
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      const patterns = {
+        click: [520],
+        open: [420, 580],
+        success: [440, 660, 880],
+        delete: [440, 300],
+        toggle: [470, 620],
+        error: [250, 210],
+      };
+
+      const notes = patterns[type] || patterns.click;
+
+      notes.forEach((frequency, index) => {
+        const start = ctx.currentTime + index * 0.075;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          start
+        );
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(
+          0.028,
+          start + 0.012
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + 0.14
+        );
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+
+        oscillator.start(start);
+        oscillator.stop(start + 0.15);
+      });
+    } catch {
+      // Sound is optional.
+    }
+  };
+
+  const toggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    localStorage.setItem(SOUND_KEY, String(next));
+  };
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.close?.().catch(() => {});
+    };
+  }, []);
+
+  return { enabled, toggle, play };
+}
 
 function SummaryCard({ title, value, icon: Icon, color, bg }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md sm:p-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-500">
-            {title}
-          </p>
-          <h3 className="mt-3 text-3xl font-bold tracking-tight text-slate-800">
-            {value}
-          </h3>
-        </div>
-        <div className={`rounded-2xl p-3 ${bg}`}>
-          <Icon size={25} className={color} />
-        </div>
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition duration-300 hover:-translate-y-1 hover:shadow-md sm:p-5">
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-slate-500 sm:text-sm">
+          {title}
+        </p>
+
+        <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+          {value}
+        </h3>
+      </div>
+
+      <div className={`shrink-0 rounded-xl p-3 ${bg}`}>
+        <Icon size={21} className={color} />
       </div>
     </div>
   );
@@ -120,8 +312,8 @@ function SummaryCard({ title, value, icon: Icon, color, bg }) {
 
 function FormField({ label, children, required = false }) {
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-semibold text-slate-700">
+    <div className="min-w-0 space-y-2">
+      <label className="block text-xs font-semibold text-[#344767]">
         {label}
         {required && (
           <span className="ml-1 text-red-500">*</span>
@@ -132,16 +324,34 @@ function FormField({ label, children, required = false }) {
   );
 }
 
-function CustomerModal({ open, onClose, onSave, customer }) {
+function CustomerModal({
+  open,
+  onClose,
+  onSave,
+  customer,
+  playSound,
+}) {
   const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState("");
+
+  const nameRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
+
     setForm(
       customer
         ? { ...emptyForm, ...customer }
         : { ...emptyForm }
     );
+
+    setError("");
+
+    const timer = window.setTimeout(() => {
+      nameRef.current?.focus();
+    }, 30);
+
+    return () => window.clearTimeout(timer);
   }, [open, customer]);
 
   useEffect(() => {
@@ -174,258 +384,310 @@ function CustomerModal({ open, onClose, onSave, customer }) {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (!form.name.trim() || !form.phone.trim()) return;
+    const name = form.name.trim();
+    const phone = form.phone.trim();
 
-    onSave({
+    if (!name || !/^\d{10}$/.test(phone)) {
+      setError(
+        "Enter customer name and a valid 10-digit phone number."
+      );
+      playSound("error");
+      return;
+    }
+
+    const success = onSave({
       ...form,
-      name: form.name.trim(),
-      phone: form.phone.trim(),
+      name,
+      phone,
       email: form.email.trim(),
       address: form.address.trim(),
       notes: form.notes.trim(),
     });
 
-    onClose();
+    if (success !== false) {
+      onClose();
+    }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07172d]/65 p-3 backdrop-blur-[3px] sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-5 sm:px-8">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 sm:text-2xl">
-              {customer ? "Edit Customer" : "Add New Customer"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {customer
-                ? "Update customer information"
-                : "Enter the customer details below"}
-            </p>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customer-modal-title"
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:max-h-[calc(100dvh-40px)]"
+      >
+        {/* MODAL HEADER */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e9eef5] px-5 py-4 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
+              {customer ? (
+                <Pencil size={19} />
+              ) : (
+                <Plus size={21} />
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <h2
+                id="customer-modal-title"
+                className="text-lg font-bold text-[#10264d]"
+              >
+                {customer
+                  ? "Edit Customer"
+                  : "Add New Customer"}
+              </h2>
+
+              <p className="mt-1 text-xs text-[#8491a5]">
+                {customer
+                  ? "Update customer information"
+                  : "Enter customer details below"}
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
             aria-label="Close modal"
           >
-            <X size={21} />
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 sm:p-8">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-              <UserRound size={22} />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800">
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">
+            <div className="flex items-center gap-3 border-b border-[#edf1f6] pb-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
+                <UserRound size={17} />
+              </div>
+
+              <h3 className="text-[13px] font-bold text-[#10264d]">
                 Personal Information
               </h3>
-              <p className="text-xs text-slate-500">
-                Customer contact and profile details
-              </p>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <FormField label="Customer Name" required>
-              <input
-                className={inputClass}
-                placeholder="Enter full name"
-                value={form.name}
-                onChange={(event) =>
-                  updateField("name", event.target.value)
-                }
-                required
-              />
-            </FormField>
-
-            <FormField label="Phone Number" required>
-              <input
-                className={inputClass}
-                type="tel"
-                placeholder="Enter phone number"
-                value={form.phone}
-                onChange={(event) =>
-                  updateField("phone", event.target.value)
-                }
-                required
-              />
-            </FormField>
-
-            <FormField label="Email Address">
-              <input
-                className={inputClass}
-                type="email"
-                placeholder="customer@example.com"
-                value={form.email}
-                onChange={(event) =>
-                  updateField("email", event.target.value)
-                }
-              />
-            </FormField>
-
-            <FormField label="Gender">
-              <select
-                className={inputClass}
-                value={form.gender}
-                onChange={(event) =>
-                  updateField("gender", event.target.value)
-                }
-              >
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </FormField>
-
-            <FormField label="Preferred Language">
-              <select
-                className={inputClass}
-                value={form.language}
-                onChange={(event) =>
-                  updateField("language", event.target.value)
-                }
-              >
-                <option value="Tamil">Tamil</option>
-                <option value="English">English</option>
-                <option value="Tamil & English">
-                  Tamil & English
-                </option>
-              </select>
-            </FormField>
-
-            <FormField label="Customer Source">
-              <select
-                className={inputClass}
-                value={form.source}
-                onChange={(event) =>
-                  updateField("source", event.target.value)
-                }
-              >
-                <option value="">Select source</option>
-                <option value="Instagram">Instagram</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Referral">Referral</option>
-                <option value="Walk-in">Walk-in</option>
-                <option value="Website">Website</option>
-                <option value="Other">Other</option>
-              </select>
-            </FormField>
-
-            <FormField label="Customer Status">
-              <select
-                className={inputClass}
-                value={form.status}
-                onChange={(event) =>
-                  updateField("status", event.target.value)
-                }
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </FormField>
-
-            <FormField label="Address">
-              <input
-                className={inputClass}
-                placeholder="Enter address"
-                value={form.address}
-                onChange={(event) =>
-                  updateField("address", event.target.value)
-                }
-              />
-            </FormField>
-
-            <div className="sm:col-span-2">
-              <FormField label="Notes">
-                <textarea
-                  className={`${inputClass} min-h-24 resize-y`}
-                  placeholder="Additional customer information..."
-                  value={form.notes}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Customer Name" required>
+                <input
+                  ref={nameRef}
+                  className={inputClass}
+                  placeholder="Enter full name"
+                  value={form.name}
                   onChange={(event) =>
-                    updateField("notes", event.target.value)
+                    updateField("name", event.target.value)
                   }
-                  rows={3}
+                  required
                 />
               </FormField>
+
+              <FormField label="Phone Number" required>
+                <input
+                  className={inputClass}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="Enter 10-digit number"
+                  value={form.phone}
+                  onChange={(event) =>
+                    updateField(
+                      "phone",
+                      event.target.value.replace(/\D/g, "")
+                    )
+                  }
+                  required
+                />
+              </FormField>
+
+              <FormField label="Email Address">
+                <input
+                  className={inputClass}
+                  type="email"
+                  placeholder="customer@example.com"
+                  value={form.email}
+                  onChange={(event) =>
+                    updateField("email", event.target.value)
+                  }
+                />
+              </FormField>
+
+              <FormField label="Gender">
+                <div className="relative">
+                  <select
+                    className={`${inputClass} appearance-none pr-10`}
+                    value={form.gender}
+                    onChange={(event) => {
+                      playSound("click");
+                      updateField("gender", event.target.value);
+                    }}
+                  >
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="Preferred Language">
+                <div className="relative">
+                  <select
+                    className={`${inputClass} appearance-none pr-10`}
+                    value={form.language}
+                    onChange={(event) => {
+                      playSound("click");
+                      updateField("language", event.target.value);
+                    }}
+                  >
+                    <option value="Tamil">Tamil</option>
+                    <option value="English">English</option>
+                    <option value="Tamil & English">
+                      Tamil & English
+                    </option>
+                  </select>
+
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="Customer Source">
+                <div className="relative">
+                  <select
+                    className={`${inputClass} appearance-none pr-10`}
+                    value={form.source}
+                    onChange={(event) => {
+                      playSound("click");
+                      updateField("source", event.target.value);
+                    }}
+                  >
+                    <option value="">Select source</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Referral">Referral</option>
+                    <option value="Walk-in">Walk-in</option>
+                    <option value="Website">Website</option>
+                    <option value="Other">Other</option>
+                  </select>
+
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="Customer Status">
+                <div className="relative">
+                  <select
+                    className={`${inputClass} appearance-none pr-10`}
+                    value={form.status}
+                    onChange={(event) => {
+                      playSound("click");
+                      updateField("status", event.target.value);
+                    }}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="Address">
+                <input
+                  className={inputClass}
+                  placeholder="Enter address"
+                  value={form.address}
+                  onChange={(event) =>
+                    updateField("address", event.target.value)
+                  }
+                />
+              </FormField>
+
+              <div className="sm:col-span-2">
+                <FormField label="Notes">
+                  <textarea
+                    className={`${inputClass} min-h-[90px] resize-y`}
+                    placeholder="Additional customer information..."
+                    value={form.notes}
+                    onChange={(event) =>
+                      updateField("notes", event.target.value)
+                    }
+                    rows={3}
+                  />
+                </FormField>
+              </div>
             </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+              >
+                <AlertCircle size={18} className="shrink-0" />
+                {error}
+              </div>
+            )}
           </div>
 
-          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+          {/* MODAL FOOTER */}
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              className="rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] hover:bg-[#eef3f9]"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e]"
             >
-              <CheckCircle2 size={18} />
-              {customer ? "Update Customer" : "Save Customer"}
+              <Save size={17} />
+              {customer
+                ? "Update Customer"
+                : "Save Customer"}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body
   );
 }
 
 export default function Customers() {
-  const [customers, setCustomers] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const existing = saved ? JSON.parse(saved) : [];
-
-      const validExisting = Array.isArray(existing)
-        ? existing
-        : [];
-
-      const alreadySeeded =
-        localStorage.getItem(DEMO_SEED_KEY) === "true";
-
-      if (alreadySeeded) {
-        return validExisting;
-      }
-
-      const existingIds = new Set(
-        validExisting.map((item) => String(item.id))
-      );
-
-      const existingPhones = new Set(
-        validExisting.map((item) => String(item.phone))
-      );
-
-      const missingDemo = initialCustomers.filter(
-        (item) =>
-          !existingIds.has(String(item.id)) &&
-          !existingPhones.has(String(item.phone))
-      );
-
-      localStorage.setItem(DEMO_SEED_KEY, "true");
-
-      return [...validExisting, ...missingDemo];
-    } catch {
-      return initialCustomers;
-    }
-  });
-
+  const [customers, setCustomers] = useState(loadCustomers);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [notice, setNotice] = useState("");
+
+  const { enabled: soundEnabled, toggle: toggleSound, play } =
+    useCustomerSounds();
 
   useEffect(() => {
     try {
@@ -466,10 +728,9 @@ export default function Customers() {
         customer.id,
         customer.phone,
         customer.email,
+        customer.address,
       ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(term)
+        String(value || "").toLowerCase().includes(term)
       );
 
       const matchesStatus =
@@ -481,11 +742,13 @@ export default function Customers() {
   }, [customers, search, statusFilter]);
 
   const openAdd = () => {
+    play("open");
     setEditingCustomer(null);
     setModalOpen(true);
   };
 
   const openEdit = (customer) => {
+    play("open");
     setEditingCustomer(customer);
     setModalOpen(true);
   };
@@ -496,6 +759,18 @@ export default function Customers() {
   };
 
   const saveCustomer = (form) => {
+    const duplicate = customers.some(
+      (customer) =>
+        customer.phone === form.phone &&
+        customer.id !== editingCustomer?.id
+    );
+
+    if (duplicate) {
+      setNotice("This phone number already exists.");
+      play("error");
+      return false;
+    }
+
     if (editingCustomer) {
       setCustomers((previous) =>
         previous.map((customer) =>
@@ -506,7 +781,8 @@ export default function Customers() {
       );
 
       setNotice("Customer updated successfully.");
-      return;
+      play("success");
+      return true;
     }
 
     const newCustomer = {
@@ -521,6 +797,8 @@ export default function Customers() {
     ]);
 
     setNotice("Customer added successfully.");
+    play("success");
+    return true;
   };
 
   const deleteCustomer = (customer) => {
@@ -537,6 +815,7 @@ export default function Customers() {
     );
 
     setNotice("Customer deleted successfully.");
+    play("delete");
   };
 
   const toggleStatus = (customer) => {
@@ -556,26 +835,30 @@ export default function Customers() {
     setNotice(
       `Customer marked ${nextStatus.toLowerCase()}.`
     );
+
+    play("toggle");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-7">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
+      <div className="w-full min-w-0 space-y-6">
+        {/* NOTIFICATION */}
         {notice && (
           <div
             role="status"
-            className="fixed right-4 top-4 z-[60] flex max-w-sm items-center gap-3 rounded-xl border border-blue-100 bg-white px-5 py-4 text-sm font-medium text-slate-700 shadow-xl"
+            className="fixed right-3 top-3 z-[60] flex max-w-[calc(100vw-24px)] items-center gap-3 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-sm font-medium text-[#10264d] shadow-xl sm:right-5 sm:top-5"
           >
             <CheckCircle2
-              className="shrink-0 text-blue-600"
+              className="shrink-0 text-[#315f9a]"
               size={20}
             />
+
             <span>{notice}</span>
 
             <button
               type="button"
               onClick={() => setNotice("")}
-              className="ml-2 text-slate-400 hover:text-slate-700"
+              className="ml-1 text-slate-400 hover:text-slate-700"
               aria-label="Dismiss notification"
             >
               <X size={17} />
@@ -583,39 +866,55 @@ export default function Customers() {
           </div>
         )}
 
-        {/* HEADER */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="mb-2 text-sm font-semibold text-blue-600">
+        {/* PAGE HEADER */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#7e93af]">
               STUDIO RAW PICTUREZ
             </p>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">
+            <h1 className="text-2xl font-extrabold text-[#10264d] lg:text-[29px]">
               Customers
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500 sm:text-base">
+            <p className="mt-1 text-sm text-slate-500">
               Manage your customer information in one place.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openAdd}
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
-          >
-            <Plus size={20} />
-            Add Customer
-          </button>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={toggleSound}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] shadow-sm transition hover:bg-blue-50 sm:text-sm"
+            >
+              {soundEnabled ? (
+                <Volume2 size={17} />
+              ) : (
+                <VolumeX size={17} />
+              )}
+
+              Sound {soundEnabled ? "ON" : "OFF"}
+            </button>
+
+            <button
+              type="button"
+              onClick={openAdd}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1d4274] sm:text-sm"
+            >
+              <Plus size={18} />
+              Add Customer
+            </button>
+          </div>
         </div>
 
-        {/* STATISTICS */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* SUMMARY CARDS */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
           <SummaryCard
             title="Total Customers"
             value={customers.length}
             icon={Users}
-            color="text-blue-600"
+            color="text-blue-700"
             bg="bg-blue-50"
           />
 
@@ -623,7 +922,7 @@ export default function Customers() {
             title="Active Customers"
             value={activeCount}
             icon={UserCheck}
-            color="text-emerald-600"
+            color="text-emerald-700"
             bg="bg-emerald-50"
           />
 
@@ -631,7 +930,7 @@ export default function Customers() {
             title="Inactive Customers"
             value={inactiveCount}
             icon={UserX}
-            color="text-orange-600"
+            color="text-orange-700"
             bg="bg-orange-50"
           />
 
@@ -639,34 +938,35 @@ export default function Customers() {
             title="Customer Records"
             value={filteredCustomers.length}
             icon={ShieldCheck}
-            color="text-violet-600"
+            color="text-violet-700"
             bg="bg-violet-50"
           />
         </div>
 
         {/* DIRECTORY */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_4px_24px_rgba(16,38,77,0.035)]">
+          <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between xl:px-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">
+              <h2 className="text-lg font-bold text-[#10264d]">
                 Customer Directory
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-xs text-[#8b99ae]">
                 Search, edit and manage your customers.
               </p>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <div className="relative flex-1 sm:min-w-64">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:w-[260px] xl:w-[300px]">
                 <Search
-                  size={19}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={17}
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
                 />
 
                 <input
-                  className={`${inputClass} pl-11`}
-                  placeholder="Search name, ID, phone..."
+                  type="search"
+                  className={`${inputClass} h-11 pl-10`}
+                  placeholder="Search customers..."
                   value={search}
                   onChange={(event) =>
                     setSearch(event.target.value)
@@ -674,13 +974,14 @@ export default function Customers() {
                 />
               </div>
 
-              <div className="relative sm:min-w-44">
+              <div className="relative w-full sm:w-[190px]">
                 <select
-                  className={`${inputClass} appearance-none pr-10`}
+                  className={`${inputClass} h-11 appearance-none pr-10`}
                   value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value);
+                    play("click");
+                  }}
                   aria-label="Filter customers by status"
                 >
                   <option value="All">All Customers</option>
@@ -689,7 +990,7 @@ export default function Customers() {
                 </select>
 
                 <ChevronDown
-                  size={17}
+                  size={16}
                   className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
               </div>
@@ -697,10 +998,18 @@ export default function Customers() {
           </div>
 
           {/* DESKTOP TABLE */}
-          <div className="mt-6 hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[850px] border-collapse text-left">
+          <div className="hidden w-full min-w-0 lg:block">
+            <table className="w-full table-fixed border-collapse text-left">
+              <colgroup>
+                <col style={{ width: "24%" }} />
+                <col style={{ width: "29%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "13%" }} />
+              </colgroup>
+
               <thead>
-                <tr className="border-y border-slate-100 bg-slate-50">
+                <tr className="border-b border-[#e9eef5] bg-[#f8fafd]">
                   {[
                     "Customer",
                     "Contact",
@@ -710,9 +1019,9 @@ export default function Customers() {
                   ].map((heading) => (
                     <th
                       key={heading}
-                      className={`px-4 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 ${
+                      className={`px-3 py-4 text-[11px] font-bold uppercase tracking-[0.02em] text-[#8290a5] xl:px-5 ${
                         heading === "Actions"
-                          ? "text-right"
+                          ? "text-center"
                           : ""
                       }`}
                     >
@@ -722,102 +1031,117 @@ export default function Customers() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#edf1f6]">
                 {filteredCustomers.map((customer) => (
                   <tr
                     key={customer.id}
-                    className="transition hover:bg-slate-50/80"
+                    className="transition-colors hover:bg-[#f8faff]"
                   >
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 font-bold text-blue-700">
+                    <td className="px-3 py-4 xl:px-5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] font-bold text-[#315f9a]">
                           {customer.name
                             ?.charAt(0)
                             ?.toUpperCase() || "C"}
                         </div>
 
-                        <div>
-                          <p className="font-semibold text-slate-800">
+                        <div className="min-w-0">
+                          <p
+                            className="truncate text-xs font-bold text-[#10264d] xl:text-[13px]"
+                            title={customer.name}
+                          >
                             {customer.name}
                           </p>
 
-                          <p className="mt-1 text-xs text-slate-400">
+                          <p className="mt-1 truncate text-[11px] text-[#8b99ae]">
                             {customer.id}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-700">
+                    <td className="px-3 py-4 xl:px-5">
+                      <div className="flex items-center gap-2 text-xs text-[#52627b]">
                         <Phone
-                          size={15}
-                          className="text-slate-400"
+                          size={14}
+                          className="shrink-0 text-slate-400"
                         />
-                        {customer.phone}
+                        <span className="truncate">
+                          {customer.phone}
+                        </span>
                       </div>
 
                       {customer.email && (
-                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                        <div className="mt-2 flex min-w-0 items-center gap-2 text-[11px] text-[#8b99ae]">
                           <Mail
                             size={14}
-                            className="text-slate-400"
+                            className="shrink-0 text-slate-400"
                           />
-                          {customer.email}
+
+                          <span
+                            className="truncate"
+                            title={customer.email}
+                          >
+                            {customer.email}
+                          </span>
                         </div>
                       )}
                     </td>
 
-                    <td className="px-4 py-4 text-sm text-slate-600">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-4 xl:px-5">
+                      <div className="flex items-center gap-2 text-xs text-[#52627b]">
                         <CalendarDays
-                          size={16}
-                          className="text-slate-400"
+                          size={15}
+                          className="shrink-0 text-slate-400"
                         />
+
                         {formatDate(customer.createdAt)}
                       </div>
                     </td>
 
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-4 xl:px-5">
                       <button
                         type="button"
                         onClick={() => toggleStatus(customer)}
                         title="Click to change status"
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${
                           customer.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-slate-100 text-slate-600"
+                            ? "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                         }`}
                       >
                         <span
-                          className={`h-2 w-2 rounded-full ${
+                          className={`h-2 w-2 shrink-0 rounded-full ${
                             customer.status === "Active"
                               ? "bg-emerald-500"
                               : "bg-slate-400"
                           }`}
                         />
+
                         {customer.status}
                       </button>
                     </td>
 
-                    <td className="px-4 py-4">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-2 py-4">
+                      <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
                           onClick={() => openEdit(customer)}
                           title="Edit customer"
-                          className="rounded-lg border border-blue-100 p-2.5 text-blue-600 transition hover:bg-blue-50"
+                          aria-label={`Edit ${customer.name}`}
+                          className="rounded-lg p-2 text-[#376aa7] transition hover:bg-blue-50"
                         >
-                          <Pencil size={17} />
+                          <Pencil size={16} />
                         </button>
 
                         <button
                           type="button"
                           onClick={() => deleteCustomer(customer)}
                           title="Delete customer"
-                          className="rounded-lg border border-red-100 p-2.5 text-red-500 transition hover:bg-red-50"
+                          aria-label={`Delete ${customer.name}`}
+                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
                         >
-                          <Trash2 size={17} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -827,119 +1151,127 @@ export default function Customers() {
             </table>
 
             {filteredCustomers.length === 0 && (
-              <div className="py-16 text-center">
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <AlertCircle
-                  className="mx-auto mb-3 text-slate-300"
-                  size={38}
+                  size={36}
+                  className="mb-3 text-slate-300"
                 />
 
-                <p className="font-semibold text-slate-600">
+                <p className="text-sm font-medium">
                   No customers found
-                </p>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Try changing your search or filter.
                 </p>
               </div>
             )}
           </div>
 
-          {/* MOBILE CARDS */}
-          <div className="mt-5 space-y-4 md:hidden">
+          {/* MOBILE / TABLET CARDS */}
+          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
             {filteredCustomers.map((customer) => (
-              <div
+              <article
                 key={customer.id}
-                className="rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200"
+                className="min-w-0 rounded-xl border border-[#e5ebf3] bg-white p-4 shadow-sm"
               >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-lg font-bold text-blue-700">
-                    {customer.name
-                      ?.charAt(0)
-                      ?.toUpperCase() || "C"}
-                  </div>
+                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf3fc] text-lg font-bold text-[#315f9a]">
+                      {customer.name
+                        ?.charAt(0)
+                        ?.toUpperCase() || "C"}
+                    </div>
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="break-words font-bold text-slate-800">
-                      {customer.name}
-                    </h3>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-[#10264d]">
+                        {customer.name}
+                      </p>
 
-                    <p className="mt-1 text-xs text-slate-400">
-                      {customer.id}
-                    </p>
-
-                    <span
-                      className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        customer.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {customer.status}
-                    </span>
+                      <p className="mt-1 text-[11px] font-semibold text-[#4972a8]">
+                        {customer.id}
+                      </p>
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => openEdit(customer)}
-                    className="rounded-lg border border-blue-100 p-2 text-blue-600 hover:bg-blue-50"
+                    aria-label={`Edit ${customer.name}`}
+                    className="shrink-0 rounded-lg bg-blue-50 p-2 text-blue-700"
                   >
-                    <Pencil size={17} />
+                    <Pencil size={16} />
                   </button>
                 </div>
 
-                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(customer)}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      customer.status === "Active"
+                        ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        customer.status === "Active"
+                          ? "bg-emerald-500"
+                          : "bg-slate-400"
+                      }`}
+                    />
+                    {customer.status}
+                  </button>
+
+                  <span className="text-[11px] text-slate-400">
+                    {formatDate(customer.createdAt)}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-3 text-xs text-[#52627b]">
                     <Phone
-                      size={16}
+                      size={15}
                       className="shrink-0 text-slate-400"
                     />
                     <span>{customer.phone}</span>
                   </div>
 
                   {customer.email && (
-                    <div className="flex min-w-0 items-center gap-3 text-sm text-slate-600">
+                    <div className="flex min-w-0 items-center gap-3 text-xs text-[#52627b]">
                       <Mail
-                        size={16}
+                        size={15}
                         className="shrink-0 text-slate-400"
                       />
-                      <span className="break-all">
+
+                      <span className="min-w-0 break-all">
                         {customer.email}
                       </span>
                     </div>
                   )}
 
                   {customer.address && (
-                    <div className="flex items-start gap-3 text-sm text-slate-600">
+                    <div className="flex items-start gap-3 text-xs text-[#52627b]">
                       <MapPin
-                        size={16}
+                        size={15}
                         className="mt-0.5 shrink-0 text-slate-400"
                       />
-                      <span>{customer.address}</span>
+                      <span className="break-words">
+                        {customer.address}
+                      </span>
                     </div>
                   )}
-
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <CalendarDays
-                      size={16}
-                      className="shrink-0 text-slate-400"
-                    />
-                    <span>
-                      Added {formatDate(customer.createdAt)}
-                    </span>
-                  </div>
                 </div>
 
-                <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
+                <div className="mt-4 flex gap-2 border-t border-[#edf1f6] pt-3">
                   <button
                     type="button"
                     onClick={() => toggleStatus(customer)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-[#dce4ef] px-2 py-2.5 text-[11px] font-semibold text-[#344767] transition hover:bg-blue-50"
                   >
                     {customer.status === "Active" ? (
-                      <UserX size={16} />
+                      <UserX size={15} />
                     ) : (
-                      <UserCheck size={16} />
+                      <UserCheck size={15} />
                     )}
+
                     Mark{" "}
                     {customer.status === "Active"
                       ? "Inactive"
@@ -949,58 +1281,46 @@ export default function Customers() {
                   <button
                     type="button"
                     onClick={() => deleteCustomer(customer)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-50"
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-red-100 px-3 py-2.5 text-[11px] font-semibold text-red-500 transition hover:bg-red-50"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                     Delete
                   </button>
                 </div>
-              </div>
+              </article>
             ))}
 
             {filteredCustomers.length === 0 && (
-              <div className="py-12 text-center">
+              <div className="col-span-full flex flex-col items-center py-12 text-slate-400">
                 <Users
-                  className="mx-auto mb-3 text-slate-300"
-                  size={38}
+                  size={36}
+                  className="mb-3 text-slate-300"
                 />
 
-                <p className="font-semibold text-slate-600">
+                <p className="text-sm">
                   No customers found
-                </p>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Try changing your search or filter.
                 </p>
               </div>
             )}
           </div>
 
           {/* FOOTER */}
-          <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1 border-t border-[#edf1f6] px-4 py-4 text-xs text-[#8290a5] sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p>
-              Showing{" "}
-              <span className="font-semibold text-slate-700">
-                {filteredCustomers.length}
-              </span>{" "}
-              of{" "}
-              <span className="font-semibold text-slate-700">
-                {customers.length}
-              </span>{" "}
-              customers
+              Showing {filteredCustomers.length} of{" "}
+              {customers.length} customers
             </p>
 
-            <p className="text-xs text-slate-400">
-              Customer data is saved in this browser.
-            </p>
+            <span>Studio Raw Picturez CRM</span>
           </div>
-        </div>
+        </section>
 
         <CustomerModal
           open={modalOpen}
           onClose={closeModal}
           onSave={saveCustomer}
           customer={editingCustomer}
+          playSound={play}
         />
       </div>
     </div>
