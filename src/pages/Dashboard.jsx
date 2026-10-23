@@ -1,5 +1,5 @@
-
 import { useEffect, useMemo, useState } from "react";
+
 import {
   Users,
   MessageSquare,
@@ -27,9 +27,9 @@ const STORAGE = {
   bookings: "studioraw_bookings",
   payments: "studioraw_payments",
   photoshoots: "studioraw_photoshoots",
-  editing: "studioraw_photo_editing",
-  albums: "studioraw_album_printing",
-  deliveries: "studioraw_deliveries",
+  editing: "studio_raw_photo_editing",
+  albums: "studio_raw_album_printing",
+  deliveries: "studio_raw_deliveries",
 };
 
 const DEMO_COUNTS = {
@@ -86,21 +86,25 @@ function dateKey(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
+
   return `${y}-${m}-${d}`;
 }
 
 function demoDate(index, future = false) {
   const date = new Date();
+
   date.setHours(12, 0, 0, 0);
+
   date.setDate(
     date.getDate() +
       (future ? index % 60 : -((index * 3) % 175))
   );
+
   return dateKey(date);
 }
 
 /* =========================================
-   DEMO DATA - 420 RECORDS
+   DEMO DATA
 ========================================= */
 
 function createDemoData() {
@@ -172,6 +176,7 @@ function createDemoData() {
     { length: DEMO_COUNTS.payments },
     (_, i) => {
       const amount = 12000 + (i % 18) * 3500;
+
       const paidAmount =
         i % 4 === 0
           ? amount
@@ -283,6 +288,7 @@ function readArray(key) {
   try {
     const saved = localStorage.getItem(key);
     const parsed = JSON.parse(saved);
+
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -293,6 +299,7 @@ function getAllData() {
   return Object.fromEntries(
     Object.entries(STORAGE).map(([name, key]) => {
       const actual = readArray(key);
+
       return [
         name,
         actual.length > 0 ? actual : DEMO_DATA[name],
@@ -341,6 +348,7 @@ function parseDate(value) {
   if (!value) return null;
 
   const text = String(value);
+
   const date = new Date(
     /^\d{4}-\d{2}-\d{2}/.test(text)
       ? `${text.slice(0, 10)}T00:00:00`
@@ -352,6 +360,7 @@ function parseDate(value) {
 
 function formatDate(value) {
   if (!value) return "Not scheduled";
+
   const date = parseDate(value);
 
   return date
@@ -391,116 +400,7 @@ const panelClass =
 
 const sectionIconClass =
   "flex shrink-0 items-center justify-center rounded-xl border border-[#365678] bg-[#1c395b] p-3 text-[#93c5fd]";
-
-/* =========================================
-   ANIMATED NUMBER
-========================================= */
-
-function AnimatedNumber({
-  value,
-  currency = false,
-  replay = 0,
-}) {
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    let frame;
-    const start = performance.now();
-    const target = Number(value) || 0;
-    const duration = 1100;
-
-    function animate(now) {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      setDisplay(Math.round(target * eased));
-
-      if (progress < 1) {
-        frame = requestAnimationFrame(animate);
-      }
-    }
-
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [value, replay]);
-
-  return currency ? money(display) : display.toLocaleString("en-IN");
-}
-
-/* =========================================
-   STAT CARD
-========================================= */
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-  subtitle,
-  index,
-  replay,
-}) {
-  const currency = ["Amount Received", "Pending Balance"].includes(title);
-
-  return (
-    <div
-      className="studio-card group relative min-w-0 overflow-hidden rounded-2xl border border-[#294361] bg-[#132943] p-4 shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-1 hover:border-[#527ba8] hover:shadow-xl sm:p-5"
-      style={{ animationDelay: `${index * 65}ms` }}
-    >
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-[#c0cee0] sm:text-sm">
-            {title}
-          </p>
-
-          <h2 className="mt-3 truncate whitespace-nowrap text-lg font-extrabold text-white sm:text-xl xl:text-2xl">
-            <AnimatedNumber
-              value={value}
-              currency={currency}
-              replay={replay}
-            />
-          </h2>
-
-          <p className="mt-2 text-[11px] font-medium leading-5 text-[#aebfd5]">
-            {subtitle}
-          </p>
-        </div>
-
-        <div className={`shrink-0 rounded-xl border p-3 ${color}`}>
-          <Icon size={22} strokeWidth={2.5} />
-        </div>
-      </div>
-
-      <div className="absolute bottom-0 left-0 h-1 w-0 bg-[#60a5fa] transition-all duration-500 group-hover:w-full" />
-    </div>
-  );
-}
-
-/* =========================================
-   SECTION TITLE
-========================================= */
-
-function SectionTitle({ title, subtitle, icon: Icon }) {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <div className={sectionIconClass}>
-        <Icon size={21} strokeWidth={2.4} />
-      </div>
-
-      <div className="min-w-0">
-        <h2 className="text-base font-extrabold text-white sm:text-lg">
-          {title}
-        </h2>
-
-        <p className="mt-1 text-xs font-medium text-[#c0cee0]">
-          {subtitle}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }) {
+  function EmptyState({ message }) {
   return (
     <div className="rounded-xl border border-dashed border-[#365678] bg-[#132943] p-10 text-center text-sm text-[#c0cee0]">
       {message}
@@ -536,8 +436,12 @@ function ChartPanel({
       <div className="grid h-56 grid-cols-6 items-end gap-2 border-b border-[#294361] pb-3 sm:h-64 sm:gap-3">
         {data.map((item, index) => {
           const value = item[dataKey] || 0;
+
           const height = value
-            ? Math.max(6, (value / Math.max(1, maxValue)) * 85)
+            ? Math.max(
+                6,
+                (value / Math.max(1, maxValue)) * 85
+              )
             : 2;
 
           return (
@@ -556,13 +460,18 @@ function ChartPanel({
                 aria-label={`${item.label}: ${value}`}
                 onClick={() => setSelected(index)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                  if (
+                    event.key === "Enter" ||
+                    event.key === " "
+                  ) {
                     event.preventDefault();
                     setSelected(index);
                   }
                 }}
                 className={`studio-bar w-full max-w-14 origin-bottom cursor-pointer rounded-t-lg transition-[filter] hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93c5fd] ${barColor} ${
-                  selected === index ? "ring-2 ring-white/60" : ""
+                  selected === index
+                    ? "ring-2 ring-white/60"
+                    : ""
                 }`}
                 style={{
                   height: `${height}%`,
@@ -622,8 +531,11 @@ function RevenueLineChart({ payments, replay }) {
   const [hoverIndex, setHoverIndex] = useState(null);
 
   const chartData = useMemo(() => {
-    const days = range === "7" ? 7 : range === "30" ? 30 : 180;
-    const bucketCount = range === "7" ? 7 : range === "30" ? 15 : 12;
+    const days =
+      range === "7" ? 7 : range === "30" ? 30 : 180;
+
+    const bucketCount =
+      range === "7" ? 7 : range === "30" ? 15 : 12;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -631,14 +543,23 @@ function RevenueLineChart({ payments, replay }) {
     const buckets = Array.from(
       { length: bucketCount },
       (_, index) => {
-        const startOffset = Math.floor((index * days) / bucketCount);
-        const endOffset = Math.floor(((index + 1) * days) / bucketCount);
+        const startOffset = Math.floor(
+          (index * days) / bucketCount
+        );
+
+        const endOffset = Math.floor(
+          ((index + 1) * days) / bucketCount
+        );
 
         const start = new Date(today);
-        start.setDate(today.getDate() - (days - 1) + startOffset);
+        start.setDate(
+          today.getDate() - (days - 1) + startOffset
+        );
 
         const end = new Date(today);
-        end.setDate(today.getDate() - (days - 1) + endOffset - 1);
+        end.setDate(
+          today.getDate() - (days - 1) + endOffset - 1
+        );
 
         return {
           key: dateKey(start),
@@ -666,7 +587,9 @@ function RevenueLineChart({ payments, replay }) {
         (item) => date >= item.start && date <= item.end
       );
 
-      if (bucket) bucket.value += paidValue(payment);
+      if (bucket) {
+        bucket.value += paidValue(payment);
+      }
     });
 
     return buckets;
@@ -686,7 +609,10 @@ function RevenueLineChart({ payments, replay }) {
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
 
-  const maxValue = Math.max(1, ...chartData.map((item) => item.value));
+  const maxValue = Math.max(
+    1,
+    ...chartData.map((item) => item.value)
+  );
 
   const niceMax =
     maxValue <= 100
@@ -697,7 +623,8 @@ function RevenueLineChart({ payments, replay }) {
     ...item,
     x:
       left +
-      (index / Math.max(1, chartData.length - 1)) * plotWidth,
+      (index / Math.max(1, chartData.length - 1)) *
+        plotWidth,
     y:
       top +
       plotHeight -
@@ -707,9 +634,11 @@ function RevenueLineChart({ payments, replay }) {
   const linePath = makeSmoothPath(points);
 
   const areaPath = points.length
-    ? `${linePath} L ${points[points.length - 1].x} ${
+    ? `${linePath} L ${
+        points[points.length - 1].x
+      } ${top + plotHeight} L ${points[0].x} ${
         top + plotHeight
-      } L ${points[0].x} ${top + plotHeight} Z`
+      } Z`
     : "";
 
   const total = chartData.reduce(
@@ -722,11 +651,13 @@ function RevenueLineChart({ payments, replay }) {
 
   function handleMove(event) {
     const rect = event.currentTarget.getBoundingClientRect();
+
     const relativeX =
       ((event.clientX - rect.left) / rect.width) * width;
 
     const index = Math.round(
-      ((relativeX - left) / plotWidth) * (points.length - 1)
+      ((relativeX - left) / plotWidth) *
+        (points.length - 1)
     );
 
     setHoverIndex(
@@ -740,7 +671,10 @@ function RevenueLineChart({ payments, replay }) {
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <div className={sectionIconClass}>
-              <ChartNoAxesCombined size={21} strokeWidth={2.4} />
+              <ChartNoAxesCombined
+                size={21}
+                strokeWidth={2.4}
+              />
             </div>
 
             <div>
@@ -876,7 +810,10 @@ function RevenueLineChart({ payments, replay }) {
               index === 0 ||
               index === points.length - 1 ||
               index %
-                Math.max(1, Math.floor(points.length / 5)) ===
+                Math.max(
+                  1,
+                  Math.floor(points.length / 5)
+                ) ===
                 0;
 
             return showLabel ? (
@@ -930,7 +867,10 @@ function RevenueLineChart({ payments, replay }) {
             style={{
               left: `${Math.max(
                 15,
-                Math.min(85, (activePoint.x / width) * 100)
+                Math.min(
+                  85,
+                  (activePoint.x / width) * 100
+                )
               )}%`,
               top: `${Math.max(
                 0,
@@ -949,17 +889,9 @@ function RevenueLineChart({ payments, replay }) {
           </div>
         )}
       </div>
-
-      <div className="mt-3 flex items-center justify-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#4adea5]" />
-        <span className="text-xs font-semibold text-[#c0cee0]">
-          Studio Revenue
-        </span>
-      </div>
     </div>
   );
 }
-
 /* =========================================
    SALES GAUGE
 ========================================= */
@@ -1017,7 +949,8 @@ function SalesGauge({ bookings, replay }) {
     { length: segments },
     (_, index) => {
       const angle =
-        Math.PI - (index / (segments - 1)) * Math.PI;
+        Math.PI -
+        (index / (segments - 1)) * Math.PI;
 
       const radius = 105;
 
@@ -1058,6 +991,7 @@ function SalesGauge({ bookings, replay }) {
         >
           {arcPoints.map((point, index) => {
             const next = arcPoints[index + 1];
+
             if (!next) return null;
 
             return (
@@ -1075,6 +1009,7 @@ function SalesGauge({ bookings, replay }) {
             );
           })}
 
+          {/* Percentage text: white in dark theme */}
           <text
             x="160"
             y="129"
@@ -1127,7 +1062,10 @@ function SalesGauge({ bookings, replay }) {
             </p>
 
             <p className="mt-2 text-lg font-extrabold text-white sm:text-xl">
-              <AnimatedNumber value={value} replay={replay} />
+              <AnimatedNumber
+                value={value}
+                replay={replay}
+              />
             </p>
           </div>
         ))}
@@ -1297,55 +1235,67 @@ export default function Dashboard() {
     };
 
     addItems(data.bookings, "Booking", CalendarDays, [
-      "createdAt", "bookingDate", "eventDate",
+      "createdAt",
+      "bookingDate",
+      "eventDate",
     ]);
 
     addItems(data.payments, "Payment", Wallet, [
-      "createdAt", "paymentDate", "date",
+      "createdAt",
+      "paymentDate",
+      "date",
     ]);
 
     addItems(data.deliveries, "Delivery", Truck, [
-      "createdAt", "deliveredDate", "expectedDate",
+      "createdAt",
+      "deliveredDate",
+      "expectedDate",
     ]);
 
     addItems(data.photoshoots, "Photo Shoot", Camera, [
-      "createdAt", "shootDate",
+      "createdAt",
+      "shootDate",
     ]);
 
     addItems(data.editing, "Photo Editing", Images, [
-      "createdAt", "date",
+      "createdAt",
+      "date",
     ]);
 
     addItems(data.albums, "Album Project", BookOpen, [
-      "createdAt", "date",
+      "createdAt",
+      "date",
     ]);
 
     return activities
       .sort((a, b) =>
         String(b.date).localeCompare(String(a.date))
       )
-      .slice(0, 6);
+      .slice(0, 8);
   }, [data]);
 
   /* MONTHLY GRAPHS */
 
   const monthlyChart = useMemo(() => {
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date();
-      date.setDate(1);
-      date.setMonth(date.getMonth() - (5 - index));
+    const months = Array.from(
+      { length: 6 },
+      (_, index) => {
+        const date = new Date();
+        date.setDate(1);
+        date.setMonth(date.getMonth() - (5 - index));
 
-      return {
-        key: `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, "0")}`,
-        label: date.toLocaleDateString("en-IN", {
-          month: "short",
-        }),
-        bookings: 0,
-        revenue: 0,
-      };
-    });
+        return {
+          key: `${date.getFullYear()}-${String(
+            date.getMonth() + 1
+          ).padStart(2, "0")}`,
+          label: date.toLocaleDateString("en-IN", {
+            month: "short",
+          }),
+          bookings: 0,
+          revenue: 0,
+        };
+      }
+    );
 
     data.bookings.forEach((item) => {
       const date =
@@ -1391,63 +1341,72 @@ export default function Dashboard() {
       title: "Total Customers",
       value: stats.customers,
       icon: Users,
-      color: "border-blue-500/30 bg-blue-500/20 text-blue-300",
+      color:
+        "border-blue-500/30 bg-blue-500/20 text-blue-300",
       subtitle: "Registered customers",
     },
     {
       title: "Total Enquiries",
       value: stats.enquiries,
       icon: MessageSquare,
-      color: "border-indigo-500/30 bg-indigo-500/20 text-indigo-300",
+      color:
+        "border-indigo-500/30 bg-indigo-500/20 text-indigo-300",
       subtitle: "Customer enquiries",
     },
     {
       title: "Total Bookings",
       value: stats.bookings,
       icon: CalendarDays,
-      color: "border-violet-500/30 bg-violet-500/20 text-violet-300",
+      color:
+        "border-violet-500/30 bg-violet-500/20 text-violet-300",
       subtitle: "Studio bookings",
     },
     {
       title: "Amount Received",
       value: stats.paid,
       icon: IndianRupee,
-      color: "border-green-500/30 bg-green-500/20 text-green-300",
+      color:
+        "border-green-500/30 bg-green-500/20 text-green-300",
       subtitle: "Recorded payments",
     },
     {
       title: "Pending Balance",
       value: stats.pending,
       icon: Wallet,
-      color: "border-amber-500/30 bg-amber-500/20 text-amber-300",
+      color:
+        "border-amber-500/30 bg-amber-500/20 text-amber-300",
       subtitle: "Outstanding amount",
     },
     {
       title: "Photo Shoots",
       value: stats.shoots,
       icon: Camera,
-      color: "border-sky-500/30 bg-sky-500/20 text-sky-300",
+      color:
+        "border-sky-500/30 bg-sky-500/20 text-sky-300",
       subtitle: "Recorded shoots",
     },
     {
       title: "Editing Pending",
       value: stats.editingPending,
       icon: Images,
-      color: "border-orange-500/30 bg-orange-500/20 text-orange-300",
+      color:
+        "border-orange-500/30 bg-orange-500/20 text-orange-300",
       subtitle: "Editing not completed",
     },
     {
       title: "Album Projects",
       value: stats.albumsPending,
       icon: BookOpen,
-      color: "border-purple-500/30 bg-purple-500/20 text-purple-300",
+      color:
+        "border-purple-500/30 bg-purple-500/20 text-purple-300",
       subtitle: "Not yet printed",
     },
     {
       title: "Pending Deliveries",
       value: stats.deliveriesPending,
       icon: Truck,
-      color: "border-rose-500/30 bg-rose-500/20 text-rose-300",
+      color:
+        "border-rose-500/30 bg-rose-500/20 text-rose-300",
       subtitle: "Awaiting delivery",
     },
   ];
@@ -1676,7 +1635,9 @@ export default function Dashboard() {
       <div className="studio-hero relative mb-6 overflow-hidden rounded-2xl border border-[#365678] p-5 text-white shadow-xl sm:p-8 lg:rounded-3xl">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="studio-floating absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/15" />
+
           <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/15" />
+
           <div className="absolute -right-32 bottom-[-170px] h-[350px] w-[350px] rounded-full bg-blue-300/10 blur-[70px]" />
         </div>
 
@@ -1730,8 +1691,7 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
-
-      {/* STAT CARDS */}
+            {/* STAT CARDS */}
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {cards.map((card, index) => (
