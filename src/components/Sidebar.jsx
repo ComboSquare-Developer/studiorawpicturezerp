@@ -344,11 +344,11 @@ export default function Sidebar({
             {showLabels && (
               <div className="min-w-0">
                 <h1 className="truncate text-sm font-extrabold tracking-wide text-white">
-                  STUDIO RAW
+                  STUDIO RAW PICTUREZ
                 </h1>
 
                 <p className="mt-1 text-[10px] font-bold tracking-[0.18em] text-white">
-                  PICTUREZ ERP
+                   ERP & CRM
                 </p>
               </div>
             )}
