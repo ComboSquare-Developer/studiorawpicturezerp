@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   MessageSquare,
@@ -27,10 +27,14 @@ const STORAGE = {
   bookings: "studioraw_bookings",
   payments: "studioraw_payments",
   photoshoots: "studioraw_photoshoots",
-  editing: "studio_raw_photo_editing",
-  albums: "studio_raw_album_printing",
-  deliveries: "studio_raw_deliveries",
+  editing: "studioraw_photo_editing",
+  albums: "studioraw_album_printing",
+  deliveries: "studioraw_deliveries",
 };
+
+/* =========================================
+   DEMO DATA - 420 RECORDS
+========================================= */
 
 const DEMO_COUNTS = {
   customers: 85,
@@ -69,43 +73,36 @@ const EVENTS = [
 
 const LOCATIONS = [
   "Nagercoil", "Chennai", "Marthandam",
-  "Kanyakumari", "Trivandrum",
-  "Tirunelveli", "Madurai", "Coimbatore",
+  "Kanyakumari", "Trivandrum", "Tirunelveli",
+  "Madurai", "Coimbatore",
 ];
 
 const customerName = (i) =>
   CUSTOMER_NAMES[i % CUSTOMER_NAMES.length];
 
-const eventName = (i) =>
-  EVENTS[i % EVENTS.length];
+const eventName = (i) => EVENTS[i % EVENTS.length];
 
 const locationName = (i) =>
   LOCATIONS[i % LOCATIONS.length];
 
 function dateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-
-  return `${y}-${m}-${d}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function demoDate(index, future = false) {
   const date = new Date();
-
   date.setHours(12, 0, 0, 0);
 
-  date.setDate(
-    date.getDate() +
-      (future ? index % 60 : -((index * 3) % 175))
-  );
+  const offset = future
+    ? index % 60
+    : -((index * 3) % 175);
 
+  date.setDate(date.getDate() + offset);
   return dateKey(date);
 }
-
-/* =========================================
-   DEMO DATA
-========================================= */
 
 function createDemoData() {
   const customers = Array.from(
@@ -125,11 +122,6 @@ function createDemoData() {
     })
   );
 
-  const stages = [
-    "New", "Contacted", "Qualified", "Quoted",
-    "Follow-up", "Won/Converted", "Lost",
-  ];
-
   const enquiries = Array.from(
     { length: DEMO_COUNTS.enquiries },
     (_, i) => ({
@@ -144,17 +136,18 @@ function createDemoData() {
       location: locationName(i),
       budget: 15000 + (i % 12) * 4500,
       source: ["Instagram", "Referral", "WhatsApp", "Website"][i % 4],
-      stage: stages[i % stages.length],
-      status: stages[i % stages.length],
+      stage: [
+        "New", "Contacted", "Qualified", "Quoted",
+        "Follow-up", "Won/Converted", "Lost",
+      ][i % 7],
+      status: [
+        "New", "Contacted", "Qualified", "Quoted",
+        "Follow-up", "Won/Converted", "Lost",
+      ][i % 7],
       eventDate: demoDate(i, true),
       createdAt: demoDate(i),
     })
   );
-
-  const bookingStatuses = [
-    "Confirmed", "Pending", "Completed",
-    "Booked", "Cancelled",
-  ];
 
   const bookings = Array.from(
     { length: DEMO_COUNTS.bookings },
@@ -168,7 +161,10 @@ function createDemoData() {
       eventDate: demoDate(i, i % 3 === 0),
       bookingDate: demoDate(i),
       createdAt: demoDate(i),
-      status: bookingStatuses[i % bookingStatuses.length],
+      status: [
+        "Confirmed", "Pending", "Completed",
+        "Booked", "Cancelled",
+      ][i % 5],
     })
   );
 
@@ -194,7 +190,9 @@ function createDemoData() {
         balanceAmount: amount - paidAmount,
         paymentDate: demoDate(i),
         createdAt: demoDate(i),
-        paymentMethod: ["UPI", "Cash", "Bank Transfer", "Card"][i % 4],
+        paymentMethod: [
+          "UPI", "Cash", "Bank Transfer", "Card",
+        ][i % 4],
         status:
           paidAmount === amount
             ? "Paid"
@@ -215,7 +213,9 @@ function createDemoData() {
       shootDate: demoDate(i, i % 3 === 0),
       createdAt: demoDate(i),
       location: locationName(i),
-      status: ["Scheduled", "In Progress", "Completed"][i % 3],
+      status: [
+        "Scheduled", "In Progress", "Completed",
+      ][i % 3],
     })
   );
 
@@ -226,7 +226,9 @@ function createDemoData() {
       customer: customerName(i),
       customerName: customerName(i),
       event: eventName(i),
-      editingStatus: ["Pending", "In Progress", "Completed"][i % 3],
+      editingStatus: [
+        "Pending", "In Progress", "Completed",
+      ][i % 3],
       createdAt: demoDate(i),
     })
   );
@@ -238,7 +240,9 @@ function createDemoData() {
       customer: customerName(i),
       customerName: customerName(i),
       event: eventName(i),
-      printingStatus: ["Pending", "In Progress", "Printed"][i % 3],
+      printingStatus: [
+        "Pending", "In Progress", "Printed",
+      ][i % 3],
       createdAt: demoDate(i),
     })
   );
@@ -262,7 +266,9 @@ function createDemoData() {
       deliveredDate: i % 4 === 0 ? demoDate(i) : "",
       createdAt: demoDate(i),
       paymentStatus: i % 3 === 0 ? "Paid" : "Partial",
-      status: ["Pending", "Packed", "Dispatched", "Delivered"][i % 4],
+      status: [
+        "Pending", "Packed", "Dispatched", "Delivered",
+      ][i % 4],
     })
   );
 
@@ -281,14 +287,12 @@ function createDemoData() {
 const DEMO_DATA = createDemoData();
 
 /* =========================================
-   HELPERS
+   DATA HELPERS
 ========================================= */
 
 function readArray(key) {
   try {
-    const saved = localStorage.getItem(key);
-    const parsed = JSON.parse(saved);
-
+    const parsed = JSON.parse(localStorage.getItem(key));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -299,7 +303,6 @@ function getAllData() {
   return Object.fromEntries(
     Object.entries(STORAGE).map(([name, key]) => {
       const actual = readArray(key);
-
       return [
         name,
         actual.length > 0 ? actual : DEMO_DATA[name],
@@ -321,17 +324,17 @@ const numberValue = (value) =>
 const getAmount = (item) =>
   numberValue(
     item.totalAmount ??
-      item.amount ??
-      item.total ??
-      item.grandTotal
+    item.amount ??
+    item.total ??
+    item.grandTotal
   );
 
 const getPaid = (item) =>
   numberValue(
     item.paidAmount ??
-      item.amountPaid ??
-      item.paid ??
-      item.receivedAmount
+    item.amountPaid ??
+    item.paid ??
+    item.receivedAmount
   );
 
 function paidValue(item) {
@@ -347,12 +350,8 @@ function paidValue(item) {
 function parseDate(value) {
   if (!value) return null;
 
-  const text = String(value);
-
   const date = new Date(
-    /^\d{4}-\d{2}-\d{2}/.test(text)
-      ? `${text.slice(0, 10)}T00:00:00`
-      : text
+    `${String(value).slice(0, 10)}T00:00:00`
   );
 
   return Number.isNaN(date.getTime()) ? null : date;
@@ -380,36 +379,129 @@ const bookingDate = (item) =>
   "";
 
 /* =========================================
-   THEME COLORS
+   ANIMATED NUMBER
 ========================================= */
 
-const COLORS = {
-  background: "#071426",
-  panel: "#102139",
-  card: "#132943",
-  border: "#294361",
-  heading: "#f8fafc",
-  text: "#e2e8f0",
-  muted: "#c0cee0",
-  green: "#4adea5",
-  blue: "#60a5fa",
-};
+function AnimatedNumber({
+  value,
+  currency = false,
+  replay = 0,
+}) {
+  const [display, setDisplay] = useState(0);
 
-const panelClass =
-  "studio-panel min-w-0 rounded-2xl border border-[#294361] bg-[#102139] p-4 shadow-xl shadow-black/10 sm:p-6";
+  useEffect(() => {
+    let frame;
+    const start = performance.now();
+    const target = Number(value) || 0;
+    const duration = 1100;
 
-const sectionIconClass =
-  "flex shrink-0 items-center justify-center rounded-xl border border-[#365678] bg-[#1c395b] p-3 text-[#93c5fd]";
-  function EmptyState({ message }) {
+    function animate(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      setDisplay(Math.round(target * eased));
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      }
+    }
+
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [value, replay]);
+
+  return currency
+    ? money(display)
+    : display.toLocaleString("en-IN");
+}
+
+/* =========================================
+   STAT CARD
+========================================= */
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+  subtitle,
+  index,
+  replay,
+}) {
+  const currency = [
+    "Amount Received",
+    "Pending Balance",
+  ].includes(title);
+
   return (
-    <div className="rounded-xl border border-dashed border-[#365678] bg-[#132943] p-10 text-center text-sm text-[#c0cee0]">
+    <div
+      className="studio-card sr-panel group relative min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-5"
+      style={{ animationDelay: `${index * 65}ms` }}
+    >
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="sr-muted text-xs font-bold sm:text-sm">
+            {title}
+          </p>
+
+          <h2 className="sr-text mt-3 truncate whitespace-nowrap text-lg font-extrabold sm:text-xl xl:text-2xl">
+            <AnimatedNumber
+              value={value}
+              currency={currency}
+              replay={replay}
+            />
+          </h2>
+
+          <p className="sr-subtle mt-2 text-[11px] font-semibold leading-5">
+            {subtitle}
+          </p>
+        </div>
+
+        <div className={`sr-stat-icon shrink-0 rounded-xl p-3 ${color}`}>
+          <Icon size={22} strokeWidth={2.7} />
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 left-0 h-1 w-0 bg-[#244d8b] transition-all duration-500 group-hover:w-full" />
+    </div>
+  );
+}
+
+/* =========================================
+   SECTION TITLE
+========================================= */
+
+function SectionTitle({ title, subtitle, icon: Icon }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <div className="sr-section-icon shrink-0 rounded-xl p-3">
+        <Icon size={21} strokeWidth={2.7} />
+      </div>
+
+      <div className="min-w-0">
+        <h2 className="sr-text text-base font-extrabold sm:text-lg">
+          {title}
+        </h2>
+
+        <p className="sr-muted mt-1 text-xs font-semibold">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="sr-inset rounded-xl border border-dashed p-10 text-center text-sm font-semibold">
       {message}
     </div>
   );
 }
 
 /* =========================================
-   BAR CHART - NO AUTOMATIC SOUND
+   BAR CHART
+   NO SCROLL / HOVER SOUND
 ========================================= */
 
 function ChartPanel({
@@ -423,17 +515,21 @@ function ChartPanel({
   formatter,
   replay,
 }) {
-  const [selected, setSelected] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
+
+  useEffect(() => {
+    setSelectedIndex(null);
+  }, [replay, dataKey]);
 
   return (
-    <div className={panelClass}>
+    <div className="studio-panel sr-panel min-w-0 rounded-2xl border p-4 shadow-sm sm:p-6">
       <SectionTitle
         title={title}
         subtitle={subtitle}
         icon={icon}
       />
 
-      <div className="grid h-56 grid-cols-6 items-end gap-2 border-b border-[#294361] pb-3 sm:h-64 sm:gap-3">
+      <div className="sr-chart-bottom grid h-56 grid-cols-6 items-end gap-2 border-b pb-3 sm:h-64 sm:gap-3">
         {data.map((item, index) => {
           const value = item[dataKey] || 0;
 
@@ -444,60 +540,40 @@ function ChartPanel({
               )
             : 2;
 
+          const selected = selectedIndex === index;
+
           return (
             <div
               key={item.key}
               className="flex h-full min-w-0 flex-col items-center justify-end gap-2"
             >
-              <span className="w-full truncate text-center text-[9px] font-bold text-white sm:text-xs">
+              <span className="sr-text w-full truncate text-center text-[9px] font-extrabold sm:text-xs">
                 {formatter ? formatter(value) : value}
               </span>
 
-              <div
+              <button
+                type="button"
                 key={`${replay}-${item.key}`}
-                role="button"
-                tabIndex={0}
+                onClick={() => setSelectedIndex(index)}
+                title={`${item.label}: ${value}`}
                 aria-label={`${item.label}: ${value}`}
-                onClick={() => setSelected(index)}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" ||
-                    event.key === " "
-                  ) {
-                    event.preventDefault();
-                    setSelected(index);
-                  }
-                }}
-                className={`studio-bar w-full max-w-14 origin-bottom cursor-pointer rounded-t-lg transition-[filter] hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#93c5fd] ${barColor} ${
-                  selected === index
-                    ? "ring-2 ring-white/60"
-                    : ""
+                aria-pressed={selected}
+                className={`studio-bar w-full max-w-14 origin-bottom rounded-t-lg transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${barColor} ${
+                  selected ? "ring-2 ring-blue-400 ring-offset-2" : ""
                 }`}
                 style={{
                   height: `${height}%`,
                   animationDelay: `${index * 100}ms`,
                 }}
-                title={`${item.label}: ${value}`}
               />
 
-              <span className="text-[10px] font-semibold text-[#c0cee0] sm:text-xs">
+              <span className="sr-muted text-[10px] font-bold sm:text-xs">
                 {item.label}
               </span>
             </div>
           );
         })}
       </div>
-
-      {selected !== null && data[selected] && (
-        <p className="mt-3 text-center text-xs font-semibold text-[#c0cee0]">
-          {data[selected].label}:{" "}
-          <span className="text-white">
-            {formatter
-              ? formatter(data[selected][dataKey] || 0)
-              : data[selected][dataKey] || 0}
-          </span>
-        </p>
-      )}
     </div>
   );
 }
@@ -577,8 +653,8 @@ function RevenueLineChart({ payments, replay }) {
     payments.forEach((payment) => {
       const date = parseDate(
         payment.paymentDate ||
-          payment.createdAt ||
-          payment.date
+        payment.createdAt ||
+        payment.date
       );
 
       if (!date) return;
@@ -636,9 +712,9 @@ function RevenueLineChart({ payments, replay }) {
   const areaPath = points.length
     ? `${linePath} L ${
         points[points.length - 1].x
-      } ${top + plotHeight} L ${points[0].x} ${
-        top + plotHeight
-      } Z`
+      } ${top + plotHeight} L ${
+        points[0].x
+      } ${top + plotHeight} Z`
     : "";
 
   const total = chartData.reduce(
@@ -666,30 +742,27 @@ function RevenueLineChart({ payments, replay }) {
   }
 
   return (
-    <div className={`${panelClass} overflow-hidden`}>
+    <div className="studio-panel sr-panel min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-6">
       <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <div className={sectionIconClass}>
-              <ChartNoAxesCombined
-                size={21}
-                strokeWidth={2.4}
-              />
+            <div className="sr-section-icon rounded-xl p-3">
+              <ChartNoAxesCombined size={21} strokeWidth={2.7} />
             </div>
 
             <div>
-              <h3 className="text-base font-extrabold text-white">
+              <h3 className="sr-text text-base font-extrabold">
                 Revenue by Channel
               </h3>
 
-              <p className="mt-1 text-xs font-medium text-[#c0cee0]">
+              <p className="sr-muted mt-1 text-xs font-semibold">
                 Revenue trend from recorded payments
               </p>
             </div>
           </div>
 
           <div className="mt-5">
-            <p className="break-words text-2xl font-extrabold text-white">
+            <p className="sr-text break-words text-2xl font-extrabold">
               <AnimatedNumber
                 value={total}
                 currency
@@ -697,13 +770,13 @@ function RevenueLineChart({ payments, replay }) {
               />
             </p>
 
-            <p className="mt-1 text-xs font-medium text-[#c0cee0]">
+            <p className="sr-muted mt-1 text-xs font-semibold">
               Total received in selected period
             </p>
           </div>
         </div>
 
-        <div className="flex w-fit max-w-full gap-1 rounded-xl border border-[#365678] bg-[#071426] p-1">
+        <div className="sr-range-group flex w-fit max-w-full gap-1 rounded-xl p-1">
           {[
             ["7", "7 Days"],
             ["30", "30 Days"],
@@ -713,10 +786,8 @@ function RevenueLineChart({ payments, replay }) {
               key={value}
               type="button"
               onClick={() => setRange(value)}
-              className={`rounded-lg px-2.5 py-2 text-[10px] font-bold transition sm:px-3 sm:text-xs ${
-                range === value
-                  ? "bg-[#2563eb] text-white shadow-sm"
-                  : "text-[#c0cee0] hover:bg-[#1c395b] hover:text-white"
+              className={`sr-range-button rounded-lg px-2.5 py-2 text-[10px] font-bold transition sm:px-3 sm:text-xs ${
+                range === value ? "sr-range-active" : ""
               }`}
             >
               {label}
@@ -733,7 +804,6 @@ function RevenueLineChart({ payments, replay }) {
           aria-label="Revenue trend line chart"
           onMouseMove={handleMove}
           onMouseLeave={() => setHoverIndex(null)}
-          onClick={handleMove}
         >
           <defs>
             <linearGradient
@@ -745,12 +815,12 @@ function RevenueLineChart({ payments, replay }) {
             >
               <stop
                 offset="0%"
-                stopColor="#4adea5"
-                stopOpacity="0.32"
+                stopColor="#3ba785"
+                stopOpacity="0.3"
               />
               <stop
                 offset="100%"
-                stopColor="#4adea5"
+                stopColor="#3ba785"
                 stopOpacity="0.01"
               />
             </linearGradient>
@@ -767,7 +837,7 @@ function RevenueLineChart({ payments, replay }) {
                   x2={width - right}
                   y1={y}
                   y2={y}
-                  stroke="#36506e"
+                  stroke="var(--sr-grid)"
                   strokeDasharray="4 5"
                 />
 
@@ -776,7 +846,8 @@ function RevenueLineChart({ payments, replay }) {
                   y={y + 4}
                   textAnchor="end"
                   fontSize="11"
-                  fill="#c0cee0"
+                  fontWeight="700"
+                  fill="var(--sr-muted)"
                 >
                   {value >= 1000
                     ? `${(value / 1000).toFixed(1)}k`
@@ -797,7 +868,7 @@ function RevenueLineChart({ payments, replay }) {
             key={`line-${range}-${replay}`}
             d={linePath}
             fill="none"
-            stroke="#4adea5"
+            stroke="#319b7b"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -813,8 +884,7 @@ function RevenueLineChart({ payments, replay }) {
                 Math.max(
                   1,
                   Math.floor(points.length / 5)
-                ) ===
-                0;
+                ) === 0;
 
             return showLabel ? (
               <text
@@ -823,7 +893,8 @@ function RevenueLineChart({ payments, replay }) {
                 y={height - 12}
                 textAnchor="middle"
                 fontSize="10"
-                fill="#c0cee0"
+                fontWeight="700"
+                fill="var(--sr-muted)"
               >
                 {point.label}
               </text>
@@ -837,7 +908,7 @@ function RevenueLineChart({ payments, replay }) {
                 x2={activePoint.x}
                 y1={top}
                 y2={top + plotHeight}
-                stroke="#93c5fd"
+                stroke="var(--sr-muted)"
                 strokeDasharray="4 5"
               />
 
@@ -845,15 +916,15 @@ function RevenueLineChart({ payments, replay }) {
                 cx={activePoint.x}
                 cy={activePoint.y}
                 r="7"
-                fill="#4adea5"
-                fillOpacity="0.25"
+                fill="#319b7b"
+                fillOpacity="0.2"
               />
 
               <circle
                 cx={activePoint.x}
                 cy={activePoint.y}
                 r="4"
-                fill="#4adea5"
+                fill="#319b7b"
                 stroke="white"
                 strokeWidth="2"
               />
@@ -863,14 +934,11 @@ function RevenueLineChart({ payments, replay }) {
 
         {activePoint && (
           <div
-            className="pointer-events-none absolute z-10 rounded-xl border border-[#365678] bg-[#071426] px-3 py-2 shadow-xl"
+            className="sr-tooltip pointer-events-none absolute z-10 rounded-xl border px-3 py-2 shadow-xl"
             style={{
               left: `${Math.max(
                 15,
-                Math.min(
-                  85,
-                  (activePoint.x / width) * 100
-                )
+                Math.min(85, (activePoint.x / width) * 100)
               )}%`,
               top: `${Math.max(
                 0,
@@ -879,19 +947,27 @@ function RevenueLineChart({ payments, replay }) {
               transform: "translate(-50%, -100%)",
             }}
           >
-            <p className="text-[10px] text-[#c0cee0]">
+            <p className="sr-muted text-[10px] font-bold">
               {activePoint.label}
             </p>
 
-            <p className="mt-1 whitespace-nowrap text-xs font-extrabold text-white">
+            <p className="sr-text mt-1 whitespace-nowrap text-xs font-extrabold">
               {money(activePoint.value)}
             </p>
           </div>
         )}
       </div>
+
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#319b7b]" />
+        <span className="sr-muted text-xs font-bold">
+          Studio Revenue
+        </span>
+      </div>
     </div>
   );
 }
+
 /* =========================================
    SALES GAUGE
 ========================================= */
@@ -965,18 +1041,18 @@ function SalesGauge({ bookings, replay }) {
   );
 
   return (
-    <div className={`${panelClass} overflow-hidden`}>
+    <div className="studio-panel sr-panel min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
-        <div className={sectionIconClass}>
-          <CircleGauge size={21} strokeWidth={2.4} />
+        <div className="sr-section-icon rounded-xl p-3">
+          <CircleGauge size={21} strokeWidth={2.7} />
         </div>
 
         <div>
-          <h3 className="text-base font-extrabold text-white">
+          <h3 className="sr-text text-base font-extrabold">
             Sales Overview
           </h3>
 
-          <p className="mt-1 text-xs font-medium text-[#c0cee0]">
+          <p className="sr-muted mt-1 text-xs font-semibold">
             Confirmed and completed bookings
           </p>
         </div>
@@ -987,7 +1063,9 @@ function SalesGauge({ bookings, replay }) {
           viewBox="0 0 320 205"
           className="h-auto w-full"
           role="img"
-          aria-label={`Booking conversion ${percentage.toFixed(1)} percent`}
+          aria-label={`Booking conversion ${percentage.toFixed(
+            1
+          )} percent`}
         >
           {arcPoints.map((point, index) => {
             const next = arcPoints[index + 1];
@@ -1002,19 +1080,20 @@ function SalesGauge({ bookings, replay }) {
                 x2={next.x}
                 y2={next.y}
                 stroke={
-                  point.active ? "#4adea5" : "#294361"
+                  point.active
+                    ? "#4ba985"
+                    : "var(--sr-gauge-track)"
                 }
                 strokeWidth="19"
               />
             );
           })}
 
-          {/* Percentage text: white in dark theme */}
           <text
             x="160"
             y="129"
             textAnchor="middle"
-            fill="#ffffff"
+            fill="var(--sr-text)"
             fontSize="32"
             fontWeight="800"
           >
@@ -1025,8 +1104,9 @@ function SalesGauge({ bookings, replay }) {
             x="160"
             y="150"
             textAnchor="middle"
-            fill="#c0cee0"
+            fill="var(--sr-muted)"
             fontSize="11"
+            fontWeight="700"
           >
             Booking progress
           </text>
@@ -1035,15 +1115,16 @@ function SalesGauge({ bookings, replay }) {
             x="160"
             y="180"
             textAnchor="middle"
-            fill="#c0cee0"
+            fill="var(--sr-muted)"
             fontSize="10"
+            fontWeight="700"
           >
             Confirmed + Completed
           </text>
         </svg>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 border-t border-[#294361] pt-5">
+      <div className="sr-chart-top grid grid-cols-3 gap-2 border-t pt-5">
         {[
           ["Total Bookings", total],
           ["Confirmed", confirmed],
@@ -1052,16 +1133,14 @@ function SalesGauge({ bookings, replay }) {
           <div
             key={label}
             className={`min-w-0 text-center ${
-              index === 1
-                ? "border-x border-[#294361]"
-                : ""
+              index === 1 ? "sr-stat-divider border-x" : ""
             }`}
           >
-            <p className="text-[10px] font-semibold text-[#c0cee0] sm:text-xs">
+            <p className="sr-muted text-[10px] font-bold sm:text-xs">
               {label}
             </p>
 
-            <p className="mt-2 text-lg font-extrabold text-white sm:text-xl">
+            <p className="sr-text mt-2 text-lg font-extrabold sm:text-xl">
               <AnimatedNumber
                 value={value}
                 replay={replay}
@@ -1071,7 +1150,7 @@ function SalesGauge({ bookings, replay }) {
         ))}
       </div>
 
-      <p className="mt-4 text-center text-[10px] font-medium text-[#aebfd5]">
+      <p className="sr-muted mt-4 text-center text-[10px] font-semibold">
         (Confirmed + Completed) / Total Bookings
       </p>
     </div>
@@ -1084,12 +1163,12 @@ function SalesGauge({ bookings, replay }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="min-w-0 border-b border-[#294361] pb-3 last:border-b-0 last:pb-0">
-      <p className="sr-booking-label text-[11px] font-semibold text-[#c0cee0]">
+    <div className="sr-info-divider min-w-0 border-b pb-3 last:border-b-0 last:pb-0">
+      <p className="sr-muted text-[11px] font-bold">
         {label}
       </p>
 
-      <p className="sr-booking-value mt-1 break-words text-sm font-bold text-white">
+      <p className="sr-text mt-1 break-words text-sm font-extrabold">
         {value || "—"}
       </p>
     </div>
@@ -1235,43 +1314,34 @@ export default function Dashboard() {
     };
 
     addItems(data.bookings, "Booking", CalendarDays, [
-      "createdAt",
-      "bookingDate",
-      "eventDate",
+      "createdAt", "bookingDate", "eventDate",
     ]);
 
     addItems(data.payments, "Payment", Wallet, [
-      "createdAt",
-      "paymentDate",
-      "date",
+      "createdAt", "paymentDate", "date",
     ]);
 
     addItems(data.deliveries, "Delivery", Truck, [
-      "createdAt",
-      "deliveredDate",
-      "expectedDate",
+      "createdAt", "deliveredDate", "expectedDate",
     ]);
 
     addItems(data.photoshoots, "Photo Shoot", Camera, [
-      "createdAt",
-      "shootDate",
+      "createdAt", "shootDate",
     ]);
 
     addItems(data.editing, "Photo Editing", Images, [
-      "createdAt",
-      "date",
+      "createdAt", "date",
     ]);
 
     addItems(data.albums, "Album Project", BookOpen, [
-      "createdAt",
-      "date",
+      "createdAt", "date",
     ]);
 
     return activities
       .sort((a, b) =>
         String(b.date).localeCompare(String(a.date))
       )
-      .slice(0, 8);
+      .slice(0, 6);
   }, [data]);
 
   /* MONTHLY GRAPHS */
@@ -1299,7 +1369,9 @@ export default function Dashboard() {
 
     data.bookings.forEach((item) => {
       const date =
-        item.bookingDate || item.createdAt || item.date;
+        item.bookingDate ||
+        item.createdAt ||
+        item.date;
 
       const month = months.find(
         (entry) =>
@@ -1311,7 +1383,9 @@ export default function Dashboard() {
 
     data.payments.forEach((item) => {
       const date =
-        item.paymentDate || item.createdAt || item.date;
+        item.paymentDate ||
+        item.createdAt ||
+        item.date;
 
       const month = months.find(
         (entry) =>
@@ -1341,82 +1415,228 @@ export default function Dashboard() {
       title: "Total Customers",
       value: stats.customers,
       icon: Users,
-      color:
-        "border-blue-500/30 bg-blue-500/20 text-blue-300",
+      color: "bg-blue-50 text-blue-700",
       subtitle: "Registered customers",
     },
     {
       title: "Total Enquiries",
       value: stats.enquiries,
       icon: MessageSquare,
-      color:
-        "border-indigo-500/30 bg-indigo-500/20 text-indigo-300",
+      color: "bg-indigo-50 text-indigo-700",
       subtitle: "Customer enquiries",
     },
     {
       title: "Total Bookings",
       value: stats.bookings,
       icon: CalendarDays,
-      color:
-        "border-violet-500/30 bg-violet-500/20 text-violet-300",
+      color: "bg-violet-50 text-violet-700",
       subtitle: "Studio bookings",
     },
     {
       title: "Amount Received",
       value: stats.paid,
       icon: IndianRupee,
-      color:
-        "border-green-500/30 bg-green-500/20 text-green-300",
+      color: "bg-green-50 text-green-700",
       subtitle: "Recorded payments",
     },
     {
       title: "Pending Balance",
       value: stats.pending,
       icon: Wallet,
-      color:
-        "border-amber-500/30 bg-amber-500/20 text-amber-300",
+      color: "bg-amber-50 text-amber-700",
       subtitle: "Outstanding amount",
     },
     {
       title: "Photo Shoots",
       value: stats.shoots,
       icon: Camera,
-      color:
-        "border-sky-500/30 bg-sky-500/20 text-sky-300",
+      color: "bg-sky-50 text-sky-700",
       subtitle: "Recorded shoots",
     },
     {
       title: "Editing Pending",
       value: stats.editingPending,
       icon: Images,
-      color:
-        "border-orange-500/30 bg-orange-500/20 text-orange-300",
+      color: "bg-orange-50 text-orange-700",
       subtitle: "Editing not completed",
     },
     {
       title: "Album Projects",
       value: stats.albumsPending,
       icon: BookOpen,
-      color:
-        "border-purple-500/30 bg-purple-500/20 text-purple-300",
+      color: "bg-purple-50 text-purple-700",
       subtitle: "Not yet printed",
     },
     {
       title: "Pending Deliveries",
       value: stats.deliveriesPending,
       icon: Truck,
-      color:
-        "border-rose-500/30 bg-rose-500/20 text-rose-300",
+      color: "bg-rose-50 text-rose-700",
       subtitle: "Awaiting delivery",
     },
   ];
 
   return (
-    <div
-      className="studio-dashboard min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-[#071426] px-3 py-5 text-[#e2e8f0] sm:px-6 lg:px-8 lg:py-8"
-      style={{ colorScheme: "dark" }}
-    >
+    <div className="studio-dashboard min-h-screen w-full min-w-0 max-w-full overflow-x-hidden px-3 py-5 sm:px-6 lg:px-8 lg:py-8">
       <style>{`
+        /* ======================================
+           LIGHT THEME - DARKER TEXT + ICONS
+        ====================================== */
+
+        .studio-dashboard {
+          --sr-bg: #f5f7fb;
+          --sr-panel: #ffffff;
+          --sr-border: #d8e1ed;
+          --sr-text: #071a36;
+          --sr-muted: #263d5d;
+          --sr-subtle: #3b5270;
+          --sr-inset: #f1f5fb;
+          --sr-grid: #d6e0ec;
+          --sr-icon-bg: #e5edfa;
+          --sr-icon: #10264d;
+          --sr-gauge-track: #dce6e3;
+          background-color: var(--sr-bg);
+          color: var(--sr-text);
+          color-scheme: light;
+          transition: background-color .25s, color .25s;
+        }
+
+        /* ======================================
+           DARK THEME - BRIGHT TEXT + ICONS
+        ====================================== */
+
+        html.dark .studio-dashboard,
+        html[data-theme="dark"] .studio-dashboard,
+        body.dark .studio-dashboard,
+        [data-theme="dark"] .studio-dashboard {
+          --sr-bg: #071426;
+          --sr-panel: #122640;
+          --sr-border: #29435f;
+          --sr-text: #ffffff;
+          --sr-muted: #e2eaf7;
+          --sr-subtle: #c5d4e9;
+          --sr-inset: #1a314d;
+          --sr-grid: #37506d;
+          --sr-icon-bg: #294563;
+          --sr-icon: #ffffff;
+          --sr-gauge-track: #35516a;
+          color-scheme: dark;
+        }
+
+        .studio-dashboard .sr-panel {
+          background-color: var(--sr-panel) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text);
+        }
+
+        .studio-dashboard .sr-text {
+          color: var(--sr-text) !important;
+        }
+
+        .studio-dashboard .sr-muted {
+          color: var(--sr-muted) !important;
+        }
+
+        .studio-dashboard .sr-subtle {
+          color: var(--sr-subtle) !important;
+        }
+
+        .studio-dashboard .sr-section-icon {
+          background-color: var(--sr-icon-bg) !important;
+          color: var(--sr-icon) !important;
+        }
+
+        .studio-dashboard .sr-section-icon svg {
+          color: var(--sr-icon) !important;
+          stroke-width: 2.7;
+        }
+
+        .studio-dashboard .sr-stat-icon svg {
+          stroke-width: 2.7;
+        }
+
+        html[data-theme="dark"] .studio-dashboard .sr-stat-icon,
+        html.dark .studio-dashboard .sr-stat-icon {
+          background-color: var(--sr-icon-bg) !important;
+          color: var(--sr-icon) !important;
+        }
+
+        .studio-dashboard .sr-inset {
+          background-color: var(--sr-inset) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-muted) !important;
+        }
+
+        .studio-dashboard .sr-info-divider,
+        .studio-dashboard .sr-chart-bottom,
+        .studio-dashboard .sr-chart-top,
+        .studio-dashboard .sr-stat-divider {
+          border-color: var(--sr-border) !important;
+        }
+
+        .studio-dashboard .sr-range-group {
+          background-color: var(--sr-inset);
+        }
+
+        .studio-dashboard .sr-range-button {
+          color: var(--sr-muted);
+        }
+
+        .studio-dashboard .sr-range-button:hover {
+          background-color: var(--sr-panel);
+        }
+
+        .studio-dashboard .sr-range-active,
+        .studio-dashboard .sr-range-active:hover {
+          background-color: #244d8b;
+          color: #ffffff;
+        }
+
+        .studio-dashboard .sr-tooltip {
+          background-color: var(--sr-panel);
+          border-color: var(--sr-border);
+        }
+
+        .studio-dashboard .sr-refresh-button {
+          background-color: var(--sr-panel) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text) !important;
+        }
+
+        .studio-dashboard .sr-refresh-button:hover {
+          background-color: var(--sr-inset) !important;
+        }
+
+        .studio-dashboard .sr-booking-card {
+          background-color: var(--sr-inset) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text) !important;
+        }
+
+        .studio-dashboard .sr-activity-icon {
+          background-color: var(--sr-icon-bg) !important;
+          color: var(--sr-icon) !important;
+        }
+
+        .studio-dashboard .sr-demo-banner {
+          background-color: var(--sr-inset) !important;
+          border-color: var(--sr-border) !important;
+          color: var(--sr-text) !important;
+        }
+
+        .studio-dashboard .sr-hero {
+          color: #ffffff !important;
+        }
+
+        .studio-dashboard .sr-hero h2,
+        .studio-dashboard .sr-hero .sr-hero-number {
+          color: #ffffff !important;
+        }
+
+        /* ======================================
+           ANIMATIONS
+        ====================================== */
+
         @keyframes studioEnter {
           from {
             opacity: 0;
@@ -1477,106 +1697,42 @@ export default function Dashboard() {
           }
         }
 
-        .studio-dashboard {
-          background: #071426 !important;
-          color: #e2e8f0 !important;
-          color-scheme: dark;
-        }
-
-        .studio-dashboard .studio-card {
+        .studio-card {
           animation: studioEnter .65s ease both;
-          background-color: #132943 !important;
-          border-color: #294361 !important;
         }
 
-        .studio-dashboard .studio-panel {
+        .studio-panel {
           animation: studioEnter .8s ease both;
-          background-color: #102139 !important;
-          border-color: #294361 !important;
         }
 
-        .studio-dashboard .studio-bar {
+        .studio-bar {
           animation: studioBar 1.1s ease both;
         }
 
-        .studio-dashboard .studio-floating {
+        .studio-floating {
           animation: studioFloat 5s ease-in-out infinite;
         }
 
-        .studio-dashboard .studio-refreshing {
+        .studio-refreshing {
           animation: studioRotate .7s ease;
         }
 
-        .studio-dashboard .studio-line-draw {
+        .studio-line-draw {
           animation: studioLineDraw 2s ease both;
         }
 
-        .studio-dashboard .studio-area-appear {
+        .studio-area-appear {
           animation: studioAreaAppear 1.5s ease both;
         }
 
-        .studio-dashboard .studio-hero {
-          background: linear-gradient(
-            135deg,
-            #091b36 0%,
-            #143662 55%,
-            #28548b 100%
-          ) !important;
-          color: #ffffff !important;
-        }
-
-        .studio-dashboard h1,
-        .studio-dashboard h2,
-        .studio-dashboard h3 {
-          color: #ffffff !important;
-        }
-
-        .studio-dashboard .sr-booking-card {
-          background-color: #172d49 !important;
-          border-color: #36506e !important;
-          color: #ffffff !important;
-        }
-
-        .studio-dashboard .sr-booking-label,
-        .studio-dashboard .sr-activity-type {
-          color: #c0cee0 !important;
-        }
-
-        .studio-dashboard .sr-booking-value,
-        .studio-dashboard .sr-activity-name {
-          color: #ffffff !important;
-          font-weight: 700;
-        }
-
-        .studio-dashboard .sr-booking-divider {
-          border-color: #36506e !important;
-        }
-
-        .studio-dashboard .studio-chart-label {
-          fill: #c0cee0 !important;
-        }
-
-        .studio-dashboard svg:not([role="img"]) {
-          opacity: 1;
-        }
-
-        .studio-dashboard button {
-          cursor: pointer;
-        }
-
-        .studio-dashboard button:focus-visible {
-          outline: 2px solid #93c5fd;
-          outline-offset: 3px;
-        }
-
         @media (prefers-reduced-motion: reduce) {
-          .studio-dashboard .studio-card,
-          .studio-dashboard .studio-panel,
-          .studio-dashboard .studio-bar,
-          .studio-dashboard .studio-floating,
-          .studio-dashboard .studio-refreshing,
-          .studio-dashboard .studio-line-draw,
-          .studio-dashboard .studio-area-appear {
+          .studio-card,
+          .studio-panel,
+          .studio-bar,
+          .studio-floating,
+          .studio-refreshing,
+          .studio-line-draw,
+          .studio-area-appear {
             animation: none !important;
           }
         }
@@ -1586,44 +1742,47 @@ export default function Dashboard() {
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[#93c5fd]">
+          <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-blue-600">
             Studio Performance
           </p>
 
-          <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+          <h1 className="sr-text text-2xl font-extrabold tracking-tight sm:text-3xl">
             Dashboard Overview
           </h1>
 
-          <p className="mt-2 text-xs font-medium text-[#c0cee0] sm:text-sm">
+          <p className="sr-muted mt-2 text-xs font-semibold sm:text-sm">
             Welcome to Studio Raw Picturez ERP &amp; CRM
           </p>
 
-          <p className="mt-2 text-[11px] font-medium text-[#aebfd5]">
+          <p className="sr-subtle mt-2 text-[11px] font-semibold">
             Last refreshed:{" "}
             {lastUpdated.toLocaleTimeString("en-IN")}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={refresh}
-          className="flex items-center justify-center gap-2 self-start rounded-xl border border-[#365678] bg-[#132943] px-4 py-3 text-xs font-bold text-white shadow-lg transition hover:bg-[#1c395b] sm:text-sm"
-        >
-          <RefreshCw
-            key={replay}
-            size={17}
-            className={
-              replay > 0 ? "studio-refreshing" : ""
-            }
-          />
-          Refresh Dashboard
-        </button>
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={refresh}
+            className="sr-refresh-button flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold shadow-sm transition sm:text-sm"
+          >
+            <RefreshCw
+              key={replay}
+              size={18}
+              strokeWidth={2.7}
+              className={
+                replay > 0 ? "studio-refreshing" : ""
+              }
+            />
+            Refresh Dashboard
+          </button>
+        </div>
       </div>
 
       {/* DEMO MESSAGE */}
 
       {isDemo && (
-        <div className="mb-5 rounded-xl border border-[#365678] bg-[#132943] px-4 py-3 text-xs font-semibold text-[#bfdbfe] sm:text-sm">
+        <div className="sr-demo-banner mb-5 rounded-xl border px-4 py-3 text-xs font-bold sm:text-sm">
           Demo preview: 420 sample records are available
           across dashboard sections without saved records.
           Existing saved records remain unchanged.
@@ -1632,33 +1791,31 @@ export default function Dashboard() {
 
       {/* HERO */}
 
-      <div className="studio-hero relative mb-6 overflow-hidden rounded-2xl border border-[#365678] p-5 text-white shadow-xl sm:p-8 lg:rounded-3xl">
+      <div className="studio-panel sr-hero relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#091b36] via-[#143662] to-[#28548b] p-5 text-white shadow-lg sm:p-8 lg:rounded-3xl">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="studio-floating absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/15" />
-
-          <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/15" />
-
+          <div className="studio-floating absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/10" />
+          <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/10" />
           <div className="absolute -right-32 bottom-[-170px] h-[350px] w-[350px] rounded-full bg-blue-300/10 blur-[70px]" />
         </div>
 
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-[#bfdbfe] sm:text-sm">
+            <p className="text-xs font-semibold text-blue-200 sm:text-sm">
               Studio Business Overview
             </p>
 
-            <h2 className="mt-3 text-xl font-extrabold text-white sm:text-2xl lg:text-3xl">
+            <h2 className="mt-3 text-xl font-extrabold sm:text-2xl lg:text-3xl">
               Manage Your Studio Smarter
             </h2>
 
-            <p className="mt-3 max-w-2xl text-xs font-medium leading-6 text-[#e2e8f0] sm:text-sm">
+            <p className="mt-3 max-w-2xl text-xs leading-6 text-blue-100/80 sm:text-sm">
               Track customers, bookings, payments,
               production and deliveries from one dashboard.
             </p>
           </div>
 
-          <div className="studio-floating hidden rounded-2xl border border-white/20 bg-white/10 p-5 text-white sm:block">
-            <Activity size={36} strokeWidth={2.3} />
+          <div className="studio-floating hidden rounded-2xl border border-white/15 bg-white/10 p-5 sm:block">
+            <Activity size={36} strokeWidth={2.5} />
           </div>
         </div>
 
@@ -1670,17 +1827,16 @@ export default function Dashboard() {
           ].map(([label, amount], index) => (
             <div
               key={label}
-              className="min-w-0 rounded-2xl border border-white/15 bg-[#102b50]/80 p-4 backdrop-blur-sm"
+              className="studio-card min-w-0 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm"
               style={{
-                animation: "studioEnter .65s ease both",
                 animationDelay: `${index * 100}ms`,
               }}
             >
-              <p className="text-xs font-semibold text-[#bfdbfe]">
+              <p className="text-xs font-semibold text-blue-200">
                 {label}
               </p>
 
-              <p className="mt-3 truncate whitespace-nowrap text-lg font-extrabold text-white lg:text-xl xl:text-2xl">
+              <p className="sr-hero-number mt-3 truncate whitespace-nowrap text-lg font-extrabold lg:text-xl xl:text-2xl">
                 <AnimatedNumber
                   value={amount}
                   currency
@@ -1691,7 +1847,8 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
-            {/* STAT CARDS */}
+
+      {/* STAT CARDS */}
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {cards.map((card, index) => (
@@ -1728,7 +1885,7 @@ export default function Dashboard() {
           data={monthlyChart}
           dataKey="bookings"
           maxValue={maxBookings}
-          barColor="bg-[#3b82f6]"
+          barColor="bg-[#244d8b]"
           replay={replay}
         />
 
@@ -1739,7 +1896,7 @@ export default function Dashboard() {
           data={monthlyChart}
           dataKey="revenue"
           maxValue={maxRevenue}
-          barColor="bg-[#34d399]"
+          barColor="bg-emerald-500"
           replay={replay}
           formatter={(value) =>
             value >= 1000
@@ -1754,7 +1911,7 @@ export default function Dashboard() {
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
         {/* UPCOMING BOOKINGS */}
 
-        <div className={panelClass}>
+        <div className="studio-panel sr-panel min-w-0 rounded-2xl border p-4 shadow-sm sm:p-6">
           <SectionTitle
             title="Upcoming Bookings"
             subtitle="Scheduled customer events"
@@ -1768,7 +1925,7 @@ export default function Dashboard() {
               {upcomingBookings.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="studio-card sr-booking-card rounded-xl border border-[#36506e] bg-[#172d49] p-4"
+                  className="studio-card sr-booking-card rounded-xl border p-4"
                 >
                   <InfoRow
                     label="Customer"
@@ -1800,7 +1957,7 @@ export default function Dashboard() {
 
         {/* RECENT ACTIVITIES */}
 
-        <div className={panelClass}>
+        <div className="studio-panel sr-panel min-w-0 rounded-2xl border p-4 shadow-sm sm:p-6">
           <SectionTitle
             title="Recent Activities"
             subtitle="Latest studio workflow updates"
@@ -1817,19 +1974,19 @@ export default function Dashboard() {
                 return (
                   <div
                     key={item.id}
-                    className="studio-card sr-booking-card rounded-xl border border-[#36506e] bg-[#172d49] p-4"
+                    className="studio-card sr-booking-card rounded-xl border p-4"
                   >
                     <div className="mb-4 flex items-center gap-3">
-                      <div className="rounded-xl border border-blue-400/20 bg-blue-500/20 p-3 text-[#93c5fd]">
-                        <Icon size={20} strokeWidth={2.4} />
+                      <div className="sr-activity-icon rounded-xl p-3">
+                        <Icon size={20} strokeWidth={2.7} />
                       </div>
 
                       <div className="min-w-0">
-                        <p className="sr-activity-name break-words text-sm font-bold text-white">
+                        <p className="sr-text break-words text-sm font-extrabold">
                           {item.name}
                         </p>
 
-                        <p className="sr-activity-type mt-1 text-xs font-semibold text-[#c0cee0]">
+                        <p className="sr-muted mt-1 text-xs font-semibold">
                           {item.type}
                         </p>
                       </div>
@@ -1856,7 +2013,7 @@ export default function Dashboard() {
 
       {/* FOOTER */}
 
-      <p className="mt-8 text-center text-xs font-medium leading-5 text-[#aebfd5]">
+      <p className="sr-muted mt-8 text-center text-xs font-semibold leading-5">
         Studio Raw Picturez ERP &amp; CRM · Dashboard
         preview and browser-local records
       </p>
