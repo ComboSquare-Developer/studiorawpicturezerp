@@ -143,26 +143,20 @@ const CUSTOMERS = [
 ];
 
 const DEMO_EVENT_TYPES = [
-  "Wedding",
-  "Birthday Party",
-  "Corporate Event",
-  "Baby Shower",
-  "College Function",
-  "Engagement",
-  "Reception",
-  "Housewarming",
-  "Naming Ceremony",
-  "Wedding Anniversary",
-  "Haldi Ceremony",
-  "Mehendi Ceremony",
-  "Product Launch",
-  "Conference",
-  "Seminar",
-  "Award Ceremony",
-  "School Annual Day",
-  "Music Concert",
-  "Exhibition",
-  "Family Function",
+  "Wedding Photography",
+  "Traditional photography",
+  "candid photography",
+  "helicom photography",
+  "Pre-Wedding photography",
+  "Post wedding photography",
+  "Custom Package",
+  "Wedding Videpgraphy",
+  "Function me arrange",
+  "Eventt Managemnet",
+  "Customized Gifts",
+  "Pre-Wedding /OutDoor Shoot",
+  "Bady/Kids Shoot",
+  "Complete Wedding Package"
 ];
 
 const DEMO_SERVICES = [

@@ -40,17 +40,20 @@ const addDays = (days) => {
 };
 
 const events = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Baby Shoot",
-  "Pre-Wedding",
-  "Portrait",
-  "Corporate",
-  "Reception",
-  "Maternity",
-  "Housewarming",
-  "Other",
+  "Wedding Photography",
+  "Traditional photography",
+  "candid photography",
+  "helicom photography",
+  "Pre-Wedding photography",
+  "Post wedding photography",
+  "Custom Package",
+  "Wedding Videpgraphy",
+  "Function me arrange",
+  "Eventt Managemnet",
+  "Customized Gifts",
+  "Pre-Wedding /OutDoor Shoot",
+  "Bady/Kids Shoot",
+  "Complete Wedding Package"
 ];
 
 const statuses = [

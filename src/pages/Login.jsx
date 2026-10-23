@@ -1,13 +1,11 @@
 
 import { useState } from "react";
 import {
-  Camera,
   Mail,
   LockKeyhole,
   Eye,
   EyeOff,
   ArrowRight,
-  Aperture,
   ShieldCheck,
   CalendarDays,
   UsersRound,
@@ -53,9 +51,13 @@ export default function Login({ onLogin }) {
           {/* Brand Header */}
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#d5bb8e]/30 bg-white/[0.07] text-[#e6d0a8]">
-                <Camera size={22} strokeWidth={1.7} />
-              </div>
+
+              {/* Original Studio Logo */}
+              <img
+                src="/studio-logo.png"
+                alt="Studio Raw Picturez Logo"
+                className="h-12 w-12 shrink-0 object-contain"
+              />
 
               <div>
                 <h1 className="text-sm font-bold tracking-[0.12em] xl:text-base">
@@ -69,24 +71,16 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Main Content */}
+          {/* Main Content - No Outer Border */}
           <div className="relative z-10 my-auto max-w-[620px] py-3">
+
+            {/* Workspace Badge */}
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d5bb8e]/25 bg-[#d5bb8e]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#e6d0a8]">
               <Sparkles size={13} />
               Your Creative Workspace
             </div>
 
-            {/* Photography Icon */}
-            {/* <div className="relative mb-5 flex h-16 w-16 items-center justify-center"> */}
-              <div className="absolute inset-0 rounded-[20px] border border-[#d5bb8e]/20 bg-white/[0.04]" />
-
-              {/* <Aperture
-                size={38}
-                strokeWidth={1.2}
-                className="relative text-[#e6d0a8]"
-              /> */}
-            {/* </div> */}
-
+            {/* Main Heading */}
             <h2 className="text-[clamp(32px,3.2vw,54px)] font-semibold leading-[1.13] tracking-[-0.045em]">
               Behind Every
               <br />
@@ -97,6 +91,7 @@ export default function Login({ onLogin }) {
               </span>
             </h2>
 
+            {/* Description */}
             <p className="mt-4 max-w-[470px] text-[13px] leading-[1.8] text-[#b7c4d7] xl:text-sm">
               A thoughtfully designed workspace to manage
               bookings, clients, photography production,
@@ -142,7 +137,7 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Left Footer */}
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-4 text-[10px] text-[#8396b0]">
             <p>© 2026 Studio Raw Picturez</p>
           </div>
@@ -151,7 +146,7 @@ export default function Login({ onLogin }) {
         {/* RIGHT LOGIN SECTION */}
         <section className="relative flex h-full w-full items-center justify-center overflow-hidden px-4 py-3 sm:px-8 lg:w-[48%] lg:px-7 xl:px-12">
 
-          {/* Right Background - unchanged */}
+          {/* Right Background */}
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#e7edf7] blur-[80px]" />
             <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[#edf0f7] blur-[80px]" />
@@ -161,9 +156,11 @@ export default function Login({ onLogin }) {
 
             {/* Mobile Brand */}
             <div className="mb-4 flex items-center gap-3 lg:hidden">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102b53] text-white">
-                <Camera size={21} />
-              </div>
+              <img
+                src="/studio-logo.png"
+                alt="Studio Raw Picturez Logo"
+                className="h-12 w-12 shrink-0 rounded-lg bg-[#102b53] object-contain"
+              />
 
               <div>
                 <p className="text-sm font-bold tracking-[0.07em] text-[#102b53]">
