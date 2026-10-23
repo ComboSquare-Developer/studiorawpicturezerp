@@ -23,13 +23,11 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Aperture,
   Sun,
   Moon,
-  Volume2,
-  VolumeX,
-  Check,
 } from "lucide-react";
+
+import studioLogo from "../assets/favicon.png";
 
 const THEME_KEY = "studioraw_theme";
 const SOUND_KEY = "studioraw_sound";
@@ -103,6 +101,20 @@ function readSetting(key, fallback) {
   }
 }
 
+function applyTheme(nextTheme) {
+  const root = document.documentElement;
+
+  root.dataset.theme = nextTheme;
+  root.classList.toggle("dark", nextTheme === "dark");
+  root.style.colorScheme = nextTheme;
+
+  window.dispatchEvent(
+    new CustomEvent("studioraw-theme-change", {
+      detail: { theme: nextTheme },
+    })
+  );
+}
+
 export default function Sidebar({
   activePage = "dashboard",
   setActivePage = () => {},
@@ -117,7 +129,9 @@ export default function Sidebar({
     readSetting(THEME_KEY, "dark")
   );
 
-  const [soundEnabled, setSoundEnabled] = useState(() =>
+  // Sound functionality retained.
+  // Only the Sound On/Off button is removed.
+  const [soundEnabled] = useState(() =>
     readSetting(SOUND_KEY, "true") !== "false"
   );
 
@@ -139,38 +153,38 @@ export default function Sidebar({
     }
   };
 
+  // GLOBAL THEME SYNC
   useEffect(() => {
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {
-      // Continue without persistence.
+      // Local storage unavailable.
     }
 
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle(
-      "dark",
-      theme === "dark"
-    );
-
-    window.dispatchEvent(
-      new CustomEvent("studioraw-theme-change", {
-        detail: { theme },
-      })
-    );
+    applyTheme(theme);
   }, [theme]);
 
+  // GLOBAL SOUND SYNC
   useEffect(() => {
     try {
       localStorage.setItem(SOUND_KEY, String(soundEnabled));
     } catch {
-      // Continue without persistence.
+      // Local storage unavailable.
     }
+
+    window.dispatchEvent(
+      new CustomEvent("studioraw-sound-change", {
+        detail: { enabled: soundEnabled },
+      })
+    );
   }, [soundEnabled]);
 
+  // MOBILE SIDEBAR
   useEffect(() => {
     if (!mobileOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
@@ -187,12 +201,14 @@ export default function Sidebar({
     };
   }, [mobileOpen, isControlled, setSidebarOpen]);
 
+  // AUDIO CLEANUP
   useEffect(() => {
     return () => {
       audioRef.current?.close?.();
     };
   }, []);
 
+  // SOUND EFFECTS
   const playSound = (type = "click", force = false) => {
     if (!soundEnabled && !force) return;
 
@@ -232,6 +248,7 @@ export default function Sidebar({
         const end = start + 0.22;
 
         oscillator.type = "sine";
+
         oscillator.frequency.setValueAtTime(frequency, start);
 
         oscillator.frequency.exponentialRampToValueAtTime(
@@ -262,18 +279,22 @@ export default function Sidebar({
     }
   };
 
+  // NAVIGATION
   const handleNavigation = (id) => {
     playSound(id !== activePage ? "navigate" : "click");
+
     setActivePage(id);
     setMobileOpen(false);
   };
 
+  // LOGOUT
   const handleLogout = () => {
     playSound("logout");
     setMobileOpen(false);
     onLogout();
   };
 
+  // THEME TOGGLE
   const handleThemeToggle = () => {
     playSound("toggle");
 
@@ -282,23 +303,18 @@ export default function Sidebar({
     );
   };
 
-  const handleSoundToggle = () => {
-    if (!soundEnabled) {
-      playSound("success", true);
-    } else {
-      playSound("click");
-    }
-
-    setSoundEnabled((previous) => !previous);
-  };
-
+  // COLLAPSE
   const handleCollapse = () => {
     playSound(collapsed ? "expand" : "collapse");
     setCollapsed((previous) => !previous);
   };
 
+  // SIDEBAR CONTENT
   const renderSidebarContent = (isMobile = false) => {
     const showLabels = !collapsed || isMobile;
+
+    const footerBackground =
+      theme === "dark" ? "bg-[#071126]" : "bg-[#0c1e3d]";
 
     return (
       <>
@@ -315,8 +331,14 @@ export default function Sidebar({
               showLabels ? "gap-3" : ""
             }`}
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#10264d] shadow-sm">
-              <Aperture size={24} strokeWidth={2.3} />
+            {/* LOGO */}
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black p-1 shadow-sm">
+              <img
+                src={studioLogo}
+                alt="Studio Raw Picturez Logo"
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
             </div>
 
             {showLabels && (
@@ -358,7 +380,7 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* COLLAPSED EXPAND */}
+        {/* EXPAND BUTTON */}
         {!isMobile && collapsed && (
           <div className="border-b border-white/15 px-3 py-3">
             <button
@@ -396,9 +418,7 @@ export default function Sidebar({
                     <button
                       key={item.id}
                       type="button"
-                      title={
-                        !showLabels ? item.label : undefined
-                      }
+                      title={!showLabels ? item.label : undefined}
                       aria-current={active ? "page" : undefined}
                       onClick={() => handleNavigation(item.id)}
                       className={`group flex w-full min-w-0 items-center rounded-xl text-left text-sm font-semibold transition-all duration-200 ${
@@ -439,9 +459,11 @@ export default function Sidebar({
           ))}
         </nav>
 
-        {/* THEME / SOUND / LOGOUT */}
-        <div className="shrink-0 border-t border-white/15 bg-[#0c1e3d] p-3">
-          {/* THEME BUTTON */}
+        {/* FOOTER */}
+        <div
+          className={`shrink-0 border-t border-white/15 p-3 transition-colors duration-300 ${footerBackground}`}
+        >
+          {/* LIGHT / DARK THEME */}
           <button
             type="button"
             onClick={handleThemeToggle}
@@ -464,51 +486,16 @@ export default function Sidebar({
             )}
 
             {showLabels && (
-              <>
-                <span className="flex-1 text-left">
-                  {theme === "dark"
-                    ? "Light Theme"
-                    : "Dark Theme"}
-                </span>
-
-                <span className="text-xs opacity-60">
-                  {theme === "dark" ? "OFF" : "ON"}
-                </span>
-              </>
+              <span className="flex-1 text-left">
+                {theme === "dark"
+                  ? "Light Theme"
+                  : "Dark Theme"}
+              </span>
             )}
           </button>
 
-          {/* SOUND BUTTON */}
-          <button
-            type="button"
-            onClick={handleSoundToggle}
-            title={!showLabels ? "Toggle Sound" : undefined}
-            aria-label={
-              soundEnabled ? "Turn sound off" : "Turn sound on"
-            }
-            aria-pressed={soundEnabled}
-            className={`mb-2 flex w-full items-center rounded-xl border border-white/15 text-sm font-semibold text-white transition hover:bg-white/15 ${
-              showLabels
-                ? "gap-3 px-3 py-3"
-                : "justify-center px-2 py-3"
-            }`}
-          >
-            {soundEnabled ? (
-              <Volume2 size={19} className="shrink-0" />
-            ) : (
-              <VolumeX size={19} className="shrink-0" />
-            )}
-
-            {showLabels && (
-              <>
-                <span className="flex-1 text-left">
-                  {soundEnabled ? "Sound On" : "Sound Off"}
-                </span>
-
-                {soundEnabled && <Check size={16} />}
-              </>
-            )}
-          </button>
+          {/* SOUND BUTTON REMOVED */}
+          {/* Sound effects still work in the background. */}
 
           {/* LOGOUT */}
           <button
@@ -522,6 +509,7 @@ export default function Sidebar({
             }`}
           >
             <LogOut size={19} className="shrink-0" />
+
             {showLabels && <span>Logout</span>}
           </button>
         </div>
@@ -531,7 +519,7 @@ export default function Sidebar({
 
   return (
     <>
-      {/* FALLBACK MOBILE MENU */}
+      {/* MOBILE MENU BUTTON */}
       {!isControlled && (
         <button
           type="button"
@@ -557,7 +545,11 @@ export default function Sidebar({
       {/* MOBILE SIDEBAR */}
       <aside
         aria-label="Mobile navigation"
-        className={`fixed inset-y-0 left-0 z-[100] flex w-[min(290px,85vw)] flex-col border-r border-white/10 bg-[#10264d] text-white shadow-2xl transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-[100] flex w-[min(290px,85vw)] flex-col border-r border-white/10 text-white shadow-2xl transition-all duration-300 lg:hidden ${
+          theme === "dark"
+            ? "bg-[#0b1730]"
+            : "bg-[#10264d]"
+        } ${
           mobileOpen
             ? "translate-x-0"
             : "-translate-x-full"
@@ -569,8 +561,14 @@ export default function Sidebar({
       {/* DESKTOP SIDEBAR */}
       <aside
         aria-label="Desktop navigation"
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-white/10 bg-[#10264d] text-white shadow-[4px_0_20px_rgba(16,38,77,0.08)] transition-[width] duration-300 lg:flex ${
-          collapsed ? "w-[78px]" : "w-[265px]"
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-white/10 text-white shadow-[4px_0_20px_rgba(16,38,77,0.08)] transition-[width,background-color] duration-300 lg:flex ${
+          theme === "dark"
+            ? "bg-[#0b1730]"
+            : "bg-[#10264d]"
+        } ${
+          collapsed
+            ? "w-[78px]"
+            : "w-[265px]"
         }`}
       >
         {renderSidebarContent(false)}

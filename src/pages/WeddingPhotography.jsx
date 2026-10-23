@@ -9,9 +9,6 @@ import {
   Trash2,
   X,
   Heart,
-  CalendarDays,
-  MapPin,
-  Phone,
   IndianRupee,
   CheckCircle2,
   Clock3,
@@ -29,6 +26,15 @@ import {
 const STORAGE_KEY = "studioraw_wedding_photography";
 const DEMO_SEED_KEY = "studioraw_wedding_demo_20_v1";
 const SOUND_KEY = "studioraw_dashboard_sound";
+
+const eventTypes = [
+  "Traditional Photography",
+  "Candid Photography",
+  "Helicam (Drone) Photography",
+  "PreWedding Photography",
+  "Post Wedding Photography",
+  "Custom Package",
+];
 
 const packages = ["Standard", "Premium", "Luxury", "Custom"];
 
@@ -100,6 +106,7 @@ const demoWeddings = demoCouples.map(([bride, groom], index) => {
     phone: String(9000010001 + index),
     date: dateString,
     venue: venues[index % (venues.length - 1)],
+    eventType: eventTypes[index % eventTypes.length],
     package: packages[index % 3],
     amount: demoAmounts[index],
     advance: demoAdvances[index],
@@ -116,6 +123,7 @@ const emptyForm = {
   phone: "",
   date: "",
   venue: "Nagercoil",
+  eventType: "Traditional Photography",
   package: "Standard",
   amount: "",
   advance: "",
@@ -412,7 +420,6 @@ function SectionTitle({ icon: Icon, title }) {
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
         <Icon size={17} />
       </div>
-
       <h4 className="text-sm font-bold text-[#10264d]">{title}</h4>
     </div>
   );
@@ -550,6 +557,7 @@ export default function WeddingPhotography() {
         item.venue,
         item.id,
         item.package,
+        item.eventType,
       ].some((value) =>
         String(value || "").toLowerCase().includes(term)
       );
@@ -573,7 +581,11 @@ export default function WeddingPhotography() {
   const openEdit = (item) => {
     previousFocusRef.current = document.activeElement;
     setEditing(item);
-    setForm({ ...emptyForm, ...item });
+    setForm({
+      ...emptyForm,
+      ...item,
+      eventType: item.eventType || "Traditional Photography",
+    });
     setError("");
     setModalOpen(true);
     playSound("open");
@@ -620,6 +632,12 @@ export default function WeddingPhotography() {
       return;
     }
 
+    if (!eventTypes.includes(form.eventType)) {
+      setError("Please select a valid event type.");
+      playSound("error");
+      return;
+    }
+
     const amount = Number(form.amount || 0);
     const advance = Number(form.advance || 0);
 
@@ -641,6 +659,7 @@ export default function WeddingPhotography() {
       groom,
       phone,
       venue: String(form.venue || "").trim(),
+      eventType: form.eventType,
       amount,
       advance,
     };
@@ -710,6 +729,7 @@ export default function WeddingPhotography() {
 
   return (
     <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:space-y-7 lg:px-8 lg:py-8">
+
       {/* NOTIFICATION */}
       {notice &&
         createPortal(
@@ -749,7 +769,8 @@ export default function WeddingPhotography() {
           </h1>
 
           <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
-            Manage wedding couples, packages, dates, venues and payments.
+            Manage wedding couples, event types, packages, dates,
+            venues and payments.
           </p>
         </div>
 
@@ -964,6 +985,13 @@ export default function WeddingPhotography() {
                   />
 
                   <MobileDetail
+                    label="Event Type"
+                    value={
+                      item.eventType || "Traditional Photography"
+                    }
+                  />
+
+                  <MobileDetail
                     label="Package"
                     value={item.package}
                   />
@@ -1015,12 +1043,13 @@ export default function WeddingPhotography() {
 
         {/* DESKTOP TABLE */}
         <div className="hidden w-full overflow-x-auto lg:block">
-          <table className="w-full min-w-[950px] border-collapse text-left">
+          <table className="w-full min-w-[1100px] border-collapse text-left">
             <thead className="bg-[#f7f9fd]">
               <tr className="text-[11px] font-bold uppercase tracking-wide text-[#8290a5]">
                 <th className="px-4 py-4">Wedding Couple</th>
                 <th className="px-4 py-4">Wedding Date</th>
                 <th className="px-4 py-4">Venue</th>
+                <th className="px-4 py-4">Event Type</th>
                 <th className="px-4 py-4">Package</th>
                 <th className="px-4 py-4">Amount</th>
                 <th className="px-4 py-4">Status</th>
@@ -1032,7 +1061,7 @@ export default function WeddingPhotography() {
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-5 py-16 text-center text-sm text-slate-400"
                   >
                     No wedding records found.
@@ -1072,6 +1101,10 @@ export default function WeddingPhotography() {
 
                     <td className="px-4 py-4 text-sm text-[#52627b]">
                       {item.venue || "—"}
+                    </td>
+
+                    <td className="min-w-[175px] px-4 py-4 text-sm font-medium text-[#52627b]">
+                      {item.eventType || "Traditional Photography"}
                     </td>
 
                     <td className="px-4 py-4 text-sm font-medium text-[#52627b]">
@@ -1202,6 +1235,7 @@ export default function WeddingPhotography() {
                 className="flex min-h-0 flex-1 flex-col"
               >
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+
                   {/* COUPLE DETAILS */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <SectionTitle
@@ -1275,6 +1309,26 @@ export default function WeddingPhotography() {
                         }
                       />
                     </FormField>
+                  </div>
+
+                  {/* EVENT TYPE */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <SectionTitle
+                      icon={Camera}
+                      title="Photography Event Type"
+                    />
+
+                    <div className="sm:col-span-2">
+                      <FormField label="Event Type" required>
+                        <CustomDropdown
+                          value={form.eventType}
+                          options={eventTypes}
+                          onChange={(value) =>
+                            update("eventType", value)
+                          }
+                        />
+                      </FormField>
+                    </div>
                   </div>
 
                   {/* PACKAGE & PAYMENT */}

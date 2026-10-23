@@ -25,28 +25,17 @@ const KEY = "studioraw_customized_gifts";
 const SOUND_KEY = "studioraw_dashboard_sound";
 
 const GIFT_TYPES = [
-  "Photo Frame",
-  "Customized Photo Album",
-  "Photo Mug",
-  "Magic Mug",
-  "Photo Cushion",
-  "Photo Keychain",
-  "Customized T-Shirt",
-  "Photo Calendar",
-  "LED Photo Frame",
-  "Acrylic Photo Frame",
-  "Wooden Photo Frame",
-  "Photo Collage",
-  "Couple Gift",
-  "Wedding Gift",
-  "Anniversary Gift",
-  "Birthday Gift",
-  "Baby Photo Gift",
-  "Personalized Name Board",
-  "Customized Clock",
-  "Photo Lamp",
-  "Crystal Photo Gift",
-  "Other",
+  "Photo Frame / Photo Click",
+  "Photo Cap / Photo Bottle",
+  "Magic Mirror / Magic Cup",
+  "Printed Cup",
+  "Magic Pillow",
+  "Wedding Calendar",
+  "3D Name / Modelling",
+  "Handmade Calligraphy",
+  "Handmade Gifts",
+  "Custom Package",
+  
 ];
 
 const OCCASIONS = [

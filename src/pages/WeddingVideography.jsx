@@ -31,23 +31,13 @@ const DEMO_KEY = "studioraw_videography_demo_30_v1";
 const SOUND_KEY = "studioraw_dashboard_sound";
 
 const EVENT_TYPES = [
-  "Wedding",
-  "Engagement",
-  "Reception",
-  "Pre-Wedding Shoot",
-  "Post-Wedding Shoot",
-  "Haldi Ceremony",
-  "Mehendi Ceremony",
-  "Sangeet Ceremony",
-  "Wedding Highlights",
-  "Cinematic Wedding Film",
-  "Traditional Wedding Video",
-  "Couple Shoot",
-  "Save the Date Video",
-  "Wedding Teaser",
-  "Wedding Documentary",
-  "Anniversary Video",
-  "Other",
+  "Traditional VideoGraphy",
+  "Candid VideoGraphy",
+  "Helicam (Drone) Videography",
+  "PreWedding VideoGraphy",
+  "Post Wedding VideoGraphy",
+  "Custom Package",
+ 
 ];
 
 const PACKAGES = [

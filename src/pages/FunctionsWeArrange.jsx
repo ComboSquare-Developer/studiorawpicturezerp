@@ -32,26 +32,13 @@ const STORAGE_KEY = "studioraw_functions_we_arrange";
 const SOUND_KEY = "studioraw_functions_sounds";
 
 const EVENT_TYPES = [
-  "Wedding",
-  "Engagement",
-  "Reception",
-  "Birthday Party",
-  "Baby Shower",
-  "Naming Ceremony",
   "Puberty Ceremony",
-  "Housewarming",
-  "Wedding Anniversary",
-  "Haldi Ceremony",
-  "Mehendi Ceremony",
-  "Sangeet",
-  "Pre-Wedding Event",
-  "Corporate Event",
-  "Product Launch",
-  "College Function",
-  "School Annual Day",
-  "Cultural Event",
-  "Family Function",
-  "Other",
+  "Engagement Ceremony",
+  "Birthday Celebrations",
+  "Inauguration Ceremony",
+  "Mehndi Ceremony",
+  "Bachelor Party",
+  
 ];
 
 const SERVICES = [

@@ -1,10 +1,365 @@
+
 @import "tailwindcss";
+
+/* ==========================================
+   STUDIO RAW PICTUREZ ERP
+   GLOBAL STYLES + LIGHT / DARK THEME
+========================================== */
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ==========================================
+   THEME VARIABLES
+========================================== */
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --app-bg: #f4f7fc;
+  --app-surface: #ffffff;
+  --app-surface-2: #f8fafc;
+  --app-surface-3: #edf2f8;
+
+  --app-text: #14213d;
+  --app-text-secondary: #475569;
+  --app-text-muted: #64748b;
+
+  --app-border: #e2e8f0;
+  --app-input: #ffffff;
+
+  --app-hover: #f1f5f9;
+  --app-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --app-bg: #080f1f;
+  --app-surface: #111e33;
+  --app-surface-2: #17263e;
+  --app-surface-3: #21334d;
+
+  --app-text: #f1f5f9;
+  --app-text-secondary: #cbd5e1;
+  --app-text-muted: #94a3b8;
+
+  --app-border: #34445e;
+  --app-input: #17263e;
+
+  --app-hover: #243650;
+  --app-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ==========================================
+   GLOBAL PAGE THEME
+========================================== */
+
+html,
+body,
+#root {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+body {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+main {
+  color: var(--app-text);
+}
+
+/* ==========================================
+   LIGHT THEME - DEFAULT
+========================================== */
+
+html[data-theme="light"] main {
+  color: #14213d;
+}
+
+html[data-theme="light"] main input,
+html[data-theme="light"] main select,
+html[data-theme="light"] main textarea {
+  color-scheme: light;
+}
+
+/* ==========================================
+   DARK THEME - BACKGROUNDS
+========================================== */
+
+html[data-theme="dark"] main {
+  background-color: var(--app-bg);
+}
+
+html[data-theme="dark"] main [class~="bg-white"],
+html[data-theme="dark"] main [class~="bg-gray-50"],
+html[data-theme="dark"] main [class~="bg-slate-50"],
+html[data-theme="dark"] main [class~="bg-slate-100"],
+html[data-theme="dark"] main [class~="bg-gray-100"],
+html[data-theme="dark"] main [class~="bg-[#ffffff]"],
+html[data-theme="dark"] main [class~="bg-[#fff]"],
+html[data-theme="dark"] main [class~="bg-[#FFFFFF]"] {
+  background-color: var(--app-surface);
+}
+
+html[data-theme="dark"] main [class~="bg-gray-200"],
+html[data-theme="dark"] main [class~="bg-slate-200"],
+html[data-theme="dark"] main [class~="bg-[#f8fafc]"],
+html[data-theme="dark"] main [class~="bg-[#f1f5f9]"],
+html[data-theme="dark"] main [class~="bg-[#f9fafb]"],
+html[data-theme="dark"] main [class~="bg-[#f4f7fb]"],
+html[data-theme="dark"] main [class~="bg-[#f5f7fb]"] {
+  background-color: var(--app-surface-2);
+}
+
+/* ==========================================
+   DARK THEME - TEXT
+========================================== */
+
+html[data-theme="dark"] main [class~="text-black"],
+html[data-theme="dark"] main [class~="text-gray-950"],
+html[data-theme="dark"] main [class~="text-gray-900"],
+html[data-theme="dark"] main [class~="text-gray-800"],
+html[data-theme="dark"] main [class~="text-slate-950"],
+html[data-theme="dark"] main [class~="text-slate-900"],
+html[data-theme="dark"] main [class~="text-slate-800"],
+html[data-theme="dark"] main [class~="text-[#111827]"],
+html[data-theme="dark"] main [class~="text-[#0f172a]"],
+html[data-theme="dark"] main [class~="text-[#14213d]"] {
+  color: var(--app-text);
+}
+
+html[data-theme="dark"] main [class~="text-gray-700"],
+html[data-theme="dark"] main [class~="text-gray-600"],
+html[data-theme="dark"] main [class~="text-slate-700"],
+html[data-theme="dark"] main [class~="text-slate-600"],
+html[data-theme="dark"] main [class~="text-[#475569]"] {
+  color: var(--app-text-secondary);
+}
+
+html[data-theme="dark"] main [class~="text-gray-500"],
+html[data-theme="dark"] main [class~="text-gray-400"],
+html[data-theme="dark"] main [class~="text-slate-500"],
+html[data-theme="dark"] main [class~="text-slate-400"] {
+  color: var(--app-text-muted);
+}
+
+/* ==========================================
+   DARK THEME - BORDERS
+========================================== */
+
+html[data-theme="dark"] main [class~="border-gray-100"],
+html[data-theme="dark"] main [class~="border-gray-200"],
+html[data-theme="dark"] main [class~="border-gray-300"],
+html[data-theme="dark"] main [class~="border-slate-100"],
+html[data-theme="dark"] main [class~="border-slate-200"],
+html[data-theme="dark"] main [class~="border-slate-300"],
+html[data-theme="dark"] main [class~="border-[#e2e8f0]"] {
+  border-color: var(--app-border);
+}
+
+/* ==========================================
+   DARK THEME - FORMS
+========================================== */
+
+html[data-theme="dark"] main input,
+html[data-theme="dark"] main select,
+html[data-theme="dark"] main textarea {
+  background-color: var(--app-input);
+  color: var(--app-text);
+  border-color: var(--app-border);
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] main input::placeholder,
+html[data-theme="dark"] main textarea::placeholder {
+  color: var(--app-text-muted);
+}
+
+html[data-theme="dark"] main input:focus,
+html[data-theme="dark"] main select:focus,
+html[data-theme="dark"] main textarea:focus {
+  outline-color: #60a5fa;
+}
+
+/* ==========================================
+   DARK THEME - TABLES
+========================================== */
+
+html[data-theme="dark"] main table {
+  color: var(--app-text);
+}
+
+html[data-theme="dark"] main thead {
+  background-color: var(--app-surface-2);
+}
+
+html[data-theme="dark"] main th {
+  color: var(--app-text-secondary);
+  border-color: var(--app-border);
+}
+
+html[data-theme="dark"] main td {
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+html[data-theme="dark"] main tbody tr {
+  border-color: var(--app-border);
+}
+
+html[data-theme="dark"] main tbody tr:hover {
+  background-color: var(--app-hover);
+}
+
+/* ==========================================
+   DARK THEME - CARDS AND SHADOWS
+========================================== */
+
+html[data-theme="dark"] main [class~="shadow-sm"],
+html[data-theme="dark"] main [class~="shadow-md"],
+html[data-theme="dark"] main [class~="shadow-lg"],
+html[data-theme="dark"] main [class~="shadow-xl"] {
+  box-shadow: var(--app-shadow);
+}
+
+/* ==========================================
+   DARK THEME - MODALS / PORTALS
+   For elements rendered outside main
+========================================== */
+
+html[data-theme="dark"] [role="dialog"] {
+  color: var(--app-text);
+}
+
+html[data-theme="dark"] [role="dialog"] [class~="bg-white"],
+html[data-theme="dark"] [role="dialog"] [class~="bg-gray-50"],
+html[data-theme="dark"] [role="dialog"] [class~="bg-slate-50"] {
+  background-color: var(--app-surface);
+}
+
+html[data-theme="dark"] [role="dialog"] [class~="text-gray-900"],
+html[data-theme="dark"] [role="dialog"] [class~="text-slate-900"] {
+  color: var(--app-text);
+}
+
+html[data-theme="dark"] [role="dialog"] input,
+html[data-theme="dark"] [role="dialog"] select,
+html[data-theme="dark"] [role="dialog"] textarea {
+  background-color: var(--app-input);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+/* ==========================================
+   SCROLLBAR
+========================================== */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ==========================================
+   SMOOTH THEME TRANSITIONS
+========================================== */
+
+main,
+main section,
+main article,
+main input,
+main select,
+main textarea,
+main table,
+main th,
+main td {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  main {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

@@ -19,16 +19,7 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  Camera,
-  Video,
-  PartyPopper,
-  Gift,
-  CalendarDays,
-  Sun,
-  Moon,
-  Volume2,
-  VolumeX,
-  Aperture,
+  Sparkles,
 } from "lucide-react";
 
 const THEME_KEY = "studioraw_theme";
@@ -43,20 +34,17 @@ const pageTitles = {
   bookings: "Booking & Calendar",
   "booking-calendar": "Booking & Calendar",
   calendar: "Booking & Calendar",
-
   "wedding-photography": "Wedding Photography",
   "wedding-videography": "Wedding Videography",
   "functions-we-arrange": "Functions We Arrange",
   "event-management": "Event Management",
   "customized-gifts": "Customized Gifts",
-
   payments: "Payment & Billing",
   billing: "Payment & Billing",
   preshoot: "Pre-Shoot Preparation",
   photoshoot: "Photo Shoot & Data",
   photoediting: "Photo Selection & Editing",
   albumprinting: "Album Design & Printing",
-
   deliveries: "Delivery Management",
   delivery: "Delivery Management",
   followup: "Follow-up & CRM",
@@ -78,13 +66,11 @@ const searchPages = [
   ["enquiries", "Enquiries & Leads"],
   ["customers", "Customers"],
   ["bookings", "Booking & Calendar"],
-
   ["wedding-photography", "Wedding Photography"],
   ["wedding-videography", "Wedding Videography"],
   ["functions-we-arrange", "Functions We Arrange"],
   ["event-management", "Event Management"],
   ["customized-gifts", "Customized Gifts"],
-
   ["payments", "Payment & Billing"],
   ["deliveries", "Delivery Management"],
   ["inventory", "Inventory Management"],
@@ -119,10 +105,7 @@ function readProfile() {
       const parsed = JSON.parse(saved);
 
       if (parsed && typeof parsed === "object") {
-        return {
-          ...defaultProfile,
-          ...parsed,
-        };
+        return { ...defaultProfile, ...parsed };
       }
     }
   } catch {
@@ -133,12 +116,10 @@ function readProfile() {
 }
 
 function getInitials(name) {
-  const parts = String(name || "Admin")
+  return String(name || "Admin")
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-
-  return parts
+    .filter(Boolean)
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
@@ -168,7 +149,6 @@ function useTheme() {
       "studioraw-theme-change",
       handleThemeChange
     );
-
     window.addEventListener("storage", handleStorage);
 
     return () => {
@@ -176,7 +156,6 @@ function useTheme() {
         "studioraw-theme-change",
         handleThemeChange
       );
-
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
@@ -197,9 +176,7 @@ function useSound() {
     };
 
     const handleStorage = (event) => {
-      if (event.key === SOUND_KEY) {
-        syncSound();
-      }
+      if (event.key === SOUND_KEY) syncSound();
     };
 
     window.addEventListener("storage", handleStorage);
@@ -230,10 +207,9 @@ function useBeautifulSound() {
   }, []);
 
   const playSound = (type = "click") => {
-    const enabled =
-      readSetting(SOUND_KEY, "true") !== "false";
+    if (!soundEnabled) return;
 
-    if (!enabled || !soundEnabled) return;
+    if (readSetting(SOUND_KEY, "true") === "false") return;
 
     try {
       const AudioContextClass =
@@ -297,6 +273,10 @@ function useBeautifulSound() {
   return playSound;
 }
 
+/* ==========================================
+   EDIT PROFILE MODAL
+========================================== */
+
 function EditProfileModal({
   profile,
   onClose,
@@ -321,9 +301,7 @@ function EditProfileModal({
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
 
     window.addEventListener("keydown", handleEscape);
@@ -335,11 +313,7 @@ function EditProfileModal({
   }, [onClose]);
 
   const updateForm = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-
+    setForm((previous) => ({ ...previous, [key]: value }));
     setError("");
     setSuccess(false);
   };
@@ -373,10 +347,7 @@ function EditProfileModal({
 
     if (result) {
       playSound("save");
-      setForm((previous) => ({
-        ...previous,
-        password: "",
-      }));
+      setForm((previous) => ({ ...previous, password: "" }));
       setSuccess(true);
       setError("");
     } else {
@@ -407,7 +378,7 @@ function EditProfileModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-profile-title"
-        className={`relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl sm:rounded-3xl ${
+        className={`sr-modal-enter relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl sm:rounded-3xl ${
           isDark
             ? "border-[#375477] bg-[#132746] text-white"
             : "border-[#dce5f2] bg-white text-[#10264d]"
@@ -427,7 +398,6 @@ function EditProfileModal({
               >
                 Edit Admin Profile
               </h2>
-
               <p className="mt-1 text-xs text-blue-100">
                 Update administrator details
               </p>
@@ -441,7 +411,7 @@ function EditProfileModal({
               onClose();
             }}
             aria-label="Close edit profile"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
+            className="sr-header-control flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
           >
             <X size={19} />
           </button>
@@ -464,7 +434,6 @@ function EditProfileModal({
               <p className={`truncate text-sm font-bold ${labelClass}`}>
                 {profile.name}
               </p>
-
               <p
                 className={`mt-1 truncate text-xs ${
                   isDark ? "text-[#b7cbe6]" : "text-[#7185a3]"
@@ -491,11 +460,7 @@ function EditProfileModal({
               <div
                 className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 transition focus-within:border-[#5c86c5] focus-within:ring-2 focus-within:ring-blue-400/20 ${inputWrapperClass}`}
               >
-                <User
-                  size={18}
-                  className="shrink-0 text-[#8fa9cb]"
-                />
-
+                <User size={18} className="shrink-0 text-[#8fa9cb]" />
                 <input
                   id="admin-name"
                   type="text"
@@ -523,11 +488,7 @@ function EditProfileModal({
               <div
                 className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 transition focus-within:border-[#5c86c5] focus-within:ring-2 focus-within:ring-blue-400/20 ${inputWrapperClass}`}
               >
-                <Mail
-                  size={18}
-                  className="shrink-0 text-[#8fa9cb]"
-                />
-
+                <Mail size={18} className="shrink-0 text-[#8fa9cb]" />
                 <input
                   id="admin-email"
                   type="email"
@@ -585,7 +546,7 @@ function EditProfileModal({
                   aria-label={
                     showPassword ? "Hide password" : "Show password"
                   }
-                  className="shrink-0 text-[#8fa9cb] transition hover:text-white"
+                  className="shrink-0 text-[#8fa9cb] transition hover:text-blue-400"
                 >
                   {showPassword ? (
                     <EyeOff size={18} />
@@ -600,8 +561,8 @@ function EditProfileModal({
                   isDark ? "text-[#b7cbe6]" : "text-slate-500"
                 }`}
               >
-                Demo interface only. Changing this field does not update
-                your actual login password.
+                Demo interface only. Changing this field does not
+                update your actual login password.
               </p>
             </div>
 
@@ -610,10 +571,7 @@ function EditProfileModal({
                 role="alert"
                 className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
+                <AlertCircle size={17} className="mt-0.5 shrink-0" />
                 {error}
               </div>
             )}
@@ -623,10 +581,7 @@ function EditProfileModal({
                 role="status"
                 className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-[#173d77]"
               >
-                <CheckCircle2
-                  size={18}
-                  className="mt-0.5 shrink-0"
-                />
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
                 Profile name and email saved successfully.
               </div>
             )}
@@ -659,7 +614,7 @@ function EditProfileModal({
           <button
             type="submit"
             form="edit-profile-form"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#244d8b] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#315b99]"
+            className="sr-header-control flex items-center justify-center gap-2 rounded-xl bg-[#244d8b] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#315b99]"
           >
             <CheckCircle2 size={17} />
             Save Changes
@@ -671,6 +626,10 @@ function EditProfileModal({
   );
 }
 
+/* ==========================================
+   MAIN HEADER
+========================================== */
+
 export default function Header({
   activePage = "dashboard",
   setSidebarOpen,
@@ -680,7 +639,6 @@ export default function Header({
 }) {
   const theme = useTheme();
   const playSound = useBeautifulSound();
-
   const isDark = theme === "dark";
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -806,7 +764,7 @@ export default function Header({
 
     return (
       <div
-        className={`mt-2 overflow-hidden rounded-xl border shadow-lg ${
+        className={`sr-dropdown-enter mt-2 overflow-hidden rounded-xl border shadow-lg ${
           isDark
             ? "border-[#375477] bg-[#132746]"
             : "border-[#dce5f2] bg-white"
@@ -836,7 +794,6 @@ export default function Header({
                 }`}
               >
                 <span className="truncate">{label}</span>
-
                 <ChevronRight
                   size={16}
                   className={
@@ -862,8 +819,8 @@ export default function Header({
   };
 
   const headerClass = isDark
-    ? "border-[#284267] bg-[#10264d] text-white"
-    : "border-[#dce5f2] bg-white text-[#10264d]";
+    ? "border-[#284267] bg-[#10264d]/95 text-white"
+    : "border-[#dce5f2] bg-white/95 text-[#10264d]";
 
   const controlClass = isDark
     ? "border-[#375477] bg-[#18345a] text-white hover:bg-[#244d8b]"
@@ -876,8 +833,11 @@ export default function Header({
   return (
     <>
       <header
-        className={`sticky top-0 z-30 w-full min-w-0 border-b shadow-[0_3px_20px_rgba(16,38,77,0.06)] transition-colors duration-300 ${headerClass}`}
+        className={`sr-header-animated sticky top-0 z-30 w-full min-w-0 border-b shadow-[0_3px_20px_rgba(16,38,77,0.06)] backdrop-blur-xl transition-colors duration-300 ${headerClass}`}
       >
+        {/* SUBTLE TOP GRADIENT */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 opacity-80" />
+
         {/* MAIN HEADER */}
         <div className="flex h-[68px] w-full min-w-0 items-center justify-between gap-2 px-3 sm:h-[76px] sm:px-5 lg:h-[84px] lg:px-7 xl:px-9">
           {/* LEFT */}
@@ -886,7 +846,7 @@ export default function Header({
               type="button"
               onClick={openSidebar}
               aria-label="Open sidebar"
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition lg:hidden ${controlClass}`}
+              className={`sr-header-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition lg:hidden ${controlClass}`}
             >
               <Menu size={21} />
             </button>
@@ -901,7 +861,8 @@ export default function Header({
               </div>
 
               <h1
-                className={`truncate text-sm font-extrabold tracking-tight min-[390px]:text-base sm:text-xl lg:text-2xl xl:text-[26px] ${
+                key={activePage}
+                className={`sr-header-title truncate text-sm font-extrabold tracking-tight min-[390px]:text-base sm:text-xl lg:text-2xl xl:text-[26px] ${
                   isDark ? "text-white" : "text-[#10264d]"
                 }`}
               >
@@ -915,7 +876,7 @@ export default function Header({
             {/* DESKTOP SEARCH */}
             <div ref={searchRef} className="relative hidden xl:block">
               <div
-                className={`flex h-11 w-[210px] items-center gap-2 rounded-xl border px-3 transition focus-within:border-[#5c86c5] 2xl:w-[280px] ${controlClass}`}
+                className={`sr-search-box flex h-11 w-[210px] items-center gap-2 rounded-xl border px-3 transition focus-within:border-[#5c86c5] 2xl:w-[280px] ${controlClass}`}
               >
                 <Search
                   size={17}
@@ -988,7 +949,7 @@ export default function Header({
               }}
               aria-label={searchOpen ? "Close search" : "Open search"}
               aria-expanded={searchOpen}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 xl:hidden ${controlClass}`}
+              className={`sr-header-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 xl:hidden ${controlClass}`}
             >
               {searchOpen ? <X size={19} /> : <Search size={19} />}
             </button>
@@ -999,11 +960,11 @@ export default function Header({
               onClick={() => navigateTo("notifications")}
               aria-label="Open notifications"
               title="Notifications"
-              className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 ${controlClass}`}
+              className={`sr-header-control sr-notification-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 ${controlClass}`}
             >
               <Bell size={19} />
 
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#5c86c5]" />
+              <span className="sr-notification-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#5c86c5]" />
             </button>
 
             <div
@@ -1024,7 +985,7 @@ export default function Header({
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
-                className={`flex items-center gap-1.5 rounded-xl border border-transparent p-0.5 transition sm:gap-2 sm:p-1 ${
+                className={`sr-header-control flex items-center gap-1.5 rounded-xl border border-transparent p-0.5 transition sm:gap-2 sm:p-1 ${
                   isDark
                     ? "hover:border-[#375477] hover:bg-white/10"
                     : "hover:border-[#dce5f2] hover:bg-[#f5f8fd]"
@@ -1056,7 +1017,7 @@ export default function Header({
 
                 <ChevronDown
                   size={15}
-                  className={`hidden shrink-0 transition-transform sm:block ${
+                  className={`hidden shrink-0 transition-transform duration-300 sm:block ${
                     profileOpen ? "rotate-180" : ""
                   } ${mutedClass}`}
                 />
@@ -1066,7 +1027,7 @@ export default function Header({
               {profileOpen && (
                 <div
                   role="menu"
-                  className={`absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-2xl border shadow-[0_20px_55px_rgba(16,38,77,0.18)] ${
+                  className={`sr-profile-menu absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-2xl border shadow-[0_20px_55px_rgba(16,38,77,0.18)] ${
                     isDark
                       ? "border-[#375477] bg-[#132746]"
                       : "border-[#dce5f2] bg-white"
@@ -1107,10 +1068,7 @@ export default function Header({
                     >
                       <Pencil size={17} />
                       Edit Profile
-                      <ChevronRight
-                        size={15}
-                        className="ml-auto"
-                      />
+                      <ChevronRight size={15} className="ml-auto" />
                     </button>
 
                     <div
@@ -1140,7 +1098,7 @@ export default function Header({
         {/* MOBILE SEARCH PANEL */}
         {searchOpen && (
           <div
-            className={`border-t px-3 py-3 sm:px-5 xl:hidden ${
+            className={`sr-dropdown-enter border-t px-3 py-3 sm:px-5 xl:hidden ${
               isDark
                 ? "border-[#375477] bg-[#10264d]"
                 : "border-[#e7edf6] bg-white"
@@ -1148,7 +1106,7 @@ export default function Header({
           >
             <div className="mx-auto max-w-3xl">
               <div
-                className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 ${controlClass}`}
+                className={`sr-search-box flex min-w-0 items-center gap-2 rounded-xl border px-3 ${controlClass}`}
               >
                 <Search
                   size={18}

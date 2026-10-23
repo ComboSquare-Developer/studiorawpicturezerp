@@ -2,6 +2,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import GlobalSound from "./components/GlobalSound";
 
 const files = import.meta.glob("./pages/*.jsx");
 
@@ -126,82 +127,88 @@ export default function App() {
     setSidebarOpen(false);
   };
 
-  if (!loggedIn) {
-    return (
-      <Suspense fallback={<Loader />}>
-        {Login ? (
-          <Login onLogin={handleLogin} />
-        ) : (
-          <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
-            <button
-              type="button"
-              onClick={handleLogin}
-              className="rounded-xl bg-[#10264d] px-6 py-3 font-semibold text-white"
-            >
-              Login
-            </button>
-          </div>
-        )}
-      </Suspense>
-    );
-  }
-
   return (
-    <div
-      className={`flex min-h-screen min-w-0 transition-colors duration-300 ${
-        theme === "dark"
-          ? "bg-[#0b1730]"
-          : "bg-[#f5f7fb]"
-      }`}
-    >
-      <Sidebar
-        activePage={activePage}
-        setActivePage={handleNavigation}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        onLogout={handleLogout}
-      />
+    <>
+      {/* GLOBAL SOUND - WORKS ON ALL PAGES */}
+      <GlobalSound />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header
-          activePage={activePage}
-          setSidebarOpen={setSidebarOpen}
-          onNavigate={handleNavigation}
-          onLogout={handleLogout}
-        />
+      {!loggedIn ? (
+        <Suspense fallback={<Loader />}>
+          {Login ? (
+            <Login onLogin={handleLogin} />
+          ) : (
+            <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
+              <button
+                type="button"
+                onClick={handleLogin}
+                className="rounded-xl bg-[#10264d] px-6 py-3 font-semibold text-white"
+              >
+                Login
+              </button>
+            </div>
+          )}
+        </Suspense>
+      ) : (
+        <div
+          className={`flex min-h-screen min-w-0 transition-colors duration-300 ${
+            theme === "dark"
+              ? "bg-[#0b1730]"
+              : "bg-[#f5f7fb]"
+          }`}
+        >
+          {/* SIDEBAR */}
+          <Sidebar
+            activePage={activePage}
+            setActivePage={handleNavigation}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            onLogout={handleLogout}
+          />
 
-        <main className="min-w-0 flex-1">
-          <Suspense fallback={<Loader />}>
-            {ActivePage ? (
-              <ActivePage />
-            ) : (
-              <div className="flex min-h-[70vh] items-center justify-center p-5">
-                <div
-                  className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-sm ${
-                    theme === "dark"
-                      ? "border-[#284267] bg-[#132746] text-white"
-                      : "border-[#e2e9f3] bg-white text-[#10264d]"
-                  }`}
-                >
-                  <h2 className="text-xl font-bold">
-                    {pageNames[activePage] || activePage}
-                  </h2>
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* HEADER */}
+            <Header
+              activePage={activePage}
+              setSidebarOpen={setSidebarOpen}
+              onNavigate={handleNavigation}
+              onLogout={handleLogout}
+            />
 
-                  <p
-                    className={`mt-2 text-sm ${
-                      theme === "dark"
-                        ? "text-[#b5c8e3]"
-                        : "text-slate-500"
-                    }`}
-                  >
-                    Page file not found in src/pages.
-                  </p>
-                </div>
-              </div>
-            )}
-          </Suspense>
-        </main>
-      </div>
-    </div>
+            {/* MAIN CONTENT */}
+            <main className="min-w-0 flex-1">
+              <Suspense fallback={<Loader />}>
+                {ActivePage ? (
+                  <ActivePage />
+                ) : (
+                  <div className="flex min-h-[70vh] items-center justify-center p-5">
+                    <div
+                      className={`w-full max-w-md rounded-2xl border p-8 text-center shadow-sm ${
+                        theme === "dark"
+                          ? "border-[#284267] bg-[#132746] text-white"
+                          : "border-[#e2e9f3] bg-white text-[#10264d]"
+                      }`}
+                    >
+                      <h2 className="text-xl font-bold">
+                        {pageNames[activePage] || activePage}
+                      </h2>
+
+                      <p
+                        className={`mt-2 text-sm ${
+                          theme === "dark"
+                            ? "text-[#b5c8e3]"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        Page file not found in src/pages.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </Suspense>
+            </main>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

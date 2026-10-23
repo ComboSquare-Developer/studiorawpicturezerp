@@ -143,21 +143,13 @@ const CUSTOMERS = [
 ];
 
 const DEMO_EVENT_TYPES = [
-  "Wedding Photography",
-  "Traditional photography",
-  "candid photography",
-  "helicom photography",
-  "Pre-Wedding photography",
-  "Post wedding photography",
-  "Custom Package",
-  "Wedding Videpgraphy",
-  "Function me arrange",
-  "Eventt Managemnet",
-  "Customized Gifts",
-  "Pre-Wedding /OutDoor Shoot",
-  "Bady/Kids Shoot",
-  "Complete Wedding Package"
-];
+  "Event Decoration",
+  "LED Wall & Live Event Streaming",
+  "YouTube Live Streaming",
+  "On-Site Video Editing",
+  "Instant Photo Printing",
+  "DJ & Sound Entertainment",
+ ];
 
 const DEMO_SERVICES = [
   ["Event Planning", "Photography", "Videography", "Venue Decoration"],
