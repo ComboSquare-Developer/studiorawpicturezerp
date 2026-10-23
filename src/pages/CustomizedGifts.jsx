@@ -37,18 +37,16 @@ const GIFT_TYPES = [
 ];
 
 const OCCASIONS = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Anniversary",
-  "Valentine's Day",
-  "Baby Shower",
-  "Housewarming",
-  "Graduation",
-  "Farewell",
-  "Corporate Gift",
-  "Festival",
-  "Other",
+  "Photo Frame / Photo Click",
+  "Photo Cap / Photo Bottle",
+  "Magic Mirror / Magic Cup",
+  "Printed Cup",
+  "Magic Pillow",
+  "Wedding Calendar",
+  "3D Name / Modelling",
+  "Handmade Calligraphy",
+  "Custom Package",
+ 
 ];
 
 const SIZES = [
