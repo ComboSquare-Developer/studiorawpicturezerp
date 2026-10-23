@@ -17,8 +17,6 @@ import {
   UserRound,
   CalendarDays,
   IndianRupee,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 
 const KEY = "studioraw_customized_gifts";
@@ -649,24 +647,6 @@ export default function CustomizedGifts() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() =>
-                setSoundEnabled((prev) => !prev)
-              }
-              title={
-                soundEnabled ? "Turn sound off" : "Turn sound on"
-              }
-              className="flex items-center justify-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm font-medium text-[#102f62]"
-            >
-              {soundEnabled ? (
-                <Volume2 size={17} />
-              ) : (
-                <VolumeX size={17} />
-              )}
-              Sound {soundEnabled ? "On" : "Off"}
-            </button>
-
-            <button
-              type="button"
               onClick={openAdd}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e] sm:flex-none"
             >
@@ -698,7 +678,7 @@ export default function CustomizedGifts() {
                   </div>
                 </div>
 
-                <h2 className="mt-4 break-words text-2xl font-bold text-[#10264d]">
+                <h2 className="mt-4 truncate whitespace-nowrap text-lg font-bold text-[#10264d] sm:text-xl xl:text-2xl">
                   {stat.value}
                 </h2>
               </div>

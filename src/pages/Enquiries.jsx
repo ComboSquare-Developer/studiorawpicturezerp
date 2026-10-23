@@ -492,7 +492,7 @@ function SummaryCard({
           {title}
         </p>
 
-        <h3 className="mt-2 text-2xl font-extrabold text-[#10264d]">
+        <h3 className="mt-2 truncate whitespace-nowrap text-xl font-extrabold text-[#10264d] sm:text-2xl">
           {value}
         </h3>
       </div>
@@ -879,14 +879,14 @@ export default function Enquiries() {
         {/* ONLY ADD ENQUIRY BUTTON */}
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
+          {/* <button
             type="button"
             onClick={() => openForm()}
             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1d4274] sm:text-sm"
           >
             <Plus size={18} />
             Add Enquiry
-          </button>
+          </button> */}
         </div>
       </div>
 

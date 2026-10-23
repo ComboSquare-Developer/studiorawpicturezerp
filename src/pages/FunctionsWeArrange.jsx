@@ -20,8 +20,6 @@ import {
   UserRound,
   Wallet,
   Check,
-  Volume2,
-  VolumeX,
   CalendarCheck2,
   BriefcaseBusiness,
   FileText,
@@ -38,7 +36,10 @@ const EVENT_TYPES = [
   "Inauguration Ceremony",
   "Mehndi Ceremony",
   "Bachelor Party",
-  
+  "Arabic Night Celebrations",
+  "Corporate Events",
+  "Maternity Photoshoots",
+  "Custom Package",
 ];
 
 const SERVICES = [
@@ -601,7 +602,7 @@ function StatCard({ title, value, icon: Icon, color }) {
         <p className="text-xs font-medium text-[#8290a5] sm:text-sm">
           {title}
         </p>
-        <h2 className="mt-2 break-words text-xl font-extrabold text-[#10264d] sm:text-2xl">
+        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
           {value}
         </h2>
       </div>
@@ -954,18 +955,6 @@ export default function FunctionsWeArrange() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => {
-                setEnabled((previous) => !previous);
-              }}
-              title={enabled ? "Mute sounds" : "Enable sounds"}
-              className="flex items-center justify-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm font-semibold text-[#102f62] transition hover:bg-blue-50"
-            >
-              {enabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-              Sound {enabled ? "On" : "Off"}
-            </button>
-
             <button
               type="button"
               onClick={openAdd}

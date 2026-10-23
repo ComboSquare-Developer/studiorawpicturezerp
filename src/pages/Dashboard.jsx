@@ -582,7 +582,7 @@ function StatCard({
             {title}
           </p>
 
-          <h2 className="mt-3 break-words text-xl font-extrabold text-[#10264d] sm:text-2xl">
+          <h2 className="mt-3 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
             <AnimatedNumber
               value={value}
               currency={currency}
@@ -2226,7 +2226,7 @@ export default function Dashboard() {
                   {label}
                 </p>
 
-                <p className="mt-3 break-words text-xl font-extrabold lg:text-2xl">
+                <p className="mt-3 truncate whitespace-nowrap text-lg font-extrabold lg:text-xl xl:text-2xl">
                   <AnimatedNumber
                     value={amount}
                     currency

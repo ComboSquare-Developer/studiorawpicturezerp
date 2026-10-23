@@ -20,8 +20,6 @@ import {
   Film,
   ChevronDown,
   Check,
-  Volume2,
-  VolumeX,
   AlertCircle,
   Filter,
 } from "lucide-react";
@@ -468,7 +466,7 @@ function StatCard({ title, value, icon: Icon, color }) {
           {title}
         </p>
 
-        <h2 className="mt-2 break-words text-xl font-extrabold text-[#10264d] sm:text-2xl">
+        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
           {value}
         </h2>
       </div>
@@ -882,20 +880,6 @@ export default function WeddingVideography() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={toggleSound}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] hover:bg-blue-50 sm:flex-none"
-          >
-            {soundEnabled ? (
-              <Volume2 size={17} />
-            ) : (
-              <VolumeX size={17} />
-            )}
-
-            Sound {soundEnabled ? "ON" : "OFF"}
-          </button>
-
-          <button
-            type="button"
             onClick={openAdd}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#1b467e] sm:flex-none sm:text-sm"
           >
@@ -918,7 +902,7 @@ export default function WeddingVideography() {
           <p className="text-xs font-semibold text-slate-500">
             Total Package Value
           </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
+          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
             {money(totalAmount)}
           </p>
         </div>
@@ -927,7 +911,7 @@ export default function WeddingVideography() {
           <p className="text-xs font-semibold text-slate-500">
             Total Advance Collected
           </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
+          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
             {money(totalAdvance)}
           </p>
         </div>
@@ -936,7 +920,7 @@ export default function WeddingVideography() {
           <p className="text-xs font-semibold text-slate-500">
             Remaining Balance
           </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
+          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
             {money(totalPending)}
           </p>
         </div>

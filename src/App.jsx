@@ -87,6 +87,13 @@ export default function App() {
   });
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme;
+  }, [theme]);
+
+  useEffect(() => {
     const handleThemeChange = (event) => {
       const nextTheme = event.detail?.theme;
 

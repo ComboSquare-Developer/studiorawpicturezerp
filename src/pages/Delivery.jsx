@@ -13,10 +13,33 @@ const STORAGE_KEY = "studioraw_deliveries";
 const SOUND_KEY = "studioraw_delivery_sounds";
 
 const EVENTS = [
-  "Wedding", "Engagement", "Birthday", "Pre-Wedding",
-  "Baby Shoot", "Maternity Shoot", "Portrait", "Corporate",
-  "Anniversary", "Housewarming", "Graduation",
-  "Fashion Shoot", "Product Photography", "Other",
+  "Wedding Photography",
+
+  "Traditional Photography",
+
+"Candid Photography",
+
+"Helicam (Drone) Photography",
+
+"PreWedding Photography",
+
+"Post Wedding Photography",
+
+"Custom Package",
+
+"Wedding Videography",
+
+"Function We Arrange",
+
+"Event Management",
+
+"Customized Gifts",
+
+"Pre-Wedding / Outdoor Shoot",
+
+"Baby & Kids Shoot",
+
+"Complete Wedding Package",
 ];
 
 const DELIVERY_ITEMS = [

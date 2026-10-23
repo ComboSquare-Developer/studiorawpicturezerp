@@ -16,8 +16,6 @@ import {
   ChevronDown,
   Check,
   Save,
-  Volume2,
-  VolumeX,
   Wallet,
   AlertCircle,
   Filter,
@@ -370,7 +368,7 @@ function StatCard({ title, value, icon: Icon, color, bg }) {
         <p className="text-xs font-medium text-slate-500 sm:text-sm">
           {title}
         </p>
-        <h3 className="mt-2 break-words text-xl font-extrabold text-[#10264d] sm:text-2xl">
+        <h3 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
           {value}
         </h3>
       </div>
@@ -777,19 +775,6 @@ export default function WeddingPhotography() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={toggleSound}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] transition hover:bg-blue-50 sm:flex-none"
-          >
-            {soundEnabled ? (
-              <Volume2 size={17} />
-            ) : (
-              <VolumeX size={17} />
-            )}
-            Sound {soundEnabled ? "ON" : "OFF"}
-          </button>
-
-          <button
-            type="button"
             onClick={openAdd}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#1b467e] sm:flex-none sm:text-sm"
           >
@@ -840,7 +825,7 @@ export default function WeddingPhotography() {
           <p className="text-xs font-semibold text-slate-500">
             Total Advance Collected
           </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
+          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
             {money(totalAdvance)}
           </p>
         </div>
@@ -849,7 +834,7 @@ export default function WeddingPhotography() {
           <p className="text-xs font-semibold text-slate-500">
             Pending Balance
           </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
+          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
             {money(totalDue)}
           </p>
         </div>

@@ -298,7 +298,7 @@ function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-500">{title}</p>
-          <h3 className="mt-3 break-words text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <h3 className="mt-3 truncate whitespace-nowrap text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl xl:text-3xl">
             {value}
           </h3>
           <p className="mt-2 text-xs leading-5 text-slate-500">{subtitle}</p>

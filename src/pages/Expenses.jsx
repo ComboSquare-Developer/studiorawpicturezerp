@@ -770,7 +770,7 @@ export default function Expenses() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                  <h2 className={`mt-3 break-words text-2xl font-extrabold sm:text-3xl ${item.color}`}>
+                  <h2 className={`mt-3 truncate whitespace-nowrap text-xl font-extrabold sm:text-2xl xl:text-3xl ${item.color}`}>
                     {item.isCount ? item.value : money(item.value)}
                   </h2>
                 </div>

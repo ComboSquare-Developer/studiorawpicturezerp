@@ -19,8 +19,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Volume2,
-  VolumeX,
   Save,
   Filter,
   ContactRound,
@@ -298,7 +296,7 @@ function SummaryCard({ title, value, icon: Icon, color, bg }) {
           {title}
         </p>
 
-        <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+        <h3 className="mt-2 truncate whitespace-nowrap text-xl font-extrabold tracking-tight text-[#10264d] sm:text-2xl xl:text-3xl">
           {value}
         </h3>
       </div>
@@ -883,20 +881,6 @@ export default function Customers() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={toggleSound}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] shadow-sm transition hover:bg-blue-50 sm:text-sm"
-            >
-              {soundEnabled ? (
-                <Volume2 size={17} />
-              ) : (
-                <VolumeX size={17} />
-              )}
-
-              Sound {soundEnabled ? "ON" : "OFF"}
-            </button>
-
             <button
               type="button"
               onClick={openAdd}

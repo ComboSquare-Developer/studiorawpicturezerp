@@ -22,8 +22,6 @@ import {
   BriefcaseBusiness,
   ClipboardList,
   Clock3,
-  Volume2,
-  VolumeX,
   Check,
   FileText,
   AlertCircle,
@@ -33,31 +31,20 @@ const STORAGE_KEY = "studioraw_event_management";
 const SOUND_KEY = "studioraw_dashboard_sound";
 
 const EVENT_TYPES = [
-  "Wedding",
-  "Engagement",
-  "Reception",
-  "Birthday Party",
-  "Baby Shower",
-  "Naming Ceremony",
-  "Puberty Ceremony",
-  "Housewarming",
-  "Wedding Anniversary",
-  "Haldi Ceremony",
+  "Event Decoration",
+  "LED Wall & Live Event Streaming",
+  "YouTube Live Streaming",
+  "On-Site Video Editing",
+  "Instant Photo Printing",
+  "DJ & Sound Entertainment",
+  "Bridal & Groom Makeover",
+  "Fun Activities & Event Entertainment",
+  "360° Selfie Booth",
+  "Custom Package",
   "Mehendi Ceremony",
   "Sangeet",
-  "Pre-Wedding Event",
-  "Corporate Event",
-  "Product Launch",
-  "Conference",
-  "Seminar",
-  "Award Ceremony",
-  "College Function",
-  "School Annual Day",
-  "Cultural Event",
-  "Music Concert",
-  "Exhibition",
-  "Family Function",
-  "Other",
+  
+ 
 ];
 
 const SERVICES = [
@@ -613,7 +600,7 @@ function StatCard({ title, value, icon: Icon, color }) {
         <p className="text-xs font-medium text-[#8290a5] sm:text-sm">
           {title}
         </p>
-        <h2 className="mt-2 break-words text-xl font-extrabold text-[#10264d] sm:text-2xl">
+        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
           {value}
         </h2>
       </div>
@@ -995,19 +982,6 @@ export default function EventManagement() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setSoundEnabled((previous) => !previous)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm font-semibold text-[#102f62] hover:bg-blue-50"
-            >
-              {soundEnabled ? (
-                <Volume2 size={18} />
-              ) : (
-                <VolumeX size={18} />
-              )}
-              Sound {soundEnabled ? "On" : "Off"}
-            </button>
-
             <button
               type="button"
               onClick={openAdd}

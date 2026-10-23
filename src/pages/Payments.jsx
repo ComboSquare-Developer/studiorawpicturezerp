@@ -19,8 +19,6 @@ import {
   Phone,
   CalendarDays,
   CheckCircle2,
-  Volume2,
-  VolumeX,
   Pencil,
 } from "lucide-react";
 
@@ -40,46 +38,34 @@ const todayKey = () => {
 };
 
 const eventOptions = [
-  "Wedding",
-  "Engagement",
-  "Reception",
-  "Birthday",
-  "Baby Shower",
-  "Naming Ceremony",
-  "Puberty Ceremony",
-  "Housewarming",
-  "Anniversary",
-  "Haldi",
-  "Mehendi",
-  "Sangeet",
-  "Pre-Wedding",
-  "Baby Shoot",
-  "Corporate",
-  "Product Launch",
-  "Conference",
-  "College Function",
-  "School Function",
-  "Cultural Event",
-  "Portrait Photography",
-  "Customized Gifts",
-  "Other",
-];
-
-const packageOptions = [
-  "Premium Wedding",
-  "Classic Wedding",
   "Wedding Photography",
-  "Wedding Videography",
-  "Classic Engagement",
-  "Birthday Special",
-  "Pre-Wedding Premium",
-  "Baby Portrait",
-  "Corporate Photography",
-  "Portrait Photography",
-  "Event Photography",
-  "Event Videography",
-  "Customized Gifts",
-  "Custom Package",
+
+"Traditional Photography",
+
+"Candid Photography",
+
+"Helicam (Drone) Photography",
+
+"PreWedding Photography",
+
+"Post Wedding Photography",
+
+"Custom Package",
+
+"Wedding Videography",
+
+"Function We Arrange",
+
+"Event Management",
+
+"Customized Gifts",
+
+"Pre-Wedding / Outdoor Shoot",
+
+"Baby & Kids Shoot",
+
+"Complete Wedding Package",
+
 ];
 
 const methodOptions = [
@@ -1132,23 +1118,6 @@ export default function Payments() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() =>
-              setEnabled((previous) => !previous)
-            }
-            title={enabled ? "Turn sound off" : "Turn sound on"}
-            className="flex items-center justify-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm font-medium text-[#102f62]"
-          >
-            {enabled ? (
-              <Volume2 size={17} />
-            ) : (
-              <VolumeX size={17} />
-            )}
-
-            Sound {enabled ? "On" : "Off"}
-          </button>
-
-          <button
-            type="button"
             onClick={openForm}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e] sm:flex-none"
           >
@@ -1175,7 +1144,7 @@ export default function Payments() {
                   </p>
 
                   <h2
-                    className={`mt-3 break-words text-lg font-bold sm:text-2xl ${stat.color}`}
+                    className={`mt-3 truncate whitespace-nowrap text-base font-bold sm:text-xl xl:text-2xl ${stat.color}`}
                   >
                     {stat.value}
                   </h2>

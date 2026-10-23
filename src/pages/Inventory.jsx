@@ -1219,7 +1219,7 @@ export default function Inventory() {
                   </p>
 
                   <h2
-                    className={`mt-3 break-words text-3xl font-extrabold ${stat.color}`}
+                    className={`mt-3 truncate whitespace-nowrap text-xl font-extrabold sm:text-2xl xl:text-3xl ${stat.color}`}
                   >
                     {stat.value}
                   </h2>

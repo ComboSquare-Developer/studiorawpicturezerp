@@ -21,8 +21,6 @@ import {
   Save,
   Phone,
   Package,
-  Volume2,
-  VolumeX,
   Filter,
 } from "lucide-react";
 
@@ -762,15 +760,6 @@ export default function BookingCalendar() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={toggleSound}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#dce4ef] bg-white px-4 py-3 text-xs font-semibold text-[#10264d] transition hover:bg-blue-50 sm:flex-none"
-          >
-            {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
-            Sound {soundEnabled ? "ON" : "OFF"}
-          </button>
-
           <button
             type="button"
             onClick={() => openBooking()}

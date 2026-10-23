@@ -25,8 +25,6 @@ import {
   Eye,
   ShieldCheck,
   RefreshCw,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 
 const STAFF_KEY = "studioraw_staff";
@@ -866,16 +864,6 @@ export default function Settings() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEnabled((previous) => !previous)}
-            title={enabled ? "Mute Sounds" : "Enable Sounds"}
-            aria-label={enabled ? "Mute Sounds" : "Enable Sounds"}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#dce5f2] bg-white text-[#10264d] shadow-sm hover:bg-[#eaf1fc]"
-          >
-            {enabled ? <Volume2 size={19} /> : <VolumeX size={19} />}
-          </button>
-
           <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dce5f2] bg-white px-3 py-2.5 text-xs font-semibold text-[#173d77] shadow-sm sm:px-4">
             <ShieldCheck size={17} />
             Studio Raw Picturez ERP

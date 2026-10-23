@@ -21,8 +21,6 @@ import {
   Save,
   UserRound,
   MessageSquare,
-  Volume2,
-  VolumeX,
   ClipboardList,
   ArrowUpRight,
 } from "lucide-react";
@@ -1273,19 +1271,6 @@ export default function Notifications() {
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 lg:w-auto lg:justify-end">
-          <button
-            type="button"
-            onClick={() => setSoundEnabled((prev) => !prev)}
-            title={soundEnabled ? "Mute Sounds" : "Enable Sounds"}
-            aria-label={soundEnabled ? "Mute Sounds" : "Enable Sounds"}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#d9e3f2] bg-white text-[#10264d] shadow-sm transition hover:bg-[#eaf1fc]"
-          >
-            {soundEnabled ? (
-              <Volume2 size={19} />
-            ) : (
-              <VolumeX size={19} />
-            )}
-          </button>
 
           <button
             type="button"
