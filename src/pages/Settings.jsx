@@ -1015,12 +1015,12 @@ export default function Settings() {
                 }
               />
 
-              <SelectField
+              {/* <SelectField
                 label="Currency"
                 value={studio.currency}
                 onChange={(value) => updateStudio("currency", value)}
                 options={["INR", "USD", "EUR"]}
-              />
+              /> */}
 
               <div className="sm:col-span-2">
                 <label className="mb-2 block text-xs font-bold text-[#29416a]">

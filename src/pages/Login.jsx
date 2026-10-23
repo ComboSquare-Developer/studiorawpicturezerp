@@ -42,17 +42,20 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="h-[100dvh] w-full overflow-hidden bg-[#f6f8fc] font-sans text-[#142b4d]">
+    <div
+      className="h-[100dvh] w-full overflow-hidden bg-[#f6f8fc] font-sans text-[#142b4d]"
+      style={{ colorScheme: "light" }}
+    >
       <div className="flex h-full w-full">
-
         {/* LEFT BRAND SECTION */}
-        <section className="relative hidden h-full w-[52%] flex-col justify-between overflow-hidden bg-[#0b1f3a] px-9 py-6 text-white lg:flex xl:px-14 xl:py-8 2xl:px-16">
 
+        <section className="relative hidden h-full w-[52%] flex-col justify-between overflow-hidden bg-[#0b1f3a] px-9 py-6 text-white lg:flex xl:px-14 xl:py-8 2xl:px-16">
           {/* Brand Header */}
+
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-
               {/* Original Studio Logo */}
+
               <img
                 src="/studio-logo.png"
                 alt="Studio Raw Picturez Logo"
@@ -71,16 +74,18 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Main Content - No Outer Border */}
-          <div className="relative z-10 my-auto max-w-[620px] py-3">
+          {/* Main Content */}
 
+          <div className="relative z-10 my-auto max-w-[620px] py-3">
             {/* Workspace Badge */}
+
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d5bb8e]/25 bg-[#d5bb8e]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#e6d0a8]">
               <Sparkles size={13} />
               Your Creative Workspace
             </div>
 
             {/* Main Heading */}
+
             <h2 className="text-[clamp(32px,3.2vw,54px)] font-semibold leading-[1.13] tracking-[-0.045em]">
               Behind Every
               <br />
@@ -92,6 +97,7 @@ export default function Login({ onLogin }) {
             </h2>
 
             {/* Description */}
+
             <p className="mt-4 max-w-[470px] text-[13px] leading-[1.8] text-[#b7c4d7] xl:text-sm">
               A thoughtfully designed workspace to manage
               bookings, clients, photography production,
@@ -99,6 +105,7 @@ export default function Login({ onLogin }) {
             </p>
 
             {/* Feature Cards */}
+
             <div className="mt-6 grid grid-cols-3 gap-3">
               {features.map(({ icon: Icon, title }) => (
                 <div
@@ -117,6 +124,7 @@ export default function Login({ onLogin }) {
             </div>
 
             {/* Benefits */}
+
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
               {[
                 "Unified Operations",
@@ -138,23 +146,25 @@ export default function Login({ onLogin }) {
           </div>
 
           {/* Left Footer */}
+
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-4 text-[10px] text-[#8396b0]">
             <p>© 2026 Studio Raw Picturez</p>
           </div>
         </section>
 
         {/* RIGHT LOGIN SECTION */}
-        <section className="relative flex h-full w-full items-center justify-center overflow-hidden px-4 py-3 sm:px-8 lg:w-[48%] lg:px-7 xl:px-12">
 
+        <section className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#f6f8fc] px-4 py-3 sm:px-8 lg:w-[48%] lg:px-7 xl:px-12">
           {/* Right Background */}
+
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#e7edf7] blur-[80px]" />
             <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[#edf0f7] blur-[80px]" />
           </div>
 
           <div className="relative z-10 w-full max-w-[430px]">
-
             {/* Mobile Brand */}
+
             <div className="mb-4 flex items-center gap-3 lg:hidden">
               <img
                 src="/studio-logo.png"
@@ -169,10 +179,17 @@ export default function Login({ onLogin }) {
               </div>
             </div>
 
-            {/* Login Card */}
-            <div className="rounded-[20px] border border-[#e7ebf2] bg-white p-5 shadow-[0_18px_65px_rgba(16,43,83,0.055)] sm:p-6 lg:p-7">
+            {/* WHITE LOGIN CARD */}
 
+            <div
+              className="rounded-[20px] border border-[#e7ebf2] !bg-white p-5 text-[#102b53] shadow-[0_18px_65px_rgba(16,43,83,0.055)] sm:p-6 lg:p-7"
+              style={{
+                backgroundColor: "#ffffff",
+                colorScheme: "light",
+              }}
+            >
               {/* Login Heading */}
+
               <div className="mb-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-1.5 rounded-full border border-[#e7ebf2] bg-[#f8fafc] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#65748a]">
@@ -195,9 +212,13 @@ export default function Login({ onLogin }) {
               </div>
 
               {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
 
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-4"
+              >
                 {/* Email */}
+
                 <div>
                   <label
                     htmlFor="login-email"
@@ -223,12 +244,13 @@ export default function Login({ onLogin }) {
                       placeholder="name@studio.com"
                       autoComplete="username"
                       required
-                      className="w-full rounded-xl border border-[#dfe6ef] bg-[#fbfcfe] py-3 pl-11 pr-4 text-sm text-[#102b53] outline-none transition focus:border-[#7c9cc9] focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
                     />
                   </div>
                 </div>
 
                 {/* Password */}
+
                 <div>
                   <label
                     htmlFor="login-password"
@@ -245,7 +267,11 @@ export default function Login({ onLogin }) {
 
                     <input
                       id="login-password"
-                      type={showPassword ? "text" : "password"}
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
@@ -254,16 +280,20 @@ export default function Login({ onLogin }) {
                       placeholder="Enter your password"
                       autoComplete="current-password"
                       required
-                      className="w-full rounded-xl border border-[#dfe6ef] bg-[#fbfcfe] py-3 pl-11 pr-11 text-sm text-[#102b53] outline-none transition focus:border-[#7c9cc9] focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3 pl-11 pr-11 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
                     />
 
                     <button
                       type="button"
                       onClick={() =>
-                        setShowPassword((previous) => !previous)
+                        setShowPassword(
+                          (previous) => !previous
+                        )
                       }
                       aria-label={
-                        showPassword ? "Hide password" : "Show password"
+                        showPassword
+                          ? "Hide password"
+                          : "Show password"
                       }
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9aa8ba] transition hover:text-[#102b53]"
                     >
@@ -277,6 +307,7 @@ export default function Login({ onLogin }) {
                 </div>
 
                 {/* Error */}
+
                 {error && (
                   <p
                     role="alert"
@@ -287,11 +318,13 @@ export default function Login({ onLogin }) {
                 )}
 
                 {/* Sign In */}
+
                 <button
                   type="submit"
                   className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-3.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)]"
                 >
                   Sign In to Dashboard
+
                   <ArrowRight
                     size={18}
                     className="transition-transform duration-300 group-hover:translate-x-1"
@@ -300,6 +333,7 @@ export default function Login({ onLogin }) {
               </form>
 
               {/* Demo Notice */}
+
               <div className="mt-5 rounded-xl border border-[#e8edf4] bg-[#f8fafc] px-3 py-2.5">
                 <div className="flex items-start gap-2">
                   <ShieldCheck
@@ -308,16 +342,18 @@ export default function Login({ onLogin }) {
                   />
 
                   <p className="text-[11px] leading-5 text-[#7d8a9c]">
-                    Demo access: any non-empty email and password
-                    will open the dashboard.
+                    Demo access: any non-empty email and
+                    password will open the dashboard.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
+
             <p className="mt-3 text-center text-[10px] text-[#a4afbe]">
-              © 2026 Studio Raw Picturez. All rights reserved.
+              © 2026 Studio Raw Picturez. All rights
+              reserved.
             </p>
           </div>
         </section>

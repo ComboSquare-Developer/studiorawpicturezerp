@@ -42,7 +42,7 @@ const EVENT_TYPES = [
   "360° Selfie Booth",
   "Custom Package",
   "Mehendi Ceremony",
-  "Sangeet",
+  
   
  
 ];

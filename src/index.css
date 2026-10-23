@@ -1188,3 +1188,175 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================
+   STUDIO RAW DASHBOARD
+   LIGHT + DARK THEME
+========================================= */
+
+/* LIGHT THEME */
+
+html[data-theme="light"] .studio-dashboard {
+  background: #f5f7fb !important;
+  color: #10264d !important;
+  color-scheme: light !important;
+}
+
+html[data-theme="light"] .studio-dashboard .studio-card {
+  background: #ffffff !important;
+  border-color: #dce5f0 !important;
+  color: #10264d !important;
+}
+
+html[data-theme="light"] .studio-dashboard .studio-panel {
+  background: #ffffff !important;
+  border-color: #dce5f0 !important;
+  color: #10264d !important;
+}
+
+html[data-theme="light"] .studio-dashboard h1,
+html[data-theme="light"] .studio-dashboard h2,
+html[data-theme="light"] .studio-dashboard h3 {
+  color: #10264d !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.studio-card p,
+html[data-theme="light"] .studio-dashboard
+.studio-panel p {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.studio-card h2,
+html[data-theme="light"] .studio-dashboard
+.studio-panel h2,
+html[data-theme="light"] .studio-dashboard
+.studio-panel h3 {
+  color: #10264d !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.studio-card svg:not([role="img"]),
+html[data-theme="light"] .studio-dashboard
+.studio-panel svg:not([role="img"]) {
+  opacity: 1 !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.sr-booking-card {
+  background: #f8faff !important;
+  border-color: #dce5f0 !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.sr-booking-label,
+html[data-theme="light"] .studio-dashboard
+.sr-activity-type {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .studio-dashboard
+.sr-booking-value,
+html[data-theme="light"] .studio-dashboard
+.sr-activity-name {
+  color: #10264d !important;
+}
+
+/* DARK THEME */
+
+html[data-theme="dark"] .studio-dashboard {
+  background: #071426 !important;
+  color: #f8fafc !important;
+  color-scheme: dark !important;
+}
+
+html[data-theme="dark"] .studio-dashboard .studio-card {
+  background: #132943 !important;
+  border-color: #294361 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .studio-dashboard .studio-panel {
+  background: #102139 !important;
+  border-color: #294361 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .studio-dashboard h1,
+html[data-theme="dark"] .studio-dashboard h2,
+html[data-theme="dark"] .studio-dashboard h3 {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .studio-dashboard
+.studio-card p,
+html[data-theme="dark"] .studio-dashboard
+.studio-panel p {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .studio-dashboard
+.studio-card h2,
+html[data-theme="dark"] .studio-dashboard
+.studio-panel h2,
+html[data-theme="dark"] .studio-dashboard
+.studio-panel h3 {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .studio-dashboard
+.sr-booking-card {
+  background: #172d49 !important;
+  border-color: #36506e !important;
+}
+
+html[data-theme="dark"] .studio-dashboard
+.sr-booking-label,
+html[data-theme="dark"] .studio-dashboard
+.sr-activity-type {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .studio-dashboard
+.sr-booking-value,
+html[data-theme="dark"] .studio-dashboard
+.sr-activity-name {
+  color: #ffffff !important;
+}
+
+/* HERO ALWAYS DARK */
+
+.studio-dashboard .studio-hero {
+  background: linear-gradient(
+    135deg,
+    #091b36,
+    #143662,
+    #28548b
+  ) !important;
+  color: #ffffff !important;
+}
+
+.studio-dashboard .studio-hero h2,
+.studio-dashboard .studio-hero p {
+  color: #ffffff !important;
+}
+
+/* STRONG ICON VISIBILITY */
+
+.studio-dashboard svg:not([role="img"]) {
+  opacity: 1;
+  stroke-width: 2.4;
+}
+
+/* SMOOTH THEME TRANSITION */
+
+.studio-dashboard,
+.studio-dashboard .studio-card,
+.studio-dashboard .studio-panel,
+.studio-dashboard .sr-booking-card {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
