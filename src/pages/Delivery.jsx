@@ -2,134 +2,56 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Plus,
-  Search,
-  X,
-  Truck,
-  Package,
-  CheckCircle2,
-  Clock3,
-  Pencil,
-  Trash2,
-  CalendarDays,
-  UserRound,
-  MapPin,
-  Save,
-  Phone,
-  Download,
-  ChevronDown,
-  Check,
-  AlertCircle,
-  CreditCard,
-  ClipboardList,
-  Eye,
-  Hash,
-  FileText,
-  Box,
-  Building2,
-  Volume2,
-  VolumeX,
-  Filter,
+  Plus, Search, X, Truck, Package, CheckCircle2, Clock3,
+  Pencil, Trash2, CalendarDays, UserRound, MapPin, Save,
+  Phone, Download, ChevronDown, Check, AlertCircle,
+  CreditCard, ClipboardList, Eye, Hash, FileText, Box,
+  Building2, Filter,
 } from "lucide-react";
 
 const STORAGE_KEY = "studioraw_deliveries";
 const SOUND_KEY = "studioraw_delivery_sounds";
 
-const NAVY = "#10264d";
-
 const EVENTS = [
-  "Wedding",
-  "Engagement",
-  "Birthday",
-  "Pre-Wedding",
-  "Baby Shoot",
-  "Maternity Shoot",
-  "Portrait",
-  "Corporate",
-  "Anniversary",
-  "Housewarming",
-  "Graduation",
-  "Fashion Shoot",
-  "Product Photography",
-  "Other",
+  "Wedding", "Engagement", "Birthday", "Pre-Wedding",
+  "Baby Shoot", "Maternity Shoot", "Portrait", "Corporate",
+  "Anniversary", "Housewarming", "Graduation",
+  "Fashion Shoot", "Product Photography", "Other",
 ];
 
 const DELIVERY_ITEMS = [
-  "Wedding Album",
-  "Photo Album",
-  "Edited Photos",
-  "Wedding Video",
-  "Photo & Video",
-  "USB Drive",
-  "Printed Frames",
-  "Canvas Print",
-  "Photo Book",
-  "Digital Gallery",
-  "Customized Gifts",
-  "Other",
+  "Wedding Album", "Photo Album", "Edited Photos",
+  "Wedding Video", "Photo & Video", "USB Drive",
+  "Printed Frames", "Canvas Print", "Photo Book",
+  "Digital Gallery", "Customized Gifts", "Other",
 ];
 
 const DELIVERY_METHODS = [
-  "Studio Pickup",
-  "Home Delivery",
-  "Courier",
-  "Digital Delivery",
+  "Studio Pickup", "Home Delivery", "Courier", "Digital Delivery",
 ];
 
 const PAYMENT_STATUSES = ["Pending", "Partial", "Paid"];
 
 const DELIVERY_STATUSES = [
-  "Pending",
-  "Packed",
-  "Dispatched",
-  "Delivered",
-  "Cancelled",
+  "Pending", "Packed", "Dispatched", "Delivered", "Cancelled",
 ];
 
 const STAFF = [
-  "Karthik",
-  "Ramesh",
-  "Suresh",
-  "Arun",
-  "Vignesh",
-  "Rahul",
-  "Manoj",
-  "Priya",
-  "Divya",
-  "Not Assigned",
+  "Karthik", "Ramesh", "Suresh", "Arun", "Vignesh",
+  "Rahul", "Manoj", "Priya", "Divya", "Not Assigned",
 ];
 
 const COURIERS = [
-  "DTDC",
-  "Blue Dart",
-  "Delhivery",
-  "India Post",
-  "Professional Couriers",
-  "ST Courier",
-  "Other",
+  "DTDC", "Blue Dart", "Delhivery", "India Post",
+  "Professional Couriers", "ST Courier", "Other",
 ];
 
 const DEMO_CUSTOMERS = [
-  "Arun Kumar",
-  "Priya S",
-  "Vijay Raj",
-  "Divya R",
-  "Karthik S",
-  "Meena Devi",
-  "Rahul Kumar",
-  "Anitha",
-  "Sanjay",
-  "Deepa",
-  "Manoj",
-  "Keerthana",
-  "Suresh",
-  "Nithya",
-  "Vignesh",
-  "Harini",
-  "Ajay",
-  "Swetha",
-  "Ramesh",
-  "Pavithra",
+  "Arun Kumar", "Priya S", "Vijay Raj", "Divya R",
+  "Karthik S", "Meena Devi", "Rahul Kumar", "Anitha",
+  "Sanjay", "Deepa", "Manoj", "Keerthana", "Suresh",
+  "Nithya", "Vignesh", "Harini", "Ajay", "Swetha",
+  "Ramesh", "Pavithra",
 ];
 
 const DEMO_LOCATIONS = [
@@ -140,7 +62,7 @@ const DEMO_LOCATIONS = [
   "Chennai, Tamil Nadu",
 ];
 
-const dateOffset = (days) => {
+function dateOffset(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
 
@@ -149,7 +71,7 @@ const dateOffset = (days) => {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
-};
+}
 
 const todayKey = () => dateOffset(0);
 
@@ -167,33 +89,27 @@ const DUMMY_DELIVERIES = Array.from(
       item: DELIVERY_ITEMS[index % DELIVERY_ITEMS.length],
       quantity: (index % 4) + 1,
       deliveryMethod: method,
-      address:
-        method === "Courier" || method === "Home Delivery"
-          ? DEMO_LOCATIONS[index % DEMO_LOCATIONS.length]
-          : "",
-      courier:
-        method === "Courier"
-          ? COURIERS[index % (COURIERS.length - 1)]
-          : "",
-      trackingNumber:
-        method === "Courier"
-          ? `TRK${String(102450 + index)}`
-          : "",
+      address: ["Courier", "Home Delivery"].includes(method)
+        ? DEMO_LOCATIONS[index % DEMO_LOCATIONS.length]
+        : "",
+      courier: method === "Courier"
+        ? COURIERS[index % (COURIERS.length - 1)]
+        : "",
+      trackingNumber: method === "Courier"
+        ? `TRK${102450 + index}`
+        : "",
       expectedDate: dateOffset(index - 8),
-      deliveredDate:
-        status === "Delivered"
-          ? dateOffset(index - 9)
-          : "",
+      deliveredDate: status === "Delivered"
+        ? dateOffset(index - 9)
+        : "",
       assignedTo: STAFF[index % STAFF.length],
-      paymentStatus:
-        PAYMENT_STATUSES[index % PAYMENT_STATUSES.length],
+      paymentStatus: PAYMENT_STATUSES[index % PAYMENT_STATUSES.length],
       status,
-      notes:
-        index % 3 === 0
-          ? "Handle carefully and confirm with customer."
-          : index % 3 === 1
-          ? "Customer requested timely delivery."
-          : "",
+      notes: index % 3 === 0
+        ? "Handle carefully and confirm with customer."
+        : index % 3 === 1
+        ? "Customer requested timely delivery."
+        : "",
     };
   }
 );
@@ -217,34 +133,168 @@ const createEmptyForm = () => ({
 });
 
 const inputClass =
-  "w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-3.5 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#315b99] focus:ring-2 focus:ring-blue-100";
+  "sr-delivery-input w-full min-w-0 rounded-xl border px-3.5 py-3 text-sm outline-none transition focus:ring-2 focus:ring-blue-400/20";
 
-const statusStyles = {
-  Pending: "bg-amber-50 text-amber-700 border-amber-200",
-  Packed: "bg-violet-50 text-violet-700 border-violet-200",
-  Dispatched: "bg-blue-50 text-blue-700 border-blue-200",
-  Delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  Cancelled: "bg-rose-50 text-rose-700 border-rose-200",
-};
+/* =========================================
+   LIGHT + DARK THEME CSS
+========================================= */
 
-const paymentStyles = {
-  Pending: "bg-rose-50 text-rose-700 border-rose-200",
-  Partial: "bg-amber-50 text-amber-700 border-amber-200",
-  Paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
+const themeCSS = `
+.sr-delivery-page,
+.sr-delivery-portal {
+  --sd-bg: #f4f7fc;
+  --sd-surface: #ffffff;
+  --sd-soft: #f7f9fd;
+  --sd-input: #ffffff;
+  --sd-text: #10264d;
+  --sd-label: #334155;
+  --sd-muted: #64748b;
+  --sd-border: #d9e3f2;
+  --sd-icon-bg: #eaf1fc;
+  --sd-icon: #173d77;
+}
+
+html[data-theme="dark"] .sr-delivery-page,
+html[data-theme="dark"] .sr-delivery-portal,
+html.dark .sr-delivery-page,
+html.dark .sr-delivery-portal {
+  --sd-bg: #080f1f;
+  --sd-surface: #142238;
+  --sd-soft: #1d304b;
+  --sd-input: #1b2c45;
+  --sd-text: #f8fafc;
+  --sd-label: #dbe7f7;
+  --sd-muted: #b4c4d9;
+  --sd-border: #344966;
+  --sd-icon-bg: #243d60;
+  --sd-icon: #dbeafe;
+}
+
+.sr-delivery-page {
+  background: var(--sd-bg) !important;
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-page .sd-surface,
+.sr-delivery-portal.sd-surface,
+.sr-delivery-portal .sd-surface {
+  background: var(--sd-surface) !important;
+  border-color: var(--sd-border) !important;
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-page .sd-soft,
+.sr-delivery-portal .sd-soft {
+  background: var(--sd-soft) !important;
+  border-color: var(--sd-border) !important;
+}
+
+.sr-delivery-page .sd-title,
+.sr-delivery-portal .sd-title {
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-page .sd-label,
+.sr-delivery-portal .sd-label {
+  color: var(--sd-label) !important;
+}
+
+.sr-delivery-page .sd-muted,
+.sr-delivery-portal .sd-muted {
+  color: var(--sd-muted) !important;
+}
+
+.sr-delivery-page .sd-icon,
+.sr-delivery-portal .sd-icon {
+  background: var(--sd-icon-bg) !important;
+  color: var(--sd-icon) !important;
+}
+
+.sr-delivery-page .sr-delivery-input,
+.sr-delivery-portal .sr-delivery-input {
+  background: var(--sd-input) !important;
+  border-color: var(--sd-border) !important;
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-page .sr-delivery-input::placeholder,
+.sr-delivery-portal .sr-delivery-input::placeholder {
+  color: var(--sd-muted) !important;
+}
+
+.sr-delivery-page .sd-divider,
+.sr-delivery-portal .sd-divider {
+  border-color: var(--sd-border) !important;
+}
+
+.sr-delivery-page .sd-primary,
+.sr-delivery-portal .sd-primary {
+  background: #10264d !important;
+  color: #ffffff !important;
+}
+
+.sr-delivery-page .sd-primary:hover,
+.sr-delivery-portal .sd-primary:hover {
+  background: #193b73 !important;
+}
+
+.sr-delivery-page .sd-secondary,
+.sr-delivery-portal .sd-secondary {
+  background: var(--sd-surface) !important;
+  border-color: var(--sd-border) !important;
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-page .sd-secondary:hover,
+.sr-delivery-portal .sd-secondary:hover {
+  background: var(--sd-soft) !important;
+}
+
+.sr-delivery-portal .sd-option {
+  color: var(--sd-text) !important;
+}
+
+.sr-delivery-portal .sd-option:hover,
+.sr-delivery-portal .sd-option[aria-selected="true"] {
+  background: var(--sd-soft) !important;
+}
+
+html[data-theme="dark"] .sr-delivery-page input[type="date"],
+html[data-theme="dark"] .sr-delivery-portal input[type="date"],
+html.dark .sr-delivery-page input[type="date"],
+html.dark .sr-delivery-portal input[type="date"] {
+  color-scheme: dark;
+}
+
+.sr-delivery-page .sd-badge,
+.sr-delivery-portal .sd-badge {
+  color: var(--badge-fg) !important;
+  background: var(--badge-bg) !important;
+  border-color: var(--badge-border) !important;
+}
+
+.sr-delivery-page .sd-badge .sd-badge-dot,
+.sr-delivery-portal .sd-badge .sd-badge-dot {
+  background: var(--badge-fg) !important;
+}
+`;
+
+/* =========================================
+   HELPERS
+========================================= */
 
 function formatDate(value) {
   if (!value) return "Not scheduled";
 
-  const date = new Date(`${value}T00:00:00`);
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
 
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
 }
 
 function createId() {
@@ -268,42 +318,26 @@ function readDeliveries() {
   }
 }
 
+/* =========================================
+   SOUND EFFECTS
+========================================= */
+
 function useDeliverySounds() {
   const audioRef = useRef(null);
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    try {
-      return localStorage.getItem(SOUND_KEY) !== "false";
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(SOUND_KEY, String(soundEnabled));
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    return () => {
-      if (
-        audioRef.current &&
-        audioRef.current.state !== "closed"
-      ) {
-        audioRef.current.close().catch(() => {});
-      }
-    };
-  }, []);
-
   const playSound = (type = "click") => {
-    if (!soundEnabled) return;
-
     try {
+      if (localStorage.getItem(SOUND_KEY) === "false") return;
+
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
 
       if (!AudioContextClass) return;
 
-      if (!audioRef.current || audioRef.current.state === "closed") {
+      if (
+        !audioRef.current ||
+        audioRef.current.state === "closed"
+      ) {
         audioRef.current = new AudioContextClass();
       }
 
@@ -348,12 +382,27 @@ function useDeliverySounds() {
         oscillator.stop(start + duration + 0.01);
       });
     } catch {
-      // Sound errors must not interrupt delivery actions.
+      // Sound errors should not interrupt actions.
     }
   };
 
-  return { soundEnabled, setSoundEnabled, playSound };
+  useEffect(() => {
+    return () => {
+      if (
+        audioRef.current &&
+        audioRef.current.state !== "closed"
+      ) {
+        audioRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
+  return playSound;
 }
+
+/* =========================================
+   CUSTOM DROPDOWN
+========================================= */
 
 function CustomDropdown({
   value,
@@ -365,41 +414,46 @@ function CustomDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(null);
+
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
 
-  const allOptions = useMemo(() => {
-    if (value && !options.includes(value)) {
-      return [value, ...options];
-    }
-    return options;
-  }, [options, value]);
+  const allOptions = useMemo(
+    () =>
+      value && !options.includes(value)
+        ? [value, ...options]
+        : options,
+    [value, options]
+  );
 
   const updatePosition = () => {
     if (!buttonRef.current) return;
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const below = window.innerHeight - rect.bottom;
+    const above = rect.top;
 
-    const menuHeight = Math.min(
+    const desiredHeight = Math.min(
       240,
       allOptions.length * 43 + 12
     );
 
     const openAbove =
-      spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow;
+      below < desiredHeight + 12 && above > below;
 
-    const available = openAbove
-      ? Math.max(80, spaceAbove - 12)
-      : Math.max(80, spaceBelow - 12);
+    const available = Math.max(
+      80,
+      (openAbove ? above : below) - 12
+    );
+
+    const height = Math.min(desiredHeight, available);
 
     setPosition({
-      left: Math.max(8, rect.left),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 100)),
       width: Math.min(rect.width, window.innerWidth - 16),
-      maxHeight: Math.min(menuHeight, available),
+      maxHeight: height,
       top: openAbove
-        ? Math.max(8, rect.top - Math.min(menuHeight, available) - 6)
+        ? Math.max(8, rect.top - height - 6)
         : rect.bottom + 6,
     });
   };
@@ -409,7 +463,7 @@ function CustomDropdown({
 
     updatePosition();
 
-    const handleOutside = (event) => {
+    const outside = (event) => {
       if (
         !buttonRef.current?.contains(event.target) &&
         !menuRef.current?.contains(event.target)
@@ -418,27 +472,28 @@ function CustomDropdown({
       }
     };
 
-    const handleEscape = (event) => {
+    const escape = (event) => {
       if (event.key === "Escape") setOpen(false);
     };
 
-    const handleScroll = (event) => {
-      if (menuRef.current?.contains(event.target)) return;
-      setOpen(false);
+    const scroll = (event) => {
+      if (!menuRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
     };
 
-    const handleResize = () => setOpen(false);
+    const resize = () => setOpen(false);
 
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("scroll", handleScroll, true);
-    window.addEventListener("resize", handleResize);
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    window.addEventListener("scroll", scroll, true);
+    window.addEventListener("resize", resize);
 
     return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("scroll", handleScroll, true);
-      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+      window.removeEventListener("scroll", scroll, true);
+      window.removeEventListener("resize", resize);
     };
   }, [open, allOptions.length]);
 
@@ -451,12 +506,10 @@ function CustomDropdown({
         aria-expanded={open}
         onClick={() => {
           playSound?.("click");
-
           if (!open) updatePosition();
-
           setOpen((previous) => !previous);
         }}
-        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#d9e3f2] bg-white text-left text-sm font-medium text-[#10264d] outline-none transition hover:border-[#315b99] focus:ring-2 focus:ring-blue-100 ${
+        className={`sr-delivery-input flex w-full min-w-0 items-center justify-between gap-2 text-left font-medium ${
           compact ? "px-3 py-2.5" : "px-3.5 py-3"
         }`}
       >
@@ -466,7 +519,7 @@ function CustomDropdown({
 
         <ChevronDown
           size={16}
-          className={`shrink-0 text-[#627895] transition ${
+          className={`sd-muted shrink-0 transition ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -480,13 +533,10 @@ function CustomDropdown({
             role="listbox"
             style={{
               position: "fixed",
-              top: position.top,
-              left: position.left,
-              width: position.width,
-              maxHeight: position.maxHeight,
+              ...position,
               zIndex: 100000,
             }}
-            className="overflow-y-auto overscroll-contain rounded-xl border border-[#d9e3f2] bg-white p-1.5 shadow-2xl"
+            className="sr-delivery-portal sd-surface overflow-y-auto overscroll-contain rounded-xl border p-1.5 shadow-2xl"
           >
             {allOptions.map((option) => (
               <button
@@ -499,16 +549,14 @@ function CustomDropdown({
                   playSound?.("click");
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                  value === option
-                    ? "bg-[#eaf1fc] font-semibold text-[#10264d]"
-                    : "text-slate-600 hover:bg-[#f4f7fc]"
-                }`}
+                className="sd-option flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition"
               >
-                <span className="min-w-0 break-words">{option}</span>
+                <span className="min-w-0 break-words">
+                  {option}
+                </span>
 
                 {value === option && (
-                  <Check size={16} className="shrink-0 text-[#173d77]" />
+                  <Check size={16} className="shrink-0" />
                 )}
               </button>
             ))}
@@ -519,27 +567,60 @@ function CustomDropdown({
   );
 }
 
+/* =========================================
+   STATUS BADGE
+========================================= */
+
 function StatusBadge({ value, payment = false }) {
-  const styles = payment ? paymentStyles : statusStyles;
+  const deliveryColors = {
+    Pending: ["#fffbeb", "#92400e", "#fcd34d"],
+    Packed: ["#f5f3ff", "#5b21b6", "#c4b5fd"],
+    Dispatched: ["#eff6ff", "#1d4ed8", "#93c5fd"],
+    Delivered: ["#ecfdf5", "#065f46", "#6ee7b7"],
+    Cancelled: ["#fff1f2", "#9f1239", "#fda4af"],
+  };
+
+  const paymentColors = {
+    Pending: ["#fff1f2", "#9f1239", "#fda4af"],
+    Partial: ["#fffbeb", "#92400e", "#fcd34d"],
+    Paid: ["#ecfdf5", "#065f46", "#6ee7b7"],
+  };
+
+  const colors = payment ? paymentColors : deliveryColors;
+
+  const [bg, fg, border] = colors[value] || [
+    "#f1f5f9",
+    "#334155",
+    "#cbd5e1",
+  ];
 
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-        styles[value] || "border-slate-200 bg-slate-50 text-slate-600"
-      }`}
+      className="sd-badge inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+      style={{
+        "--badge-bg": bg,
+        "--badge-fg": fg,
+        "--badge-border": border,
+      }}
     >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      <span className="sd-badge-dot h-1.5 w-1.5 shrink-0 rounded-full" />
       <span className="truncate">{value || "Pending"}</span>
     </span>
   );
 }
 
+/* =========================================
+   FORM COMPONENTS
+========================================= */
+
 function FormField({ label, required = false, children }) {
   return (
     <div className="min-w-0">
-      <label className="mb-2 block text-xs font-semibold text-[#29416a]">
+      <label className="sd-label mb-2 block text-xs font-semibold">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
       </label>
       {children}
     </div>
@@ -548,33 +629,35 @@ function FormField({ label, required = false, children }) {
 
 function SectionHeading({ icon: Icon, title }) {
   return (
-    <div className="mb-5 flex items-center gap-3 border-b border-[#edf1f6] pb-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#173d77]">
+    <div className="sd-divider mb-5 flex items-center gap-3 border-b pb-3">
+      <div className="sd-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
         <Icon size={18} />
       </div>
-      <h3 className="text-sm font-bold text-[#10264d]">
-        {title}
-      </h3>
+      <h3 className="sd-title text-sm font-bold">{title}</h3>
     </div>
   );
 }
 
 function InfoBox({ label, value, icon: Icon, children }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#e5ebf4] bg-[#f7f9fd] p-3">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
-        {Icon && <Icon size={12} className="shrink-0 text-[#173d77]" />}
+    <div className="sd-soft min-w-0 rounded-xl border p-3">
+      <div className="sd-muted mb-1.5 flex items-center gap-1.5 text-[10px] font-medium">
+        {Icon && <Icon size={12} className="shrink-0" />}
         <span>{label}</span>
       </div>
 
       {children || (
-        <p className="break-words text-xs font-bold leading-5 text-[#10264d]">
+        <p className="sd-title break-words text-xs font-bold leading-5">
           {value === 0 ? 0 : value || "—"}
         </p>
       )}
     </div>
   );
 }
+
+/* =========================================
+   DELIVERY CARD
+========================================= */
 
 function DeliveryCard({
   item,
@@ -586,18 +669,18 @@ function DeliveryCard({
   playSound,
 }) {
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-[#e0e7f1] bg-white p-3.5 shadow-sm transition hover:border-[#b6c9e4] hover:shadow-md sm:p-4">
-      <div className="flex min-w-0 items-start justify-between gap-2 border-b border-slate-100 pb-3">
+    <article className="sd-surface flex min-w-0 flex-col rounded-2xl border p-3.5 shadow-sm transition hover:shadow-md sm:p-4">
+      <div className="sd-divider flex min-w-0 items-start justify-between gap-2 border-b pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#10264d]">
+          <div className="sd-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <UserRound size={19} />
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-bold text-[#10264d]">
+            <h3 className="sd-title truncate text-sm font-bold">
               {item.customer}
             </h3>
-            <p className="mt-0.5 truncate text-[10px] font-semibold text-[#315b99]">
+            <p className="sd-label mt-0.5 truncate text-[10px] font-semibold">
               {deliveryId}
             </p>
           </div>
@@ -634,22 +717,38 @@ function DeliveryCard({
       </div>
 
       <div className="flex items-center justify-between gap-2 py-3">
-        <span className="text-xs font-medium text-slate-500">
+        <span className="sd-label text-xs font-medium">
           Delivery Status
         </span>
         <StatusBadge value={item.status} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <InfoBox label="Delivery Item" value={item.item} icon={Package} />
-        <InfoBox label="Quantity" value={item.quantity} icon={Box} />
-        <InfoBox label="Phone" value={item.phone} icon={Phone} />
+        <InfoBox
+          label="Delivery Item"
+          value={item.item}
+          icon={Package}
+        />
+        <InfoBox
+          label="Quantity"
+          value={item.quantity}
+          icon={Box}
+        />
+        <InfoBox
+          label="Phone"
+          value={item.phone}
+          icon={Phone}
+        />
         <InfoBox
           label="Delivery Method"
           value={item.deliveryMethod}
           icon={Truck}
         />
-        <InfoBox label="Event" value={item.event} icon={CalendarDays} />
+        <InfoBox
+          label="Event"
+          value={item.event}
+          icon={CalendarDays}
+        />
         <InfoBox
           label="Expected Date"
           value={formatDate(item.expectedDate)}
@@ -665,9 +764,11 @@ function DeliveryCard({
           value={item.assignedTo || "Not Assigned"}
           icon={UserRound}
         />
+
         <InfoBox label="Payment Status" icon={CreditCard}>
           <StatusBadge value={item.paymentStatus} payment />
         </InfoBox>
+
         <InfoBox
           label="Tracking Number"
           value={item.trackingNumber}
@@ -685,18 +786,26 @@ function DeliveryCard({
         )}
 
         {item.courier && (
-          <InfoBox label="Courier" value={item.courier} icon={Building2} />
+          <InfoBox
+            label="Courier"
+            value={item.courier}
+            icon={Building2}
+          />
         )}
 
         {item.notes && (
           <div className="col-span-2">
-            <InfoBox label="Notes" value={item.notes} icon={FileText} />
+            <InfoBox
+              label="Notes"
+              value={item.notes}
+              icon={FileText}
+            />
           </div>
         )}
       </div>
 
-      <div className="mt-auto border-t border-slate-100 pt-3">
-        <p className="mb-2 text-[11px] font-semibold text-[#29416a]">
+      <div className="sd-divider mt-auto border-t pt-3">
+        <p className="sd-label mb-2 text-[11px] font-semibold">
           Update Status
         </p>
 
@@ -712,6 +821,10 @@ function DeliveryCard({
   );
 }
 
+/* =========================================
+   MODAL
+========================================= */
+
 function ModalShell({
   title,
   description,
@@ -723,29 +836,26 @@ function ModalShell({
   maxWidth = "max-w-[850px]",
 }) {
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152b]/70 p-2 backdrop-blur-[4px] sm:p-5">
-      <div
-        className="absolute inset-0"
-        onClick={onClose}
-      />
+    <div className="sr-delivery-portal fixed inset-0 z-[9999] flex items-center justify-center bg-[#07152b]/70 p-2 backdrop-blur-[4px] sm:p-5">
+      <div className="absolute inset-0" onClick={onClose} />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex max-h-[96dvh] w-full min-w-0 ${maxWidth} flex-col overflow-hidden rounded-2xl border border-[#e0e7f1] bg-white shadow-2xl sm:max-h-[93dvh] sm:rounded-3xl`}
+        className={`sd-surface relative flex max-h-[96dvh] w-full min-w-0 ${maxWidth} flex-col overflow-hidden rounded-2xl border shadow-2xl sm:max-h-[93dvh] sm:rounded-3xl`}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e5ebf3] px-4 py-4 sm:px-7 sm:py-5">
+        <div className="sd-divider flex shrink-0 items-start justify-between gap-3 border-b px-4 py-4 sm:px-7 sm:py-5">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#10264d] text-white">
+            <div className="sd-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
               <Icon size={21} />
             </div>
 
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-[#10264d] sm:text-xl">
+              <h2 className="sd-title text-lg font-bold sm:text-xl">
                 {title}
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="sd-muted mt-1 text-xs">
                 {description}
               </p>
             </div>
@@ -755,7 +865,7 @@ function ModalShell({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-lg p-2 text-[#627895] hover:bg-slate-100"
+            className="sd-muted shrink-0 rounded-lg p-2 hover:opacity-70"
           >
             <X size={21} />
           </button>
@@ -770,18 +880,18 @@ function ModalShell({
               {children}
             </div>
 
-            <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#e5ebf3] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
+            <div className="sd-divider flex shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-[#d9e3f2] px-6 py-3 text-sm font-semibold text-[#10264d] hover:bg-slate-50"
+                className="sd-secondary rounded-xl border px-6 py-3 text-sm font-semibold"
               >
                 Cancel
               </button>
 
               <button
                 type="submit"
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-[#193b73]"
+                className="sd-primary flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold"
               >
                 <Save size={17} />
                 {submitLabel}
@@ -794,11 +904,11 @@ function ModalShell({
               {children}
             </div>
 
-            <div className="flex shrink-0 justify-end border-t border-[#e5ebf3] px-4 py-4 sm:px-7">
+            <div className="sd-divider flex shrink-0 justify-end border-t px-4 py-4 sm:px-7">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-[#193b73]"
+                className="sd-primary rounded-xl px-6 py-3 text-sm font-semibold"
               >
                 Close
               </button>
@@ -811,12 +921,14 @@ function ModalShell({
   );
 }
 
+/* =========================================
+   MAIN DELIVERY COMPONENT
+========================================= */
+
 export default function Delivery() {
-  const { soundEnabled, setSoundEnabled, playSound } =
-    useDeliverySounds();
+  const playSound = useDeliverySounds();
 
   const [deliveries, setDeliveries] = useState(readDeliveries);
-
   const [form, setForm] = useState(createEmptyForm);
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -841,21 +953,21 @@ export default function Delivery() {
   useEffect(() => {
     if (!showForm && !viewId) return;
 
-    const previousOverflow = document.body.style.overflow;
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const handleEscape = (event) => {
+    const escape = (event) => {
       if (event.key === "Escape") {
         setShowForm(false);
         setViewId(null);
       }
     };
 
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", escape);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", escape);
     };
   }, [showForm, viewId]);
 
@@ -879,12 +991,10 @@ export default function Delivery() {
 
   const openEdit = (item) => {
     playSound("open");
-
     setForm({
       ...createEmptyForm(),
       ...item,
     });
-
     setEditingId(item.id);
     setViewId(null);
     setError("");
@@ -907,50 +1017,36 @@ export default function Delivery() {
   const saveDelivery = (event) => {
     event.preventDefault();
 
-    const customer = form.customer.trim();
+    const customer = String(form.customer || "").trim();
     const phone = String(form.phone || "").trim();
     const quantity = Number(form.quantity);
 
-    if (!customer) {
-      setError("Please enter customer name.");
+    const fail = (message) => {
+      setError(message);
       playSound("error");
-      return;
+    };
+
+    if (!customer) {
+      return fail("Please enter customer name.");
     }
 
     if (phone && !/^\d{10}$/.test(phone)) {
-      setError("Enter a valid 10-digit phone number.");
-      playSound("error");
-      return;
+      return fail("Enter a valid 10-digit phone number.");
     }
 
     if (!Number.isInteger(quantity) || quantity < 1) {
-      setError("Quantity must be at least 1.");
-      playSound("error");
-      return;
-    }
-
-    if (
-      form.expectedDate &&
-      form.deliveredDate &&
-      form.deliveredDate < form.expectedDate &&
-      form.status !== "Delivered"
-    ) {
-      // Early delivery is allowed; no blocking validation needed.
+      return fail("Quantity must be at least 1.");
     }
 
     if (form.status === "Delivered" && !form.deliveredDate) {
-      setError("Please select the actual delivery date.");
-      playSound("error");
-      return;
+      return fail("Please select the actual delivery date.");
     }
 
     if (
       ["Courier", "Home Delivery"].includes(form.deliveryMethod) &&
-      !form.address.trim()
+      !String(form.address || "").trim()
     ) {
-      setError("Please enter the delivery address.");
-      playSound("error");
-      return;
+      return fail("Please enter the delivery address.");
     }
 
     const record = {
@@ -960,21 +1056,15 @@ export default function Delivery() {
       phone,
       quantity,
       assignedTo: form.assignedTo || "Not Assigned",
-      deliveredDate:
-        form.status === "Delivered"
-          ? form.deliveredDate
-          : form.deliveredDate || "",
     };
 
-    if (editingId !== null) {
-      setDeliveries((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? record : item
-        )
-      );
-    } else {
-      setDeliveries((previous) => [record, ...previous]);
-    }
+    setDeliveries((previous) =>
+      editingId !== null
+        ? previous.map((item) =>
+            item.id === editingId ? record : item
+          )
+        : [record, ...previous]
+    );
 
     playSound("success");
     setStatusError("");
@@ -987,7 +1077,9 @@ export default function Delivery() {
   const deleteDelivery = (id) => {
     playSound("click");
 
-    if (!window.confirm("Delete this delivery record?")) return;
+    if (!window.confirm("Delete this delivery record?")) {
+      return;
+    }
 
     setDeliveries((previous) =>
       previous.filter((item) => item.id !== id)
@@ -1070,8 +1162,6 @@ export default function Delivery() {
       title: "Total Deliveries",
       value: deliveries.length,
       icon: Package,
-      bg: "bg-[#eaf1fc]",
-      color: "text-[#173d77]",
     },
     {
       title: "Pending Deliveries",
@@ -1079,8 +1169,6 @@ export default function Delivery() {
         ["Pending", "Packed"].includes(item.status)
       ).length,
       icon: Clock3,
-      bg: "bg-amber-50",
-      color: "text-amber-600",
     },
     {
       title: "Dispatched",
@@ -1088,8 +1176,6 @@ export default function Delivery() {
         (item) => item.status === "Dispatched"
       ).length,
       icon: Truck,
-      bg: "bg-blue-50",
-      color: "text-blue-700",
     },
     {
       title: "Delivered",
@@ -1097,33 +1183,20 @@ export default function Delivery() {
         (item) => item.status === "Delivered"
       ).length,
       icon: CheckCircle2,
-      bg: "bg-emerald-50",
-      color: "text-emerald-600",
     },
   ];
 
   const exportCSV = () => {
     const columns = [
-      "id",
-      "customer",
-      "phone",
-      "event",
-      "item",
-      "quantity",
-      "deliveryMethod",
-      "address",
-      "courier",
-      "trackingNumber",
-      "expectedDate",
-      "deliveredDate",
-      "assignedTo",
-      "paymentStatus",
-      "status",
-      "notes",
+      "id", "customer", "phone", "event", "item",
+      "quantity", "deliveryMethod", "address", "courier",
+      "trackingNumber", "expectedDate", "deliveredDate",
+      "assignedTo", "paymentStatus", "status", "notes",
     ];
 
     const escapeCSV = (value) => {
       const text = String(value ?? "");
+
       const safe = /^\s*[=+\-@\t\r]/.test(text)
         ? `'${text}`
         : text;
@@ -1163,19 +1236,22 @@ export default function Delivery() {
   );
 
   return (
-    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f4f7fc] px-3 py-4 text-[#10264d] sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+    <div className="sr-delivery-page min-h-screen w-full min-w-0 overflow-x-hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+      <style>{themeCSS}</style>
+
       {/* HEADER */}
+
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[#315b99]">
+          <p className="sd-label mb-2 text-[11px] font-bold uppercase tracking-widest">
             Studio Raw / Operations
           </p>
 
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          <h1 className="sd-title text-2xl font-extrabold tracking-tight sm:text-3xl">
             Delivery Management
           </h1>
 
-          <p className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">
+          <p className="sd-muted mt-2 text-xs leading-6 sm:text-sm">
             Manage albums, photos, videos and customer deliveries.
           </p>
         </div>
@@ -1183,21 +1259,8 @@ export default function Delivery() {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             type="button"
-            onClick={() => setSoundEnabled((previous) => !previous)}
-            title={soundEnabled ? "Mute Sound" : "Enable Sound"}
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9e3f2] bg-white text-[#10264d] hover:bg-[#eaf1fc]"
-          >
-            {soundEnabled ? (
-              <Volume2 size={19} />
-            ) : (
-              <VolumeX size={19} />
-            )}
-          </button>
-
-          <button
-            type="button"
             onClick={exportCSV}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9e3f2] bg-white px-4 py-2.5 text-xs font-semibold text-[#10264d] hover:bg-[#eaf1fc] sm:flex-none sm:text-sm"
+            className="sd-secondary flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold sm:flex-none sm:text-sm"
           >
             <Download size={17} />
             Export CSV
@@ -1206,7 +1269,7 @@ export default function Delivery() {
           <button
             type="button"
             onClick={openCreate}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#193b73] sm:flex-none sm:text-sm"
+            className="sd-primary flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold sm:flex-none sm:text-sm"
           >
             <Plus size={18} />
             New Delivery
@@ -1215,6 +1278,7 @@ export default function Delivery() {
       </div>
 
       {/* STATISTICS */}
+
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -1222,21 +1286,21 @@ export default function Delivery() {
           return (
             <div
               key={stat.title}
-              className="min-w-0 rounded-2xl border border-[#e0e7f1] bg-white p-3.5 shadow-sm transition hover:shadow-md sm:p-5"
+              className="sd-surface min-w-0 rounded-2xl border p-3.5 shadow-sm transition hover:shadow-md sm:p-5"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium leading-5 text-slate-500 sm:text-sm">
+                  <p className="sd-muted text-[11px] font-medium leading-5 sm:text-sm">
                     {stat.title}
                   </p>
 
-                  <h2 className="mt-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
+                  <h2 className="sd-title mt-3 text-2xl font-extrabold sm:text-3xl">
                     {stat.value}
                   </h2>
                 </div>
 
-                <div className={`shrink-0 rounded-xl p-2.5 ${stat.bg}`}>
-                  <Icon size={20} className={stat.color} />
+                <div className="sd-icon shrink-0 rounded-xl p-2.5">
+                  <Icon size={20} />
                 </div>
               </div>
             </div>
@@ -1245,16 +1309,17 @@ export default function Delivery() {
       </div>
 
       {/* DELIVERY RECORDS */}
-      <section className="min-w-0 rounded-2xl border border-[#e0e7f1] bg-white shadow-sm">
-        <div className="border-b border-[#edf1f6] p-4 sm:p-5 lg:p-6">
+
+      <section className="sd-surface min-w-0 rounded-2xl border shadow-sm">
+        <div className="sd-divider border-b p-4 sm:p-5 lg:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold">
+              <h2 className="sd-title flex items-center gap-2 text-lg font-bold">
                 <ClipboardList size={20} />
                 Delivery Records
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="sd-muted mt-1 text-xs">
                 Showing {filtered.length} of {deliveries.length} records
               </p>
             </div>
@@ -1263,7 +1328,7 @@ export default function Delivery() {
               <div className="relative w-full sm:flex-1 xl:w-72">
                 <Search
                   size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="sd-muted pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"
                 />
 
                 <input
@@ -1276,7 +1341,7 @@ export default function Delivery() {
               </div>
 
               <div className="flex w-full items-center gap-2 sm:w-52">
-                <Filter size={17} className="shrink-0 text-[#315b99]" />
+                <Filter size={17} className="sd-label shrink-0" />
 
                 <CustomDropdown
                   value={filter}
@@ -1290,7 +1355,7 @@ export default function Delivery() {
         </div>
 
         {statusError && (
-          <div className="mx-4 mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+          <div className="mx-4 mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             <AlertCircle size={17} className="shrink-0" />
             <span className="flex-1">{statusError}</span>
 
@@ -1305,13 +1370,13 @@ export default function Delivery() {
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-            <Truck size={36} className="text-[#9cb2d0]" />
+            <Truck size={36} className="sd-muted" />
 
-            <h3 className="mt-4 font-bold">
+            <h3 className="sd-title mt-4 font-bold">
               No delivery records found
             </h3>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="sd-muted mt-2 text-sm">
               Try another search or add a new delivery.
             </p>
           </div>
@@ -1344,7 +1409,7 @@ export default function Delivery() {
           </div>
         )}
 
-        <div className="flex flex-col gap-2 border-t border-[#edf1f6] px-4 py-4 text-xs text-slate-400 sm:flex-row sm:justify-between sm:px-6">
+        <div className="sd-divider sd-muted flex flex-col gap-2 border-t px-4 py-4 text-xs sm:flex-row sm:justify-between sm:px-6">
           <span>
             Showing {filtered.length} of {deliveries.length} deliveries
           </span>
@@ -1353,6 +1418,7 @@ export default function Delivery() {
       </section>
 
       {/* CREATE / EDIT FORM */}
+
       {showForm && (
         <ModalShell
           title={editingId ? "Edit Delivery" : "New Delivery"}
@@ -1577,7 +1643,7 @@ export default function Delivery() {
           {error && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
             >
               <AlertCircle size={18} className="shrink-0" />
               <span>{error}</span>
@@ -1587,6 +1653,7 @@ export default function Delivery() {
       )}
 
       {/* VIEW DETAILS */}
+
       {selectedView && (
         <ModalShell
           title="Delivery Details"
@@ -1599,10 +1666,9 @@ export default function Delivery() {
           maxWidth="max-w-[650px]"
         >
           <div className="mb-5 flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-slate-500">
+            <span className="sd-label text-sm font-semibold">
               Delivery Status
             </span>
-
             <StatusBadge value={selectedView.status} />
           </div>
 
@@ -1652,6 +1718,7 @@ export default function Delivery() {
               value={selectedView.assignedTo}
               icon={UserRound}
             />
+
             <InfoBox label="Payment Status" icon={CreditCard}>
               <StatusBadge
                 value={selectedView.paymentStatus}
@@ -1699,7 +1766,7 @@ export default function Delivery() {
           <button
             type="button"
             onClick={() => openEdit(selectedView)}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white hover:bg-[#193b73]"
+            className="sd-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
           >
             <Pencil size={16} />
             Edit Delivery

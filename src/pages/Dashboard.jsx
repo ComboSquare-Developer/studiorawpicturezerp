@@ -13,8 +13,6 @@ import {
   Wallet,
   Activity,
   RefreshCw,
-  Volume2,
-  VolumeX,
   ChartNoAxesCombined,
   CircleGauge,
 } from "lucide-react";
@@ -34,7 +32,7 @@ const STORAGE = {
   deliveries: "studioraw_deliveries",
 };
 
-const SOUND_KEY = "studioraw_dashboard_sound";
+const SOUND_KEY = "studioraw_sound";
 
 /* =========================================
    DEMO DATA - TOTAL 420 RECORDS
@@ -412,6 +410,16 @@ function paidValue(item) {
     : getPaid(item);
 }
 
+function parseDate(value) {
+  if (!value) return null;
+
+  const date = new Date(
+    `${String(value).slice(0, 10)}T00:00:00`
+  );
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatDate(value) {
   if (!value) return "Not scheduled";
 
@@ -426,16 +434,6 @@ function formatDate(value) {
     : String(value);
 }
 
-function parseDate(value) {
-  if (!value) return null;
-
-  const date = new Date(
-    `${String(value).slice(0, 10)}T00:00:00`
-  );
-
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 const bookingDate = (item) =>
   item.eventDate ||
   item.bookingDate ||
@@ -445,13 +443,14 @@ const bookingDate = (item) =>
 
 /* =========================================
    SOUND EFFECTS
+   NO SOUND ON/OFF BUTTON
 ========================================= */
 
 let audioContext = null;
 
 function playDashboardSound(type = "click", index = 0) {
   try {
-    if (localStorage.getItem(SOUND_KEY) !== "true") return;
+    if (localStorage.getItem(SOUND_KEY) === "false") return;
 
     const AudioContextClass =
       window.AudioContext || window.webkitAudioContext;
@@ -464,7 +463,6 @@ function playDashboardSound(type = "click", index = 0) {
 
     if (audioContext.state === "suspended") {
       audioContext.resume().catch(() => {});
-      return;
     }
 
     const notes =
@@ -483,8 +481,13 @@ function playDashboardSound(type = "click", index = 0) {
       const gain = audioContext.createGain();
       const start = audioContext.currentTime + i * 0.07;
 
-      oscillator.type = type === "graph" ? "triangle" : "sine";
-      oscillator.frequency.setValueAtTime(frequency, start);
+      oscillator.type =
+        type === "graph" ? "triangle" : "sine";
+
+      oscillator.frequency.setValueAtTime(
+        frequency,
+        start
+      );
 
       gain.gain.setValueAtTime(0.0001, start);
       gain.gain.exponentialRampToValueAtTime(
@@ -525,8 +528,13 @@ function AnimatedNumber({
     const duration = 1100;
 
     function animate(now) {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const progress = Math.min(
+        (now - start) / duration,
+        1
+      );
+
+      const eased =
+        1 - Math.pow(1 - progress, 3);
 
       setDisplay(Math.round(target * eased));
 
@@ -663,11 +671,14 @@ function ChartPanel({
 
         started = true;
 
-        if (localStorage.getItem(SOUND_KEY) === "true") {
+        if (localStorage.getItem(SOUND_KEY) !== "false") {
           data.forEach((_, index) => {
             timers.push(
               setTimeout(() => {
-                playDashboardSound("graph", index + soundOffset);
+                playDashboardSound(
+                  "graph",
+                  index + soundOffset
+                );
               }, index * 110)
             );
           });
@@ -714,7 +725,9 @@ function ChartPanel({
               className="flex h-full min-w-0 flex-col items-center justify-end gap-2"
             >
               <span className="w-full truncate text-center text-[9px] font-semibold text-[#10264d] sm:text-xs">
-                {formatter ? formatter(value) : value}
+                {formatter
+                  ? formatter(value)
+                  : value}
               </span>
 
               <div
@@ -753,7 +766,8 @@ function makeSmoothPath(points) {
   for (let i = 0; i < points.length - 1; i++) {
     const current = points[i];
     const next = points[i + 1];
-    const middleX = (current.x + next.x) / 2;
+    const middleX =
+      (current.x + next.x) / 2;
 
     path += ` C ${middleX} ${current.y}, ${middleX} ${next.y}, ${next.x} ${next.y}`;
   }
@@ -770,8 +784,19 @@ function RevenueLineChart({ payments, replay }) {
   const [hoverIndex, setHoverIndex] = useState(null);
 
   const chartData = useMemo(() => {
-    const days = range === "7" ? 7 : range === "30" ? 30 : 180;
-    const bucketCount = range === "7" ? 7 : range === "30" ? 15 : 12;
+    const days =
+      range === "7"
+        ? 7
+        : range === "30"
+        ? 30
+        : 180;
+
+    const bucketCount =
+      range === "7"
+        ? 7
+        : range === "30"
+        ? 15
+        : 12;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -789,12 +814,17 @@ function RevenueLineChart({ payments, replay }) {
 
         const start = new Date(today);
         start.setDate(
-          today.getDate() - (days - 1) + startOffset
+          today.getDate() -
+            (days - 1) +
+            startOffset
         );
 
         const end = new Date(today);
         end.setDate(
-          today.getDate() - (days - 1) + endOffset - 1
+          today.getDate() -
+            (days - 1) +
+            endOffset -
+            1
         );
 
         return {
@@ -813,14 +843,16 @@ function RevenueLineChart({ payments, replay }) {
     payments.forEach((payment) => {
       const date = parseDate(
         payment.paymentDate ||
-        payment.createdAt ||
-        payment.date
+          payment.createdAt ||
+          payment.date
       );
 
       if (!date) return;
 
       const bucket = buckets.find(
-        (item) => date >= item.start && date <= item.end
+        (item) =>
+          date >= item.start &&
+          date <= item.end
       );
 
       if (bucket) {
@@ -856,24 +888,30 @@ function RevenueLineChart({ payments, replay }) {
       ? Math.ceil(maxValue / 10) * 10
       : Math.ceil(maxValue / 1000) * 1000;
 
-  const points = chartData.map((item, index) => ({
-    ...item,
-    x:
-      left +
-      (index / Math.max(1, chartData.length - 1)) *
-        plotWidth,
-    y:
-      top +
-      plotHeight -
-      (item.value / niceMax) * plotHeight,
-  }));
+  const points = chartData.map(
+    (item, index) => ({
+      ...item,
+      x:
+        left +
+        (index /
+          Math.max(1, chartData.length - 1)) *
+          plotWidth,
+      y:
+        top +
+        plotHeight -
+        (item.value / niceMax) *
+          plotHeight,
+    })
+  );
 
   const linePath = makeSmoothPath(points);
 
   const areaPath = points.length
-    ? `${linePath} L ${points[points.length - 1].x} ${
-        top + plotHeight
-      } L ${points[0].x} ${top + plotHeight} Z`
+    ? `${linePath} L ${
+        points[points.length - 1].x
+      } ${top + plotHeight} L ${
+        points[0].x
+      } ${top + plotHeight} Z`
     : "";
 
   const total = chartData.reduce(
@@ -882,13 +920,18 @@ function RevenueLineChart({ payments, replay }) {
   );
 
   const activePoint =
-    hoverIndex !== null ? points[hoverIndex] : null;
+    hoverIndex !== null
+      ? points[hoverIndex]
+      : null;
 
   function handleMove(event) {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect =
+      event.currentTarget.getBoundingClientRect();
 
     const relativeX =
-      ((event.clientX - rect.left) / rect.width) * width;
+      ((event.clientX - rect.left) /
+        rect.width) *
+      width;
 
     const index = Math.round(
       ((relativeX - left) / plotWidth) *
@@ -896,7 +939,10 @@ function RevenueLineChart({ payments, replay }) {
     );
 
     setHoverIndex(
-      Math.max(0, Math.min(points.length - 1, index))
+      Math.max(
+        0,
+        Math.min(points.length - 1, index)
+      )
     );
   }
 
@@ -969,7 +1015,9 @@ function RevenueLineChart({ payments, replay }) {
           role="img"
           aria-label="Revenue trend line chart"
           onMouseMove={handleMove}
-          onMouseLeave={() => setHoverIndex(null)}
+          onMouseLeave={() =>
+            setHoverIndex(null)
+          }
           onClick={(event) => {
             handleMove(event);
             playDashboardSound("graph", 2);
@@ -996,35 +1044,43 @@ function RevenueLineChart({ payments, replay }) {
             </linearGradient>
           </defs>
 
-          {[0, 1, 2, 3, 4].map((index) => {
-            const y = top + (index * plotHeight) / 4;
-            const value = niceMax * (1 - index / 4);
+          {[0, 1, 2, 3, 4].map(
+            (index) => {
+              const y =
+                top +
+                (index * plotHeight) / 4;
 
-            return (
-              <g key={index}>
-                <line
-                  x1={left}
-                  x2={width - right}
-                  y1={y}
-                  y2={y}
-                  stroke="#e9eef4"
-                  strokeDasharray="4 5"
-                />
+              const value =
+                niceMax * (1 - index / 4);
 
-                <text
-                  x={left - 12}
-                  y={y + 4}
-                  textAnchor="end"
-                  fontSize="11"
-                  fill="#91a0b5"
-                >
-                  {value >= 1000
-                    ? `${(value / 1000).toFixed(1)}k`
-                    : Math.round(value)}
-                </text>
-              </g>
-            );
-          })}
+              return (
+                <g key={index}>
+                  <line
+                    x1={left}
+                    x2={width - right}
+                    y1={y}
+                    y2={y}
+                    stroke="#e9eef4"
+                    strokeDasharray="4 5"
+                  />
+
+                  <text
+                    x={left - 12}
+                    y={y + 4}
+                    textAnchor="end"
+                    fontSize="11"
+                    fill="#91a0b5"
+                  >
+                    {value >= 1000
+                      ? `${(
+                          value / 1000
+                        ).toFixed(1)}k`
+                      : Math.round(value)}
+                  </text>
+                </g>
+              );
+            }
+          )}
 
           <path
             key={`area-${range}-${replay}`}
@@ -1052,8 +1108,11 @@ function RevenueLineChart({ payments, replay }) {
               index %
                 Math.max(
                   1,
-                  Math.floor(points.length / 5)
-                ) === 0;
+                  Math.floor(
+                    points.length / 5
+                  )
+                ) ===
+                0;
 
             return showLabel ? (
               <text
@@ -1108,14 +1167,20 @@ function RevenueLineChart({ payments, replay }) {
                 15,
                 Math.min(
                   85,
-                  (activePoint.x / width) * 100
+                  (activePoint.x /
+                    width) *
+                    100
                 )
               )}%`,
               top: `${Math.max(
                 0,
-                (activePoint.y / height) * 100 - 15
+                (activePoint.y /
+                  height) *
+                  100 -
+                  15
               )}%`,
-              transform: "translate(-50%, -100%)",
+              transform:
+                "translate(-50%, -100%)",
             }}
           >
             <p className="text-[10px] text-slate-400">
@@ -1146,51 +1211,81 @@ function RevenueLineChart({ payments, replay }) {
 function SalesGauge({ bookings, replay }) {
   const total = bookings.length;
 
-  const completed = bookings.filter((item) =>
-    ["completed", "complete", "delivered", "finished"].includes(
-      String(
-        item.status || item.bookingStatus || ""
-      ).toLowerCase()
-    )
+  const completed = bookings.filter(
+    (item) =>
+      [
+        "completed",
+        "complete",
+        "delivered",
+        "finished",
+      ].includes(
+        String(
+          item.status ||
+            item.bookingStatus ||
+            ""
+        ).toLowerCase()
+      )
   ).length;
 
-  const confirmed = bookings.filter((item) =>
-    ["confirmed", "booked", "approved"].includes(
-      String(
-        item.status || item.bookingStatus || ""
-      ).toLowerCase()
-    )
+  const confirmed = bookings.filter(
+    (item) =>
+      [
+        "confirmed",
+        "booked",
+        "approved",
+      ].includes(
+        String(
+          item.status ||
+            item.bookingStatus ||
+            ""
+        ).toLowerCase()
+      )
   ).length;
 
   const percentage = total
     ? Math.min(
         100,
-        ((completed + confirmed) / total) * 100
+        ((completed + confirmed) /
+          total) *
+          100
       )
     : 0;
 
-  const [animatedPercentage, setAnimatedPercentage] =
-    useState(0);
+  const [
+    animatedPercentage,
+    setAnimatedPercentage,
+  ] = useState(0);
 
   useEffect(() => {
     let frame;
     const start = performance.now();
 
     function animate(now) {
-      const progress = Math.min((now - start) / 1500, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const progress = Math.min(
+        (now - start) / 1500,
+        1
+      );
 
-      setAnimatedPercentage(percentage * eased);
+      const eased =
+        1 - Math.pow(1 - progress, 3);
+
+      setAnimatedPercentage(
+        percentage * eased
+      );
 
       if (progress < 1) {
-        frame = requestAnimationFrame(animate);
+        frame = requestAnimationFrame(
+          animate
+        );
       }
     }
 
     setAnimatedPercentage(0);
-    frame = requestAnimationFrame(animate);
+    frame =
+      requestAnimationFrame(animate);
 
-    return () => cancelAnimationFrame(frame);
+    return () =>
+      cancelAnimationFrame(frame);
   }, [percentage, replay]);
 
   const segments = 75;
@@ -1200,16 +1295,26 @@ function SalesGauge({ bookings, replay }) {
     (_, index) => {
       const angle =
         Math.PI -
-        (index / (segments - 1)) * Math.PI;
+        (index /
+          (segments - 1)) *
+          Math.PI;
 
       const radius = 105;
 
       return {
-        x: 160 + Math.cos(angle) * radius,
-        y: 152 - Math.sin(angle) * radius,
+        x:
+          160 +
+          Math.cos(angle) *
+            radius,
+        y:
+          152 -
+          Math.sin(angle) *
+            radius,
         active:
-          index / (segments - 1) <=
-          animatedPercentage / 100,
+          index /
+            (segments - 1) <=
+          animatedPercentage /
+            100,
       };
     }
   );
@@ -1241,23 +1346,30 @@ function SalesGauge({ bookings, replay }) {
             1
           )} percent`}
         >
-          {arcPoints.map((point, index) => {
-            const next = arcPoints[index + 1];
+          {arcPoints.map(
+            (point, index) => {
+              const next =
+                arcPoints[index + 1];
 
-            if (!next) return null;
+              if (!next) return null;
 
-            return (
-              <line
-                key={index}
-                x1={point.x}
-                y1={point.y}
-                x2={next.x}
-                y2={next.y}
-                stroke={point.active ? "#4ba985" : "#e6ecea"}
-                strokeWidth="19"
-              />
-            );
-          })}
+              return (
+                <line
+                  key={index}
+                  x1={point.x}
+                  y1={point.y}
+                  x2={next.x}
+                  y2={next.y}
+                  stroke={
+                    point.active
+                      ? "#4ba985"
+                      : "#e6ecea"
+                  }
+                  strokeWidth="19"
+                />
+              );
+            }
+          )}
 
           <text
             x="160"
@@ -1267,7 +1379,9 @@ function SalesGauge({ bookings, replay }) {
             fontSize="32"
             fontWeight="800"
           >
-            {animatedPercentage.toFixed(1)}%
+            {animatedPercentage.toFixed(
+              1
+            )}%
           </text>
 
           <text
@@ -1297,24 +1411,29 @@ function SalesGauge({ bookings, replay }) {
           ["Total Bookings", total],
           ["Confirmed", confirmed],
           ["Completed", completed],
-        ].map(([label, value], index) => (
-          <div
-            key={label}
-            className={`min-w-0 text-center ${
-              index === 1
-                ? "border-x border-slate-100"
-                : ""
-            }`}
-          >
-            <p className="text-[10px] text-slate-500 sm:text-xs">
-              {label}
-            </p>
+        ].map(
+          ([label, value], index) => (
+            <div
+              key={label}
+              className={`min-w-0 text-center ${
+                index === 1
+                  ? "border-x border-slate-100"
+                  : ""
+              }`}
+            >
+              <p className="text-[10px] text-slate-500 sm:text-xs">
+                {label}
+              </p>
 
-            <p className="mt-2 text-lg font-extrabold text-[#10264d] sm:text-xl">
-              <AnimatedNumber value={value} replay={replay} />
-            </p>
-          </div>
-        ))}
+              <p className="mt-2 text-lg font-extrabold text-[#10264d] sm:text-xl">
+                <AnimatedNumber
+                  value={value}
+                  replay={replay}
+                />
+              </p>
+            </div>
+          )
+        )}
       </div>
 
       <p className="mt-4 text-center text-[10px] text-slate-400">
@@ -1330,12 +1449,12 @@ function SalesGauge({ bookings, replay }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="min-w-0 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-      <p className="text-[11px] font-semibold text-slate-400">
+    <div className="min-w-0 border-b border-slate-200 pb-3 last:border-b-0 last:pb-0">
+      <p className="sr-booking-label text-[11px] font-semibold">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
+      <p className="sr-booking-value mt-1 break-words text-sm font-bold">
         {value || "—"}
       </p>
     </div>
@@ -1347,60 +1466,33 @@ function InfoRow({ label, value }) {
 ========================================= */
 
 export default function Dashboard() {
-  const [data, setData] = useState(getAllData);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [replay, setReplay] = useState(0);
+  const [data, setData] =
+    useState(getAllData);
 
-  const [soundEnabled, setSoundEnabled] = useState(
-    () => localStorage.getItem(SOUND_KEY) === "true"
-  );
+  const [
+    lastUpdated,
+    setLastUpdated,
+  ] = useState(new Date());
 
-  const isDemo = Object.entries(STORAGE).some(
+  const [replay, setReplay] =
+    useState(0);
+
+  const isDemo = Object.entries(
+    STORAGE
+  ).some(
     ([name, key]) =>
       readArray(key).length === 0 &&
       DEMO_DATA[name].length > 0
   );
 
-  useEffect(() => {
-    function syncSound(event) {
-      if (event.key === SOUND_KEY) {
-        setSoundEnabled(event.newValue === "true");
-      }
-    }
-
-    window.addEventListener("storage", syncSound);
-
-    return () =>
-      window.removeEventListener("storage", syncSound);
-  }, []);
-
-  function toggleSound() {
-    const next = !soundEnabled;
-
-    localStorage.setItem(SOUND_KEY, String(next));
-    setSoundEnabled(next);
-
-    if (next) {
-      const AudioContextClass =
-        window.AudioContext || window.webkitAudioContext;
-
-      if (AudioContextClass) {
-        if (!audioContext) {
-          audioContext = new AudioContextClass();
-        }
-
-        audioContext
-          .resume()
-          .then(() => playDashboardSound("welcome"))
-          .catch(() => {});
-      }
-    }
-  }
-
-  function refresh(withSound = true) {
+  function refresh(
+    withSound = true
+  ) {
     setData(getAllData());
     setLastUpdated(new Date());
-    setReplay((prev) => prev + 1);
+    setReplay(
+      (previous) => previous + 1
+    );
 
     if (withSound) {
       playDashboardSound("refresh");
@@ -1411,233 +1503,374 @@ export default function Dashboard() {
     function handleUpdate() {
       setData(getAllData());
       setLastUpdated(new Date());
-      setReplay((prev) => prev + 1);
+      setReplay(
+        (previous) => previous + 1
+      );
     }
 
-    window.addEventListener("storage", handleUpdate);
-    window.addEventListener("focus", handleUpdate);
+    window.addEventListener(
+      "storage",
+      handleUpdate
+    );
+
+    window.addEventListener(
+      "focus",
+      handleUpdate
+    );
 
     return () => {
-      window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener("focus", handleUpdate);
+      window.removeEventListener(
+        "storage",
+        handleUpdate
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleUpdate
+      );
     };
   }, []);
 
-  const today = dateKey(new Date());
+  const today = dateKey(
+    new Date()
+  );
 
   /* STATISTICS */
 
   const stats = useMemo(() => {
-    const billed = data.payments.reduce(
-      (sum, item) => sum + getAmount(item),
-      0
-    );
+    const billed =
+      data.payments.reduce(
+        (sum, item) =>
+          sum + getAmount(item),
+        0
+      );
 
-    const paid = data.payments.reduce(
-      (sum, item) => sum + paidValue(item),
-      0
-    );
+    const paid =
+      data.payments.reduce(
+        (sum, item) =>
+          sum + paidValue(item),
+        0
+      );
 
     return {
-      customers: data.customers.length,
-      enquiries: data.enquiries.length,
-      bookings: data.bookings.length,
+      customers:
+        data.customers.length,
+
+      enquiries:
+        data.enquiries.length,
+
+      bookings:
+        data.bookings.length,
+
       billed,
       paid,
-      pending: Math.max(0, billed - paid),
-      shoots: data.photoshoots.length,
 
-      editingPending: data.editing.filter(
-        (item) =>
-          !["completed", "complete"].includes(
-            String(
-              item.editingStatus ||
-              item.status ||
-              ""
-            ).toLowerCase()
-          )
-      ).length,
+      pending: Math.max(
+        0,
+        billed - paid
+      ),
 
-      albumsPending: data.albums.filter(
-        (item) =>
-          !["printed", "delivered", "completed"].includes(
-            String(
-              item.printingStatus ||
-              item.status ||
-              ""
-            ).toLowerCase()
-          )
-      ).length,
+      shoots:
+        data.photoshoots.length,
 
-      deliveriesPending: data.deliveries.filter(
-        (item) =>
-          !["delivered", "cancelled"].includes(
-            String(item.status || "").toLowerCase()
-          )
-      ).length,
+      editingPending:
+        data.editing.filter(
+          (item) =>
+            ![
+              "completed",
+              "complete",
+            ].includes(
+              String(
+                item.editingStatus ||
+                  item.status ||
+                  ""
+              ).toLowerCase()
+            )
+        ).length,
+
+      albumsPending:
+        data.albums.filter(
+          (item) =>
+            ![
+              "printed",
+              "delivered",
+              "completed",
+            ].includes(
+              String(
+                item.printingStatus ||
+                  item.status ||
+                  ""
+              ).toLowerCase()
+            )
+        ).length,
+
+      deliveriesPending:
+        data.deliveries.filter(
+          (item) =>
+            ![
+              "delivered",
+              "cancelled",
+            ].includes(
+              String(
+                item.status || ""
+              ).toLowerCase()
+            )
+        ).length,
     };
   }, [data]);
 
   /* UPCOMING BOOKINGS */
 
-  const upcomingBookings = useMemo(
-    () =>
-      data.bookings
-        .filter((item) => {
-          const date = String(
-            bookingDate(item)
-          ).slice(0, 10);
+  const upcomingBookings =
+    useMemo(
+      () =>
+        data.bookings
+          .filter((item) => {
+            const date = String(
+              bookingDate(item)
+            ).slice(0, 10);
 
-          return date && date >= today;
-        })
-        .sort((a, b) =>
-          String(bookingDate(a)).localeCompare(
-            String(bookingDate(b))
+            return (
+              date &&
+              date >= today
+            );
+          })
+          .sort((a, b) =>
+            String(
+              bookingDate(a)
+            ).localeCompare(
+              String(
+                bookingDate(b)
+              )
+            )
           )
-        )
-        .slice(0, 5),
-    [data.bookings, today]
-  );
+          .slice(0, 5),
+      [data.bookings, today]
+    );
 
   /* RECENT ACTIVITIES */
 
-  const recentActivities = useMemo(() => {
-    const activities = [];
+  const recentActivities =
+    useMemo(() => {
+      const activities = [];
 
-    const addItems = (items, type, icon, dateFields) => {
-      items.forEach((item, index) => {
-        const date = dateFields
-          .map((key) => item[key])
-          .find(Boolean);
+      const addItems = (
+        items,
+        type,
+        icon,
+        dateFields
+      ) => {
+        items.forEach(
+          (item, index) => {
+            const date =
+              dateFields
+                .map(
+                  (key) =>
+                    item[key]
+                )
+                .find(Boolean);
 
-        if (!date) return;
+            if (!date) return;
 
-        activities.push({
-          id: `${type}-${item.id || index}`,
-          type,
-          icon,
-          name:
-            item.customer ||
-            item.customerName ||
-            item.name ||
-            "Customer",
-          date,
-          status:
-            item.status ||
-            item.editingStatus ||
-            item.printingStatus ||
-            "Recorded",
-        });
-      });
-    };
+            activities.push({
+              id: `${type}-${
+                item.id || index
+              }`,
+              type,
+              icon,
+              name:
+                item.customer ||
+                item.customerName ||
+                item.name ||
+                "Customer",
+              date,
+              status:
+                item.status ||
+                item.editingStatus ||
+                item.printingStatus ||
+                "Recorded",
+            });
+          }
+        );
+      };
 
-    addItems(data.bookings, "Booking", CalendarDays, [
-      "createdAt",
-      "bookingDate",
-      "eventDate",
-    ]);
+      addItems(
+        data.bookings,
+        "Booking",
+        CalendarDays,
+        [
+          "createdAt",
+          "bookingDate",
+          "eventDate",
+        ]
+      );
 
-    addItems(data.payments, "Payment", Wallet, [
-      "createdAt",
-      "paymentDate",
-      "date",
-    ]);
+      addItems(
+        data.payments,
+        "Payment",
+        Wallet,
+        [
+          "createdAt",
+          "paymentDate",
+          "date",
+        ]
+      );
 
-    addItems(data.deliveries, "Delivery", Truck, [
-      "createdAt",
-      "deliveredDate",
-      "expectedDate",
-    ]);
+      addItems(
+        data.deliveries,
+        "Delivery",
+        Truck,
+        [
+          "createdAt",
+          "deliveredDate",
+          "expectedDate",
+        ]
+      );
 
-    addItems(data.photoshoots, "Photo Shoot", Camera, [
-      "createdAt",
-      "shootDate",
-    ]);
+      addItems(
+        data.photoshoots,
+        "Photo Shoot",
+        Camera,
+        [
+          "createdAt",
+          "shootDate",
+        ]
+      );
 
-    addItems(data.editing, "Photo Editing", Images, [
-      "createdAt",
-      "date",
-    ]);
+      addItems(
+        data.editing,
+        "Photo Editing",
+        Images,
+        [
+          "createdAt",
+          "date",
+        ]
+      );
 
-    addItems(data.albums, "Album Project", BookOpen, [
-      "createdAt",
-      "date",
-    ]);
+      addItems(
+        data.albums,
+        "Album Project",
+        BookOpen,
+        [
+          "createdAt",
+          "date",
+        ]
+      );
 
-    return activities
-      .sort((a, b) =>
-        String(b.date).localeCompare(String(a.date))
-      )
-      .slice(0, 6);
-  }, [data]);
+      return activities
+        .sort((a, b) =>
+          String(
+            b.date
+          ).localeCompare(
+            String(a.date)
+          )
+        )
+        .slice(0, 6);
+    }, [data]);
 
   /* MONTHLY GRAPHS */
 
-  const monthlyChart = useMemo(() => {
-    const months = Array.from(
-      { length: 6 },
-      (_, index) => {
-        const date = new Date();
-        date.setDate(1);
-        date.setMonth(
-          date.getMonth() - (5 - index)
+  const monthlyChart =
+    useMemo(() => {
+      const months =
+        Array.from(
+          { length: 6 },
+          (_, index) => {
+            const date =
+              new Date();
+
+            date.setDate(1);
+
+            date.setMonth(
+              date.getMonth() -
+                (5 - index)
+            );
+
+            return {
+              key: `${
+                date.getFullYear()
+              }-${String(
+                date.getMonth() +
+                  1
+              ).padStart(2, "0")}`,
+              label:
+                date.toLocaleDateString(
+                  "en-IN",
+                  {
+                    month: "short",
+                  }
+                ),
+              bookings: 0,
+              revenue: 0,
+            };
+          }
         );
 
-        return {
-          key: `${date.getFullYear()}-${String(
-            date.getMonth() + 1
-          ).padStart(2, "0")}`,
-          label: date.toLocaleDateString("en-IN", {
-            month: "short",
-          }),
-          bookings: 0,
-          revenue: 0,
-        };
-      }
+      data.bookings.forEach(
+        (item) => {
+          const date =
+            item.bookingDate ||
+            item.createdAt ||
+            item.date;
+
+          const month =
+            months.find(
+              (entry) =>
+                String(
+                  date || ""
+                ).slice(0, 7) ===
+                entry.key
+            );
+
+          if (month) {
+            month.bookings += 1;
+          }
+        }
+      );
+
+      data.payments.forEach(
+        (item) => {
+          const date =
+            item.paymentDate ||
+            item.createdAt ||
+            item.date;
+
+          const month =
+            months.find(
+              (entry) =>
+                String(
+                  date || ""
+                ).slice(0, 7) ===
+                entry.key
+            );
+
+          if (month) {
+            month.revenue +=
+              paidValue(item);
+          }
+        }
+      );
+
+      return months;
+    }, [data]);
+
+  const maxBookings =
+    Math.max(
+      1,
+      ...monthlyChart.map(
+        (item) =>
+          item.bookings
+      )
     );
 
-    data.bookings.forEach((item) => {
-      const date =
-        item.bookingDate ||
-        item.createdAt ||
-        item.date;
-
-      const month = months.find(
-        (entry) =>
-          String(date || "").slice(0, 7) === entry.key
-      );
-
-      if (month) month.bookings += 1;
-    });
-
-    data.payments.forEach((item) => {
-      const date =
-        item.paymentDate ||
-        item.createdAt ||
-        item.date;
-
-      const month = months.find(
-        (entry) =>
-          String(date || "").slice(0, 7) === entry.key
-      );
-
-      if (month) {
-        month.revenue += paidValue(item);
-      }
-    });
-
-    return months;
-  }, [data]);
-
-  const maxBookings = Math.max(
-    1,
-    ...monthlyChart.map((item) => item.bookings)
-  );
-
-  const maxRevenue = Math.max(
-    1,
-    ...monthlyChart.map((item) => item.revenue)
-  );
+  const maxRevenue =
+    Math.max(
+      1,
+      ...monthlyChart.map(
+        (item) =>
+          item.revenue
+      )
+    );
 
   /* CARDS */
 
@@ -1646,64 +1879,86 @@ export default function Dashboard() {
       title: "Total Customers",
       value: stats.customers,
       icon: Users,
-      color: "bg-blue-50 text-blue-700",
-      subtitle: "Registered customers",
+      color:
+        "bg-blue-50 text-blue-700",
+      subtitle:
+        "Registered customers",
     },
     {
       title: "Total Enquiries",
       value: stats.enquiries,
       icon: MessageSquare,
-      color: "bg-indigo-50 text-indigo-700",
-      subtitle: "Customer enquiries",
+      color:
+        "bg-indigo-50 text-indigo-700",
+      subtitle:
+        "Customer enquiries",
     },
     {
       title: "Total Bookings",
       value: stats.bookings,
       icon: CalendarDays,
-      color: "bg-violet-50 text-violet-700",
-      subtitle: "Studio bookings",
+      color:
+        "bg-violet-50 text-violet-700",
+      subtitle:
+        "Studio bookings",
     },
     {
       title: "Amount Received",
       value: stats.paid,
       icon: IndianRupee,
-      color: "bg-green-50 text-green-700",
-      subtitle: "Recorded payments",
+      color:
+        "bg-green-50 text-green-700",
+      subtitle:
+        "Recorded payments",
     },
     {
       title: "Pending Balance",
       value: stats.pending,
       icon: Wallet,
-      color: "bg-amber-50 text-amber-700",
-      subtitle: "Outstanding amount",
+      color:
+        "bg-amber-50 text-amber-700",
+      subtitle:
+        "Outstanding amount",
     },
     {
       title: "Photo Shoots",
       value: stats.shoots,
       icon: Camera,
-      color: "bg-sky-50 text-sky-700",
-      subtitle: "Recorded shoots",
+      color:
+        "bg-sky-50 text-sky-700",
+      subtitle:
+        "Recorded shoots",
     },
     {
       title: "Editing Pending",
-      value: stats.editingPending,
+      value:
+        stats.editingPending,
       icon: Images,
-      color: "bg-orange-50 text-orange-700",
-      subtitle: "Editing not completed",
+      color:
+        "bg-orange-50 text-orange-700",
+      subtitle:
+        "Editing not completed",
     },
     {
       title: "Album Projects",
-      value: stats.albumsPending,
+      value:
+        stats.albumsPending,
       icon: BookOpen,
-      color: "bg-purple-50 text-purple-700",
-      subtitle: "Not yet printed",
+      color:
+        "bg-purple-50 text-purple-700",
+      subtitle:
+        "Not yet printed",
     },
     {
-      title: "Pending Deliveries",
-      value: stats.deliveriesPending,
+      title:
+        "Pending Deliveries",
+      value:
+        stats.deliveriesPending,
       icon: Truck,
-      color: "bg-rose-50 text-rose-700",
-      subtitle: "Awaiting delivery",
+      color:
+        "bg-rose-50 text-rose-700",
+      subtitle:
+        "Awaiting delivery",
     },
   ];
 
@@ -1762,8 +2017,12 @@ export default function Dashboard() {
         }
 
         @keyframes studioAreaAppear {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         .studio-card {
@@ -1792,6 +2051,49 @@ export default function Dashboard() {
 
         .studio-area-appear {
           animation: studioAreaAppear 1.5s ease both;
+        }
+
+        /*
+          UPCOMING BOOKINGS / RECENT ACTIVITIES
+          Always use light cards + dark navy text.
+          This overrides the global dark-theme
+          text and background selectors.
+        */
+
+        html[data-theme="light"] main .sr-booking-card,
+        html[data-theme="dark"] main .sr-booking-card,
+        html[data-theme="light"] .sr-booking-card,
+        html[data-theme="dark"] .sr-booking-card {
+          background-color: #f8faff !important;
+          border-color: #e2e8f0 !important;
+          color: #10264d !important;
+          color-scheme: light;
+        }
+
+        html[data-theme="light"] .sr-booking-card .sr-booking-label,
+        html[data-theme="dark"] .sr-booking-card .sr-booking-label {
+          color: #475569 !important;
+        }
+
+        html[data-theme="light"] .sr-booking-card .sr-booking-value,
+        html[data-theme="dark"] .sr-booking-card .sr-booking-value {
+          color: #10264d !important;
+          font-weight: 700;
+        }
+
+        html[data-theme="light"] .sr-booking-card .sr-booking-divider,
+        html[data-theme="dark"] .sr-booking-card .sr-booking-divider {
+          border-color: #dce5f0 !important;
+        }
+
+        html[data-theme="light"] .sr-booking-card .sr-activity-name,
+        html[data-theme="dark"] .sr-booking-card .sr-activity-name {
+          color: #10264d !important;
+        }
+
+        html[data-theme="light"] .sr-booking-card .sr-activity-type,
+        html[data-theme="dark"] .sr-booking-card .sr-activity-type {
+          color: #64748b !important;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1825,34 +2127,27 @@ export default function Dashboard() {
 
           <p className="mt-2 text-[11px] text-slate-400">
             Last refreshed:{" "}
-            {lastUpdated.toLocaleTimeString("en-IN")}
+            {lastUpdated.toLocaleTimeString(
+              "en-IN"
+            )}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             type="button"
-            onClick={toggleSound}
-            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-[#10264d] shadow-sm hover:bg-blue-50 sm:text-sm"
-          >
-            {soundEnabled ? (
-              <Volume2 size={18} />
-            ) : (
-              <VolumeX size={18} />
-            )}
-            Sound {soundEnabled ? "ON" : "OFF"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => refresh(true)}
+            onClick={() =>
+              refresh(true)
+            }
             className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-[#10264d] shadow-sm hover:bg-blue-50 sm:text-sm"
           >
             <RefreshCw
               key={replay}
               size={17}
               className={
-                replay > 0 ? "studio-refreshing" : ""
+                replay > 0
+                  ? "studio-refreshing"
+                  : ""
               }
             />
             Refresh Dashboard
@@ -1875,7 +2170,9 @@ export default function Dashboard() {
       <div className="studio-panel relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#091b36] via-[#143662] to-[#28548b] p-5 text-white shadow-lg sm:p-8 lg:rounded-3xl">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="studio-floating absolute -right-24 -top-40 h-[420px] w-[420px] rounded-full border border-white/10" />
+
           <div className="absolute -right-10 -top-24 h-[300px] w-[300px] rounded-full border border-white/10" />
+
           <div className="absolute -right-32 bottom-[-170px] h-[350px] w-[350px] rounded-full bg-blue-300/10 blur-[70px]" />
         </div>
 
@@ -1902,44 +2199,59 @@ export default function Dashboard() {
 
         <div className="relative mt-6 grid grid-cols-1 gap-3 border-t border-white/20 pt-5 sm:grid-cols-3 sm:gap-4">
           {[
-            ["Total Billed", stats.billed],
-            ["Total Received", stats.paid],
-            ["Pending Amount", stats.pending],
-          ].map(([label, amount], index) => (
-            <div
-              key={label}
-              className="studio-card min-w-0 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm"
-              style={{
-                animationDelay: `${index * 100}ms`,
-              }}
-            >
-              <p className="text-xs text-blue-200">
-                {label}
-              </p>
+            [
+              "Total Billed",
+              stats.billed,
+            ],
+            [
+              "Total Received",
+              stats.paid,
+            ],
+            [
+              "Pending Amount",
+              stats.pending,
+            ],
+          ].map(
+            ([label, amount], index) => (
+              <div
+                key={label}
+                className="studio-card min-w-0 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm"
+                style={{
+                  animationDelay: `${
+                    index * 100
+                  }ms`,
+                }}
+              >
+                <p className="text-xs text-blue-200">
+                  {label}
+                </p>
 
-              <p className="mt-3 break-words text-xl font-extrabold lg:text-2xl">
-                <AnimatedNumber
-                  value={amount}
-                  currency
-                  replay={replay}
-                />
-              </p>
-            </div>
-          ))}
+                <p className="mt-3 break-words text-xl font-extrabold lg:text-2xl">
+                  <AnimatedNumber
+                    value={amount}
+                    currency
+                    replay={replay}
+                  />
+                </p>
+              </div>
+            )
+          )}
         </div>
       </div>
 
       {/* STAT CARDS */}
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        {cards.map((card, index) => (
-          <StatCard
-            key={card.title}
-            {...card}
-            index={index}
-            replay={replay}
-          />
-        ))}
+        {cards.map(
+          (card, index) => (
+            <StatCard
+              key={card.title}
+              {...card}
+              index={index}
+              replay={replay}
+            />
+          )
+        )}
       </div>
 
       {/* REVENUE + SALES */}
@@ -1982,15 +2294,19 @@ export default function Dashboard() {
           soundOffset={6}
           formatter={(value) =>
             value >= 1000
-              ? `${(value / 1000).toFixed(1)}k`
+              ? `${(
+                  value / 1000
+                ).toFixed(1)}k`
               : value
           }
         />
       </div>
 
-      {/* BOOKINGS + ACTIVITIES */}
+      {/* UPCOMING BOOKINGS + RECENT ACTIVITIES */}
 
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* UPCOMING BOOKINGS */}
+
         <div className="studio-panel min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <SectionTitle
             title="Upcoming Bookings"
@@ -1998,42 +2314,54 @@ export default function Dashboard() {
             icon={CalendarDays}
           />
 
-          {upcomingBookings.length === 0 ? (
+          {upcomingBookings.length ===
+          0 ? (
             <EmptyState message="No upcoming bookings found" />
           ) : (
             <div className="flex flex-col gap-3">
-              {upcomingBookings.map((item, index) => (
-                <div
-                  key={item.id || index}
-                  className="studio-card rounded-xl border border-slate-100 bg-[#f8faff] p-4"
-                >
-                  <InfoRow
-                    label="Customer"
-                    value={
-                      item.customer ||
-                      item.customerName ||
-                      item.name
+              {upcomingBookings.map(
+                (item, index) => (
+                  <div
+                    key={
+                      item.id || index
                     }
-                  />
-
-                  <div className="mt-3">
+                    className="studio-card sr-booking-card rounded-xl border border-slate-200 bg-[#f8faff] p-4"
+                  >
                     <InfoRow
-                      label="Event"
-                      value={item.event || item.eventType}
+                      label="Customer"
+                      value={
+                        item.customer ||
+                        item.customerName ||
+                        item.name
+                      }
                     />
-                  </div>
 
-                  <div className="mt-3">
-                    <InfoRow
-                      label="Event Date"
-                      value={formatDate(bookingDate(item))}
-                    />
+                    <div className="mt-3">
+                      <InfoRow
+                        label="Event"
+                        value={
+                          item.event ||
+                          item.eventType
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-3">
+                      <InfoRow
+                        label="Event Date"
+                        value={formatDate(
+                          bookingDate(item)
+                        )}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </div>
+
+        {/* RECENT ACTIVITIES */}
 
         <div className="studio-panel min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <SectionTitle
@@ -2042,48 +2370,58 @@ export default function Dashboard() {
             icon={Activity}
           />
 
-          {recentActivities.length === 0 ? (
+          {recentActivities.length ===
+          0 ? (
             <EmptyState message="No recent activities available" />
           ) : (
             <div className="flex flex-col gap-3">
-              {recentActivities.map((item) => {
-                const Icon = item.icon;
+              {recentActivities.map(
+                (item) => {
+                  const Icon =
+                    item.icon;
 
-                return (
-                  <div
-                    key={item.id}
-                    className="studio-card rounded-xl border border-slate-100 bg-[#f8faff] p-4"
-                  >
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
-                        <Icon size={19} />
+                  return (
+                    <div
+                      key={item.id}
+                      className="studio-card sr-booking-card rounded-xl border border-slate-200 bg-[#f8faff] p-4"
+                    >
+                      <div className="mb-4 flex items-center gap-3">
+                        <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+                          <Icon
+                            size={19}
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="sr-activity-name break-words text-sm font-bold">
+                            {item.name}
+                          </p>
+
+                          <p className="sr-activity-type mt-1 text-xs">
+                            {item.type}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="min-w-0">
-                        <p className="break-words text-sm font-bold text-[#10264d]">
-                          {item.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          {item.type}
-                        </p>
-                      </div>
-                    </div>
-
-                    <InfoRow
-                      label="Date"
-                      value={formatDate(item.date)}
-                    />
-
-                    <div className="mt-3">
                       <InfoRow
-                        label="Status"
-                        value={item.status}
+                        label="Date"
+                        value={formatDate(
+                          item.date
+                        )}
                       />
+
+                      <div className="mt-3">
+                        <InfoRow
+                          label="Status"
+                          value={
+                            item.status
+                          }
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
             </div>
           )}
         </div>

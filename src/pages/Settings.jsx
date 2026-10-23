@@ -856,7 +856,7 @@ export default function Settings() {
             Studio Administration
           </div>
 
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+          <h1 className="text-2xl font-extrabold  text-blue-900 sm:text-3xl">
             Settings
           </h1>
 

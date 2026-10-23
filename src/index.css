@@ -3,10 +3,12 @@
 
 /* ==========================================
    STUDIO RAW PICTUREZ ERP
-   GLOBAL STYLES + LIGHT / DARK THEME
+   COMPLETE GLOBAL STYLES
 ========================================== */
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -17,19 +19,21 @@ html {
 html,
 body,
 #root {
-  min-height: 100%;
   width: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+  background-color: var(--app-bg);
+  color: var(--app-text);
 }
 
 button,
 input,
-select,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -45,8 +49,14 @@ img {
   max-width: 100%;
 }
 
+input,
+textarea,
+select {
+  min-width: 0;
+}
+
 /* ==========================================
-   THEME VARIABLES
+   LIGHT THEME VARIABLES
 ========================================== */
 
 :root,
@@ -58,18 +68,25 @@ html[data-theme="light"] {
   --app-surface-2: #f8fafc;
   --app-surface-3: #edf2f8;
 
-  --app-text: #14213d;
-  --app-text-secondary: #475569;
+  --app-text: #10264d;
+  --app-text-secondary: #334155;
   --app-text-muted: #64748b;
 
   --app-border: #e2e8f0;
   --app-input: #ffffff;
-
   --app-hover: #f1f5f9;
-  --app-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+
+  --card-label-color: #475569;
+  --card-value-color: #10264d;
+  --card-divider-color: #cbd5e1;
 }
 
-html[data-theme="dark"] {
+/* ==========================================
+   DARK THEME VARIABLES
+========================================== */
+
+html[data-theme="dark"],
+html.dark {
   color-scheme: dark;
 
   --app-bg: #080f1f;
@@ -77,19 +94,21 @@ html[data-theme="dark"] {
   --app-surface-2: #17263e;
   --app-surface-3: #21334d;
 
-  --app-text: #f1f5f9;
+  --app-text: #f8fafc;
   --app-text-secondary: #cbd5e1;
   --app-text-muted: #94a3b8;
 
   --app-border: #34445e;
   --app-input: #17263e;
-
   --app-hover: #243650;
-  --app-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+
+  --card-label-color: #cbd5e1;
+  --card-value-color: #f8fafc;
+  --card-divider-color: #475569;
 }
 
 /* ==========================================
-   GLOBAL PAGE THEME
+   GLOBAL BACKGROUND / TEXT
 ========================================== */
 
 html,
@@ -99,116 +118,259 @@ body,
   color: var(--app-text);
 }
 
-body {
+main {
+  color: var(--app-text);
+}
+
+body,
+main {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
 }
 
-main {
-  color: var(--app-text);
-}
-
 /* ==========================================
-   LIGHT THEME - DEFAULT
-========================================== */
-
-html[data-theme="light"] main {
-  color: #14213d;
-}
-
-html[data-theme="light"] main input,
-html[data-theme="light"] main select,
-html[data-theme="light"] main textarea {
-  color-scheme: light;
-}
-
-/* ==========================================
-   DARK THEME - BACKGROUNDS
+   DARK THEME - MAIN BACKGROUND
 ========================================== */
 
 html[data-theme="dark"] main {
   background-color: var(--app-bg);
 }
 
-html[data-theme="dark"] main [class~="bg-white"],
-html[data-theme="dark"] main [class~="bg-gray-50"],
-html[data-theme="dark"] main [class~="bg-slate-50"],
-html[data-theme="dark"] main [class~="bg-slate-100"],
-html[data-theme="dark"] main [class~="bg-gray-100"],
-html[data-theme="dark"] main [class~="bg-[#ffffff]"],
-html[data-theme="dark"] main [class~="bg-[#fff]"],
-html[data-theme="dark"] main [class~="bg-[#FFFFFF]"] {
+/* White / light cards become dark cards */
+
+html[data-theme="dark"] main :is(
+  .bg-white,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-slate-50,
+  .bg-slate-100,
+  .bg-\[\#ffffff\],
+  .bg-\[\#fff\],
+  .bg-\[\#f8fafc\],
+  .bg-\[\#f9fafb\]
+) {
   background-color: var(--app-surface);
 }
 
-html[data-theme="dark"] main [class~="bg-gray-200"],
-html[data-theme="dark"] main [class~="bg-slate-200"],
-html[data-theme="dark"] main [class~="bg-[#f8fafc]"],
-html[data-theme="dark"] main [class~="bg-[#f1f5f9]"],
-html[data-theme="dark"] main [class~="bg-[#f9fafb]"],
-html[data-theme="dark"] main [class~="bg-[#f4f7fb]"],
-html[data-theme="dark"] main [class~="bg-[#f5f7fb]"] {
+html[data-theme="dark"] main :is(
+  .bg-gray-200,
+  .bg-slate-200,
+  .bg-\[\#f1f5f9\],
+  .bg-\[\#f4f7fb\],
+  .bg-\[\#f5f7fb\],
+  .bg-\[\#f3f6fb\]
+) {
   background-color: var(--app-surface-2);
 }
 
 /* ==========================================
-   DARK THEME - TEXT
+   DARK THEME - TEXT VISIBILITY FIX
 ========================================== */
 
-html[data-theme="dark"] main [class~="text-black"],
-html[data-theme="dark"] main [class~="text-gray-950"],
-html[data-theme="dark"] main [class~="text-gray-900"],
-html[data-theme="dark"] main [class~="text-gray-800"],
-html[data-theme="dark"] main [class~="text-slate-950"],
-html[data-theme="dark"] main [class~="text-slate-900"],
-html[data-theme="dark"] main [class~="text-slate-800"],
-html[data-theme="dark"] main [class~="text-[#111827]"],
-html[data-theme="dark"] main [class~="text-[#0f172a]"],
-html[data-theme="dark"] main [class~="text-[#14213d]"] {
-  color: var(--app-text);
+/* Dark blue / black text -> white */
+
+html[data-theme="dark"] main :is(
+  .text-black,
+  .text-gray-950,
+  .text-gray-900,
+  .text-gray-800,
+  .text-slate-950,
+  .text-slate-900,
+  .text-slate-800,
+  .text-blue-950,
+  .text-blue-900,
+  .text-blue-800,
+  .text-indigo-950,
+  .text-indigo-900,
+  .text-indigo-800,
+  .text-\[\#000000\],
+  .text-\[\#111827\],
+  .text-\[\#0f172a\],
+  .text-\[\#10264d\],
+  .text-\[\#0f2345\],
+  .text-\[\#142d55\],
+  .text-\[\#173d77\],
+  .text-\[\#183b70\],
+  .text-\[\#1e3a8a\],
+  .text-\[\#14213d\],
+  .text-\[\#1e293b\],
+  .text-\[\#243b60\],
+  .text-\[\#253858\],
+  .text-\[\#334155\]
+) {
+  color: var(--card-value-color);
 }
 
-html[data-theme="dark"] main [class~="text-gray-700"],
-html[data-theme="dark"] main [class~="text-gray-600"],
-html[data-theme="dark"] main [class~="text-slate-700"],
-html[data-theme="dark"] main [class~="text-slate-600"],
-html[data-theme="dark"] main [class~="text-[#475569]"] {
-  color: var(--app-text-secondary);
+/* Secondary text */
+
+html[data-theme="dark"] main :is(
+  .text-gray-700,
+  .text-gray-600,
+  .text-slate-700,
+  .text-slate-600,
+  .text-blue-700,
+  .text-indigo-700,
+  .text-\[\#475569\],
+  .text-\[\#526b90\],
+  .text-\[\#64748b\]
+) {
+  color: var(--card-label-color);
 }
 
-html[data-theme="dark"] main [class~="text-gray-500"],
-html[data-theme="dark"] main [class~="text-gray-400"],
-html[data-theme="dark"] main [class~="text-slate-500"],
-html[data-theme="dark"] main [class~="text-slate-400"] {
+/* Muted text */
+
+html[data-theme="dark"] main :is(
+  .text-gray-500,
+  .text-gray-400,
+  .text-slate-500,
+  .text-slate-400,
+  .text-\[\#7185a3\],
+  .text-\[\#8c9bb0\]
+) {
   color: var(--app-text-muted);
 }
 
 /* ==========================================
-   DARK THEME - BORDERS
+   CUSTOMER / EVENT / EVENT DATE
+   DETAILS VISIBILITY
 ========================================== */
 
-html[data-theme="dark"] main [class~="border-gray-100"],
-html[data-theme="dark"] main [class~="border-gray-200"],
-html[data-theme="dark"] main [class~="border-gray-300"],
-html[data-theme="dark"] main [class~="border-slate-100"],
-html[data-theme="dark"] main [class~="border-slate-200"],
-html[data-theme="dark"] main [class~="border-slate-300"],
-html[data-theme="dark"] main [class~="border-[#e2e8f0]"] {
-  border-color: var(--app-border);
+/* Reusable classes for detail fields */
+
+.sr-detail-label {
+  color: var(--card-label-color);
+}
+
+.sr-detail-value {
+  color: var(--card-value-color);
+  font-weight: 600;
+}
+
+.sr-detail-divider {
+  border-color: var(--card-divider-color);
+}
+
+/* Light theme card labels */
+
+html[data-theme="light"] main :is(
+  .bg-white,
+  .bg-gray-50,
+  .bg-slate-50,
+  .bg-\[\#ffffff\],
+  .bg-\[\#f8fafc\]
+) :is(
+  label,
+  small
+) {
+  color: var(--card-label-color);
+}
+
+/* Dark theme card labels */
+
+html[data-theme="dark"] main :is(
+  .bg-white,
+  .bg-gray-50,
+  .bg-slate-50,
+  .bg-\[\#ffffff\],
+  .bg-\[\#f8fafc\]
+) :is(
+  label,
+  small
+) {
+  color: var(--card-label-color);
+}
+
+/* Card values with dark text utility classes */
+
+html[data-theme="dark"] main :is(
+  .bg-white,
+  .bg-gray-50,
+  .bg-slate-50,
+  .bg-\[\#ffffff\],
+  .bg-\[\#f8fafc\]
+) :is(
+  .text-black,
+  .text-gray-900,
+  .text-gray-800,
+  .text-slate-900,
+  .text-slate-800,
+  .text-blue-900,
+  .text-blue-950,
+  .text-\[\#10264d\],
+  .text-\[\#173d77\],
+  .text-\[\#1e3a8a\]
+) {
+  color: var(--card-value-color);
 }
 
 /* ==========================================
-   DARK THEME - FORMS
+   DETAILS IN DARK NAVY PANELS
 ========================================== */
 
-html[data-theme="dark"] main input,
-html[data-theme="dark"] main select,
-html[data-theme="dark"] main textarea {
+html[data-theme="dark"] main :is(
+  .bg-\[\#10264d\],
+  .bg-\[\#132746\],
+  .bg-\[\#111e33\],
+  .bg-\[\#0f172a\]
+) :is(
+  .text-blue-900,
+  .text-blue-950,
+  .text-slate-900,
+  .text-gray-900,
+  .text-\[\#10264d\],
+  .text-\[\#173d77\]
+) {
+  color: #f8fafc;
+}
+
+/* ==========================================
+   DIVIDERS / BORDERS
+========================================== */
+
+html[data-theme="dark"] main :is(
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-slate-100,
+  .border-slate-200,
+  .border-slate-300,
+  .border-\[\#dce5f2\],
+  .border-\[\#e2e8f0\]
+) {
+  border-color: var(--app-border);
+}
+
+html[data-theme="dark"] main hr {
+  border-color: var(--card-divider-color);
+}
+
+/* Only neutral divider borders */
+
+html[data-theme="dark"] main :is(
+  .border-b,
+  .border-t
+):is(
+  .border-gray-100,
+  .border-gray-200,
+  .border-slate-100,
+  .border-slate-200
+) {
+  border-color: var(--card-divider-color);
+}
+
+/* ==========================================
+   FORMS
+========================================== */
+
+html[data-theme="dark"] main :is(
+  input,
+  select,
+  textarea
+) {
   background-color: var(--app-input);
   color: var(--app-text);
   border-color: var(--app-border);
-  color-scheme: dark;
 }
 
 html[data-theme="dark"] main input::placeholder,
@@ -216,14 +378,21 @@ html[data-theme="dark"] main textarea::placeholder {
   color: var(--app-text-muted);
 }
 
-html[data-theme="dark"] main input:focus,
-html[data-theme="dark"] main select:focus,
-html[data-theme="dark"] main textarea:focus {
+html[data-theme="dark"] main :is(
+  input,
+  select,
+  textarea
+):focus {
   outline-color: #60a5fa;
 }
 
+html[data-theme="dark"] main select option {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+}
+
 /* ==========================================
-   DARK THEME - TABLES
+   TABLES
 ========================================== */
 
 html[data-theme="dark"] main table {
@@ -234,18 +403,17 @@ html[data-theme="dark"] main thead {
   background-color: var(--app-surface-2);
 }
 
+html[data-theme="dark"] main th,
+html[data-theme="dark"] main td {
+  border-color: var(--app-border);
+}
+
 html[data-theme="dark"] main th {
   color: var(--app-text-secondary);
-  border-color: var(--app-border);
 }
 
 html[data-theme="dark"] main td {
   color: var(--app-text);
-  border-color: var(--app-border);
-}
-
-html[data-theme="dark"] main tbody tr {
-  border-color: var(--app-border);
 }
 
 html[data-theme="dark"] main tbody tr:hover {
@@ -253,42 +421,225 @@ html[data-theme="dark"] main tbody tr:hover {
 }
 
 /* ==========================================
-   DARK THEME - CARDS AND SHADOWS
+   STATUS BADGES
+   PRESERVE ORIGINAL STATUS COLORS
 ========================================== */
 
-html[data-theme="dark"] main [class~="shadow-sm"],
-html[data-theme="dark"] main [class~="shadow-md"],
-html[data-theme="dark"] main [class~="shadow-lg"],
-html[data-theme="dark"] main [class~="shadow-xl"] {
-  box-shadow: var(--app-shadow);
+html[data-theme="dark"] :is(
+  .bg-green-50,
+  .bg-green-100,
+  .bg-emerald-50,
+  .bg-emerald-100,
+  .bg-red-50,
+  .bg-red-100,
+  .bg-rose-50,
+  .bg-rose-100,
+  .bg-yellow-50,
+  .bg-yellow-100,
+  .bg-amber-50,
+  .bg-amber-100,
+  .bg-blue-50,
+  .bg-blue-100
+) {
+  color: #10264d;
 }
 
 /* ==========================================
-   DARK THEME - MODALS / PORTALS
-   For elements rendered outside main
+   MODALS / PORTALS
 ========================================== */
 
 html[data-theme="dark"] [role="dialog"] {
   color: var(--app-text);
 }
 
-html[data-theme="dark"] [role="dialog"] [class~="bg-white"],
-html[data-theme="dark"] [role="dialog"] [class~="bg-gray-50"],
-html[data-theme="dark"] [role="dialog"] [class~="bg-slate-50"] {
+html[data-theme="dark"] [role="dialog"] :is(
+  .bg-white,
+  .bg-gray-50,
+  .bg-slate-50
+) {
   background-color: var(--app-surface);
 }
 
-html[data-theme="dark"] [role="dialog"] [class~="text-gray-900"],
-html[data-theme="dark"] [role="dialog"] [class~="text-slate-900"] {
+html[data-theme="dark"] [role="dialog"] :is(
+  .text-black,
+  .text-gray-900,
+  .text-gray-800,
+  .text-slate-900,
+  .text-slate-800,
+  .text-blue-900,
+  .text-blue-950,
+  .text-\[\#10264d\],
+  .text-\[\#173d77\]
+) {
   color: var(--app-text);
 }
 
-html[data-theme="dark"] [role="dialog"] input,
-html[data-theme="dark"] [role="dialog"] select,
-html[data-theme="dark"] [role="dialog"] textarea {
-  background-color: var(--app-input);
-  color: var(--app-text);
-  border-color: var(--app-border);
+html[data-theme="dark"] [role="dialog"] :is(
+  .text-gray-700,
+  .text-gray-600,
+  .text-slate-600,
+  .text-slate-700
+) {
+  color: var(--app-text-secondary);
+}
+
+/* ==========================================
+   HEADER ANIMATIONS
+========================================== */
+
+@keyframes srHeaderEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes srTitleEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes srBellRing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+
+  20% {
+    transform: rotate(14deg);
+  }
+
+  40% {
+    transform: rotate(-11deg);
+  }
+
+  60% {
+    transform: rotate(7deg);
+  }
+
+  80% {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes srNotificationPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.5);
+  }
+
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(96, 165, 250, 0);
+  }
+}
+
+@keyframes srDropdownEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes srModalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header entrance */
+
+.sr-header-animated {
+  animation: srHeaderEnter 0.55s ease-out both;
+}
+
+/* Animated title */
+
+.sr-header-title {
+  animation: srTitleEnter 0.4s ease-out both;
+}
+
+.sr-header-title::after {
+  content: "";
+  display: block;
+  width: 42px;
+  height: 3px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #a855f7);
+}
+
+/* Header controls */
+
+.sr-header-control {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.sr-header-control:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+}
+
+.sr-header-control:active {
+  transform: scale(0.96);
+}
+
+/* Notification bell */
+
+.sr-notification-bell:hover svg {
+  animation: srBellRing 0.65s ease-in-out;
+  transform-origin: top center;
+}
+
+.sr-notification-dot {
+  animation: srNotificationPulse 2.5s ease-in-out infinite;
+}
+
+/* Dropdown animations */
+
+.sr-profile-menu,
+.sr-dropdown-enter {
+  animation: srDropdownEnter 0.25s ease-out both;
+  transform-origin: top right;
+}
+
+/* Modal animation */
+
+.sr-modal-enter {
+  animation: srModalEnter 0.3s ease-out both;
+}
+
+/* Search focus */
+
+.sr-search-box:focus-within {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* ==========================================
@@ -309,35 +660,8 @@ html[data-theme="dark"] [role="dialog"] textarea {
   border-radius: 20px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
 html[data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: #475569;
-}
-
-html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-/* ==========================================
-   SMOOTH THEME TRANSITIONS
-========================================== */
-
-main,
-main section,
-main article,
-main input,
-main select,
-main textarea,
-main table,
-main th,
-main td {
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    color 0.25s ease;
 }
 
 /* ==========================================
@@ -354,12 +678,16 @@ main td {
   }
 }
 
+/* ==========================================
+   ACCESSIBILITY
+========================================== */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
