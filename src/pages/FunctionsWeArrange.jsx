@@ -104,26 +104,8 @@ const DEMO_VENUES = [
 ];
 
 const DEMO_EVENTS = [
-  "Wedding",
-  "Birthday Party",
-  "Engagement",
-  "Baby Shower",
-  "Reception",
-  "Housewarming",
-  "Corporate Event",
-  "Naming Ceremony",
-  "Wedding Anniversary",
-  "College Function",
-  "Haldi Ceremony",
-  "Mehendi Ceremony",
-  "Cultural Event",
-  "Family Function",
-  "Product Launch",
-  "School Annual Day",
-  "Pre-Wedding Event",
-  "Sangeet",
-  "Puberty Ceremony",
-  "Other",
+ 
+
 ];
 
 const DEMO_SERVICES = [
@@ -193,14 +175,14 @@ const DEMO_DATA = DEMO_NAMES.map((customer, index) => {
 const emptyForm = {
   customer: "",
   phone: "",
-  eventType: "Wedding",
+  eventType: "",
   eventDate: "",
   venue: "",
   guests: "",
   services: [],
   amount: "",
   advance: "",
-  status: "Upcoming",
+  status: "",
   notes: "",
 };
 
@@ -934,22 +916,22 @@ export default function FunctionsWeArrange() {
         {/* HEADER */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
+            {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
               Studio Raw Picturez ERP
-            </p>
+            </p> */}
 
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white shadow-sm">
+              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white shadow-sm">
                 <PartyPopper size={22} />
-              </div>
+              </div> */}
 
               <div className="min-w-0">
-                <h1 className="text-xl font-extrabold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px]">
+                {/* <h1 className="text-xl font-extrabold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px]">
                   Functions We Arrange
-                </h1>
-                <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
+                </h1> */}
+                {/* <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
                   Manage events, services, bookings and payments.
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -1453,7 +1435,7 @@ export default function FunctionsWeArrange() {
                   </section>
 
                   {/* SERVICES */}
-                  <section>
+                  {/* <section>
                     <SectionTitle
                       icon={BriefcaseBusiness}
                       title="Services Required"
@@ -1469,7 +1451,7 @@ export default function FunctionsWeArrange() {
                         updateForm("services", services)
                       }
                     />
-                  </section>
+                  </section> */}
 
                   {/* PAYMENT */}
                   <section>

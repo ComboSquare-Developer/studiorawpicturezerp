@@ -913,7 +913,7 @@ export default function Settings() {
           }`}
         >
           <Users size={17} className="shrink-0" />
-          <span>Team Members</span>
+          {/* <span>Team Members</span> */}
 
           <span
             className={`rounded-lg px-1.5 py-0.5 text-[10px] ${
@@ -1234,9 +1234,9 @@ export default function Settings() {
             )}
 
             <div className="flex flex-col gap-1 border-t border-[#edf1f7] px-4 py-4 text-xs text-slate-500 sm:flex-row sm:justify-between sm:px-6">
-              <span>
+              {/* <span>
                 Showing {filteredStaff.length} of {staff.length} team members
-              </span>
+              </span> */}
 
               <span>{inactiveCount} inactive members</span>
             </div>

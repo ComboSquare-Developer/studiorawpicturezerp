@@ -754,22 +754,22 @@ export default function WeddingPhotography() {
       {/* HEADER */}
       <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
+          {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
             Studio Raw Picturez
-          </p>
+          </p> */}
 
-          <h1 className="flex items-center gap-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
+           {/* <h1 className="flex items-center gap-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
             <Camera
               className="shrink-0 text-[#315f9a]"
-              size={28}
-            />
+              size={28}></Camera>
+            
             <span>Wedding Photography</span>
-          </h1>
+          </h1> */}
 
-          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
+          {/* <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
             Manage wedding couples, event types, packages, dates,
             venues and payments.
-          </p>
+          </p>  */}
         </div>
 
         <div className="flex flex-wrap gap-2">

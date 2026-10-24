@@ -961,22 +961,22 @@ export default function EventManagement() {
         {/* HEADER */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
+            {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
               Studio Raw Picturez ERP
-            </p>
+            </p> */}
 
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
+              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
                 <PartyPopper size={22} />
-              </div>
+              </div> */}
 
               <div className="min-w-0">
-                <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl lg:text-[29px]">
+                {/* <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl lg:text-[29px]">
                   Event Management
-                </h1>
-                <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
+                </h1> */}
+                {/* <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
                   Manage events, planning, coordinators and payments.
-                </p>
+                </p> */}
               </div>
             </div>
           </div>

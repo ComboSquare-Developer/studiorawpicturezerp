@@ -627,18 +627,18 @@ export default function CustomizedGifts() {
         {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[#102f62] p-3 text-white shadow-sm">
+            {/* <div className="rounded-xl bg-[#102f62] p-3 text-white shadow-sm">
               <Gift size={23} />
-            </div>
+            </div> */}
 
             <div className="min-w-0">
-              <h1 className="text-xl font-bold sm:text-2xl">
+              {/* <h1 className="text-xl font-bold sm:text-2xl">
                 Customized Gifts
-              </h1>
+              </h1> */}
 
-              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+              {/* <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 Manage personalized gift orders and deliveries
-              </p>
+              </p> */}
             </div>
           </div>
 
@@ -647,10 +647,10 @@ export default function CustomizedGifts() {
               type="button"
               onClick={openAdd}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e] sm:flex-none"
-            >
-              <Plus size={18} />
+            > 
+           <Plus size={18} />
               Add Gift Order
-            </button>
+            </button> 
           </div>
         </div>
 

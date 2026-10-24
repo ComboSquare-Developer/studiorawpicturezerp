@@ -20,9 +20,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Command,
+  ArrowUpRight,
+  ShieldCheck,
+  Camera,
 } from "lucide-react";
 
-const THEME_KEY = "studioraw_theme";
 const SOUND_KEY = "studioraw_sound";
 const PROFILE_KEY = "studioraw_admin_profile";
 
@@ -109,7 +112,7 @@ function readProfile() {
       }
     }
   } catch {
-    // Use default profile.
+    // Use default
   }
 
   return { ...defaultProfile };
@@ -125,48 +128,12 @@ function getInitials(name) {
     .join("");
 }
 
-function useTheme() {
-  const [theme, setTheme] = useState(() =>
-    readSetting(THEME_KEY, "dark")
+function useBeautifulSound() {
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => readSetting(SOUND_KEY, "true") !== "false"
   );
 
-  useEffect(() => {
-    const handleThemeChange = (event) => {
-      const nextTheme = event.detail?.theme;
-
-      if (nextTheme === "dark" || nextTheme === "light") {
-        setTheme(nextTheme);
-      }
-    };
-
-    const handleStorage = (event) => {
-      if (event.key === THEME_KEY) {
-        setTheme(event.newValue || "dark");
-      }
-    };
-
-    window.addEventListener(
-      "studioraw-theme-change",
-      handleThemeChange
-    );
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener(
-        "studioraw-theme-change",
-        handleThemeChange
-      );
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
-
-  return theme;
-}
-
-function useSound() {
-  const [soundEnabled, setSoundEnabled] = useState(() =>
-    readSetting(SOUND_KEY, "true") !== "false"
-  );
+  const audioRef = useRef(null);
 
   useEffect(() => {
     const syncSound = () => {
@@ -175,15 +142,11 @@ function useSound() {
       );
     };
 
-    const handleStorage = (event) => {
-      if (event.key === SOUND_KEY) syncSound();
-    };
-
-    window.addEventListener("storage", handleStorage);
+    window.addEventListener("storage", syncSound);
     window.addEventListener("studioraw-sound-change", syncSound);
 
     return () => {
-      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("storage", syncSound);
       window.removeEventListener(
         "studioraw-sound-change",
         syncSound
@@ -191,18 +154,9 @@ function useSound() {
     };
   }, []);
 
-  return soundEnabled;
-}
-
-function useBeautifulSound() {
-  const soundEnabled = useSound();
-  const audioRef = useRef(null);
-
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.close().catch(() => {});
-      }
+      audioRef.current?.close?.();
     };
   }, []);
 
@@ -227,7 +181,7 @@ function useBeautifulSound() {
         context.resume().catch(() => {});
       }
 
-      const soundNotes = {
+      const sounds = {
         click: [659.25],
         search: [523.25, 659.25],
         profile: [587.33, 783.99],
@@ -237,7 +191,7 @@ function useBeautifulSound() {
         close: [587.33, 493.88],
       };
 
-      const notes = soundNotes[type] || soundNotes.click;
+      const notes = sounds[type] || sounds.click;
 
       notes.forEach((frequency, index) => {
         const oscillator = context.createOscillator();
@@ -250,10 +204,12 @@ function useBeautifulSound() {
         oscillator.frequency.setValueAtTime(frequency, start);
 
         gain.gain.setValueAtTime(0.0001, start);
+
         gain.gain.exponentialRampToValueAtTime(
           0.035,
           start + 0.02
         );
+
         gain.gain.exponentialRampToValueAtTime(
           0.0001,
           end
@@ -281,7 +237,6 @@ function EditProfileModal({
   profile,
   onClose,
   onSave,
-  theme,
   playSound,
 }) {
   const [form, setForm] = useState({
@@ -293,8 +248,6 @@ function EditProfileModal({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-
-  const isDark = theme === "dark";
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -313,7 +266,11 @@ function EditProfileModal({
   }, [onClose]);
 
   const updateForm = (key, value) => {
-    setForm((previous) => ({ ...previous, [key]: value }));
+    setForm((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+
     setError("");
     setSuccess(false);
   };
@@ -347,7 +304,12 @@ function EditProfileModal({
 
     if (result) {
       playSound("save");
-      setForm((previous) => ({ ...previous, password: "" }));
+
+      setForm((previous) => ({
+        ...previous,
+        password: "",
+      }));
+
       setSuccess(true);
       setError("");
     } else {
@@ -355,22 +317,13 @@ function EditProfileModal({
     }
   };
 
-  const labelClass = isDark
-    ? "text-white"
-    : "text-[#10264d]";
-
-  const inputWrapperClass = isDark
-    ? "border-[#375477] bg-[#10264d]"
-    : "border-[#dce5f2] bg-white";
-
-  const inputClass = isDark
-    ? "text-white placeholder:text-[#8fa9cb]"
-    : "text-[#10264d] placeholder:text-[#8c9bb0]";
+  const inputClass =
+    "flex min-w-0 items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-4 transition-all duration-300 focus-within:border-[#173d77] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(36,77,139,0.09),0_8px_22px_rgba(16,38,77,0.06)]";
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
       <div
-        className="absolute inset-0 bg-[#06152b]/75 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#06152b]/65 backdrop-blur-[6px]"
         onClick={onClose}
       />
 
@@ -378,67 +331,58 @@ function EditProfileModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-profile-title"
-        className={`sr-modal-enter relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl sm:rounded-3xl ${
-          isDark
-            ? "border-[#375477] bg-[#132746] text-white"
-            : "border-[#dce5f2] bg-white text-[#10264d]"
-        }`}
+        className="sr-premium-modal relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-[26px] border border-[#dce5f2] bg-white text-[#10264d] shadow-[0_30px_90px_rgba(5,20,45,0.25)]"
       >
-        {/* MODAL HEADER */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 bg-[#10264d] px-4 py-5 text-white sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10">
-              <UserCircle size={27} />
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-[#10264d] px-5 py-6 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-blue-400/15 blur-3xl" />
+
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                <UserCircle size={27} />
+              </div>
+
+              <div>
+                <h2
+                  id="edit-profile-title"
+                  className="text-lg font-extrabold sm:text-xl"
+                >
+                  Edit Admin Profile
+                </h2>
+
+                <p className="mt-1 text-xs text-blue-100">
+                  Personalize your workspace details
+                </p>
+              </div>
             </div>
 
-            <div className="min-w-0">
-              <h2
-                id="edit-profile-title"
-                className="text-lg font-extrabold sm:text-xl"
-              >
-                Edit Admin Profile
-              </h2>
-              <p className="mt-1 text-xs text-blue-100">
-                Update administrator details
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                playSound("close");
+                onClose();
+              }}
+              aria-label="Close edit profile"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-all duration-300 hover:rotate-90 hover:bg-white/20"
+            >
+              <X size={19} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              playSound("close");
-              onClose();
-            }}
-            aria-label="Close edit profile"
-            className="sr-header-control flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
-          >
-            <X size={19} />
-          </button>
         </div>
 
-        {/* MODAL BODY */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div
-            className={`mb-5 flex items-center gap-3 rounded-xl border p-4 ${
-              isDark
-                ? "border-[#375477] bg-[#10264d]"
-                : "border-[#dce5f2] bg-[#f5f8fd]"
-            }`}
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#244d8b] text-sm font-extrabold text-white">
+        {/* BODY */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[#e1e8f3] bg-[#f5f8fd] p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#10264d] text-sm font-extrabold text-white">
               {getInitials(profile.name)}
             </div>
 
             <div className="min-w-0">
-              <p className={`truncate text-sm font-bold ${labelClass}`}>
+              <p className="truncate text-sm font-bold">
                 {profile.name}
               </p>
-              <p
-                className={`mt-1 truncate text-xs ${
-                  isDark ? "text-[#b7cbe6]" : "text-[#7185a3]"
-                }`}
-              >
+              <p className="mt-1 text-xs text-[#7185a3]">
                 {profile.role}
               </p>
             </div>
@@ -449,18 +393,21 @@ function EditProfileModal({
             onSubmit={handleSubmit}
             className="space-y-5"
           >
+            {/* NAME */}
             <div>
               <label
                 htmlFor="admin-name"
-                className={`mb-2 block text-sm font-bold ${labelClass}`}
+                className="mb-2 block text-sm font-bold"
               >
                 Admin Name
               </label>
 
-              <div
-                className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 transition focus-within:border-[#5c86c5] focus-within:ring-2 focus-within:ring-blue-400/20 ${inputWrapperClass}`}
-              >
-                <User size={18} className="shrink-0 text-[#8fa9cb]" />
+              <div className={inputClass}>
+                <User
+                  size={18}
+                  className="shrink-0 text-[#8195b2]"
+                />
+
                 <input
                   id="admin-name"
                   type="text"
@@ -472,23 +419,26 @@ function EditProfileModal({
                     updateForm("name", event.target.value)
                   }
                   placeholder="Enter admin name"
-                  className={`w-full min-w-0 bg-transparent py-3.5 text-sm outline-none ${inputClass}`}
+                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
                 />
               </div>
             </div>
 
+            {/* EMAIL */}
             <div>
               <label
                 htmlFor="admin-email"
-                className={`mb-2 block text-sm font-bold ${labelClass}`}
+                className="mb-2 block text-sm font-bold"
               >
                 Email Address
               </label>
 
-              <div
-                className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 transition focus-within:border-[#5c86c5] focus-within:ring-2 focus-within:ring-blue-400/20 ${inputWrapperClass}`}
-              >
-                <Mail size={18} className="shrink-0 text-[#8fa9cb]" />
+              <div className={inputClass}>
+                <Mail
+                  size={18}
+                  className="shrink-0 text-[#8195b2]"
+                />
+
                 <input
                   id="admin-email"
                   type="email"
@@ -500,28 +450,27 @@ function EditProfileModal({
                     updateForm("email", event.target.value)
                   }
                   placeholder="Enter email address"
-                  className={`w-full min-w-0 bg-transparent py-3.5 text-sm outline-none ${inputClass}`}
+                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
                 />
               </div>
             </div>
 
+            {/* PASSWORD */}
             <div>
               <label
                 htmlFor="admin-password"
-                className={`mb-2 block text-sm font-bold ${labelClass}`}
+                className="mb-2 block text-sm font-bold"
               >
                 New Password
-                <span className="ml-2 text-xs font-normal opacity-60">
+                <span className="ml-2 text-xs font-normal text-[#91a0b4]">
                   (Optional)
                 </span>
               </label>
 
-              <div
-                className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 transition focus-within:border-[#5c86c5] focus-within:ring-2 focus-within:ring-blue-400/20 ${inputWrapperClass}`}
-              >
+              <div className={inputClass}>
                 <LockKeyhole
                   size={18}
-                  className="shrink-0 text-[#8fa9cb]"
+                  className="shrink-0 text-[#8195b2]"
                 />
 
                 <input
@@ -534,7 +483,7 @@ function EditProfileModal({
                     updateForm("password", event.target.value)
                   }
                   placeholder="Enter new password"
-                  className={`w-full min-w-0 bg-transparent py-3.5 text-sm outline-none ${inputClass}`}
+                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
                 />
 
                 <button
@@ -544,9 +493,11 @@ function EditProfileModal({
                     setShowPassword((previous) => !previous);
                   }}
                   aria-label={
-                    showPassword ? "Hide password" : "Show password"
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
                   }
-                  className="shrink-0 text-[#8fa9cb] transition hover:text-blue-400"
+                  className="shrink-0 text-[#8195b2] transition hover:text-[#10264d]"
                 >
                   {showPassword ? (
                     <EyeOff size={18} />
@@ -556,11 +507,7 @@ function EditProfileModal({
                 </button>
               </div>
 
-              <p
-                className={`mt-2 text-xs leading-5 ${
-                  isDark ? "text-[#b7cbe6]" : "text-slate-500"
-                }`}
-              >
+              <p className="mt-2 text-xs leading-5 text-slate-500">
                 Demo interface only. Changing this field does not
                 update your actual login password.
               </p>
@@ -571,7 +518,10 @@ function EditProfileModal({
                 role="alert"
                 className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                <AlertCircle size={17} className="mt-0.5 shrink-0" />
+                <AlertCircle
+                  size={17}
+                  className="mt-0.5 shrink-0"
+                />
                 {error}
               </div>
             )}
@@ -581,32 +531,25 @@ function EditProfileModal({
                 role="status"
                 className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-[#173d77]"
               >
-                <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+                <CheckCircle2
+                  size={18}
+                  className="mt-0.5 shrink-0"
+                />
                 Profile name and email saved successfully.
               </div>
             )}
           </form>
         </div>
 
-        {/* MODAL FOOTER */}
-        <div
-          className={`flex shrink-0 flex-col-reverse gap-2 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6 ${
-            isDark
-              ? "border-[#375477] bg-[#132746]"
-              : "border-[#e3eaf4] bg-white"
-          }`}
-        >
+        {/* FOOTER */}
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#e3eaf4] bg-[#fbfcff] px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button
             type="button"
             onClick={() => {
               playSound("close");
               onClose();
             }}
-            className={`rounded-xl border px-5 py-3 text-sm font-bold transition ${
-              isDark
-                ? "border-[#375477] text-white hover:bg-white/10"
-                : "border-[#dce5f2] bg-white text-[#10264d] hover:bg-[#f0f4fa]"
-            }`}
+            className="rounded-xl border border-[#dce5f2] bg-white px-5 py-3 text-sm font-bold text-[#10264d] transition hover:bg-[#f0f4fa]"
           >
             Cancel
           </button>
@@ -614,7 +557,7 @@ function EditProfileModal({
           <button
             type="submit"
             form="edit-profile-form"
-            className="sr-header-control flex items-center justify-center gap-2 rounded-xl bg-[#244d8b] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#315b99]"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#244d8b] hover:shadow-[0_10px_24px_rgba(16,38,77,0.2)]"
           >
             <CheckCircle2 size={17} />
             Save Changes
@@ -637,9 +580,7 @@ export default function Header({
   onLogout,
   onNavigate,
 }) {
-  const theme = useTheme();
   const playSound = useBeautifulSound();
-  const isDark = theme === "dark";
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -691,7 +632,10 @@ export default function Header({
     window.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("pointerdown", handleOutsideClick);
+      document.removeEventListener(
+        "pointerdown",
+        handleOutsideClick
+      );
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
@@ -722,7 +666,9 @@ export default function Header({
 
   const navigateTo = (page) => {
     playSound(
-      page === "notifications" ? "notification" : "search"
+      page === "notifications"
+        ? "notification"
+        : "search"
     );
 
     setSearch("");
@@ -759,102 +705,246 @@ export default function Header({
     }
   };
 
-  const SearchResults = () => {
+  const SearchResults = ({ mobile = false }) => {
     if (!search.trim()) return null;
 
     return (
       <div
-        className={`sr-dropdown-enter mt-2 overflow-hidden rounded-xl border shadow-lg ${
-          isDark
-            ? "border-[#375477] bg-[#132746]"
-            : "border-[#dce5f2] bg-white"
+        className={`sr-search-results overflow-hidden rounded-2xl border border-[#dce5f2] bg-white shadow-[0_20px_55px_rgba(16,38,77,0.16)] ${
+          mobile ? "mt-3" : "absolute left-0 right-0 top-full z-50 mt-3"
         }`}
       >
-        <div
-          className={`border-b px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider ${
-            isDark
-              ? "border-[#375477] bg-[#10264d] text-[#b7cbe6]"
-              : "border-[#e7edf6] bg-[#f5f8fd] text-[#526b90]"
-          }`}
-        >
-          Workspace Pages
+        <div className="flex items-center justify-between border-b border-[#e8edf5] bg-[#f8fbff] px-4 py-3">
+          <span className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#627895]">
+            <Sparkles size={13} className="text-[#315b99]" />
+            Workspace Pages
+          </span>
+
+          <span className="rounded-lg bg-[#eaf1fc] px-2 py-1 text-[10px] font-bold text-[#315b99]">
+            {filteredPages.length} found
+          </span>
         </div>
 
         {filteredPages.length > 0 ? (
-          <div className="max-h-60 overflow-y-auto p-1.5">
+          <div className="max-h-64 overflow-y-auto p-2">
             {filteredPages.map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => navigateTo(key)}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition ${
-                  isDark
-                    ? "text-white hover:bg-white/10"
-                    : "text-[#10264d] hover:bg-[#eaf1fc]"
-                }`}
+                className="group flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:translate-x-1 hover:border-[#dce7f8] hover:bg-[#eef5ff]"
               >
-                <span className="truncate">{label}</span>
-                <ChevronRight
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf3fc] text-[#315b99] transition group-hover:bg-[#dceaff]">
+                    <Search size={15} />
+                  </span>
+
+                  <span className="truncate">{label}</span>
+                </span>
+
+                <ArrowUpRight
                   size={16}
-                  className={
-                    isDark
-                      ? "shrink-0 text-[#b7cbe6]"
-                      : "shrink-0 text-[#7185a3]"
-                  }
+                  className="shrink-0 text-[#91a0b4] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#173d77]"
                 />
               </button>
             ))}
           </div>
         ) : (
-          <div
-            className={`px-4 py-5 text-center text-sm ${
-              isDark ? "text-[#b7cbe6]" : "text-slate-500"
-            }`}
-          >
-            No matching workspace pages.
+          <div className="px-4 py-8 text-center">
+            <Search
+              size={24}
+              className="mx-auto mb-3 text-[#9aacbf]"
+            />
+
+            <p className="text-sm font-semibold text-[#10264d]">
+              No matching pages
+            </p>
+
+            <p className="mt-1 text-xs text-[#91a0b4]">
+              Try searching with another keyword.
+            </p>
           </div>
         )}
       </div>
     );
   };
 
-  const headerClass = isDark
-    ? "border-[#284267] bg-[#10264d]/95 text-white"
-    : "border-[#dce5f2] bg-white/95 text-[#10264d]";
-
-  const controlClass = isDark
-    ? "border-[#375477] bg-[#18345a] text-white hover:bg-[#244d8b]"
-    : "border-[#dce5f2] bg-white text-[#10264d] hover:bg-[#eaf1fc]";
-
-  const mutedClass = isDark
-    ? "text-[#b7cbe6]"
-    : "text-[#7185a3]";
-
   return (
     <>
-      <header
-        className={`sr-header-animated sticky top-0 z-30 w-full min-w-0 border-b shadow-[0_3px_20px_rgba(16,38,77,0.06)] backdrop-blur-xl transition-colors duration-300 ${headerClass}`}
-      >
-        {/* SUBTLE TOP GRADIENT */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-400 to-purple-500 opacity-80" />
+      <style>{`
+        @keyframes srHeaderEnter {
+          from {
+            opacity: 0;
+            transform: translateY(-14px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
 
-        {/* MAIN HEADER */}
-        <div className="flex h-[68px] w-full min-w-0 items-center justify-between gap-2 px-3 sm:h-[76px] sm:px-5 lg:h-[84px] lg:px-7 xl:px-9">
+        @keyframes srTitleEnter {
+          from {
+            opacity: 0;
+            transform: translateY(9px);
+            filter: blur(3px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes srSearchEnter {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes srBellRing {
+          0%, 100% { transform: rotate(0deg); }
+          15% { transform: rotate(12deg); }
+          30% { transform: rotate(-10deg); }
+          45% { transform: rotate(7deg); }
+          60% { transform: rotate(-4deg); }
+        }
+
+        @keyframes srPulse {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(49,91,153,0.25);
+          }
+          50% {
+            box-shadow: 0 0 0 5px rgba(49,91,153,0);
+          }
+        }
+
+        @keyframes srShimmer {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(100%); }
+        }
+
+        .sr-premium-header {
+          animation: srHeaderEnter 0.55s ease-out both;
+        }
+
+        .sr-premium-title {
+          animation: srTitleEnter 0.45s ease-out both;
+        }
+
+        .sr-search-results,
+        .sr-premium-dropdown {
+          animation: srSearchEnter 0.25s ease-out both;
+        }
+
+        .sr-premium-modal {
+          animation: srSearchEnter 0.35s
+            cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        .sr-premium-control {
+          transition:
+            transform 0.25s ease,
+            background-color 0.25s ease,
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
+        }
+
+        .sr-premium-control:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 7px 18px rgba(16,38,77,0.09);
+        }
+
+        .sr-premium-control:active {
+          transform: scale(0.95);
+        }
+
+        .sr-premium-search {
+          transition:
+            border-color 0.35s ease,
+            background-color 0.35s ease,
+            box-shadow 0.35s ease,
+            transform 0.35s ease;
+        }
+
+        .sr-premium-search:focus-within {
+          border-color: #173d77;
+          background: #fff;
+          box-shadow:
+            0 0 0 4px rgba(36,77,139,0.09),
+            0 9px 28px rgba(16,38,77,0.09);
+          transform: translateY(-1px);
+        }
+
+        .sr-premium-search:focus-within .sr-search-icon {
+          color: #173d77;
+          transform: scale(1.12);
+        }
+
+        .sr-search-icon {
+          transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .sr-premium-bell:hover svg {
+          animation: srBellRing 0.65s ease-in-out;
+          transform-origin: top center;
+        }
+
+        .sr-premium-dot {
+          animation: srPulse 2.5s infinite;
+        }
+
+        .sr-header-shimmer {
+          animation: srShimmer 5s linear infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .sr-premium-header,
+          .sr-premium-title,
+          .sr-search-results,
+          .sr-premium-dropdown,
+          .sr-premium-modal,
+          .sr-premium-dot,
+          .sr-header-shimmer {
+            animation: none !important;
+          }
+
+          .sr-premium-control,
+          .sr-premium-search {
+            transition: none !important;
+          }
+        }
+      `}</style>
+
+      <header className="sr-premium-header sticky top-0 z-30 w-full min-w-0 border-b border-[#e2e9f3] bg-white/95 text-[#10264d] shadow-[0_4px_25px_rgba(16,38,77,0.055)] backdrop-blur-xl">
+
+        {/* ANIMATED TOP LINE */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] overflow-hidden bg-[#e8f0fc]">
+          <div className="sr-header-shimmer h-full w-1/2 bg-gradient-to-r from-transparent via-[#244d8b] to-transparent" />
+        </div>
+
+        {/* HEADER CONTENT */}
+        <div className="flex h-[70px] w-full min-w-0 items-center justify-between gap-2 px-3 sm:h-[78px] sm:px-5 lg:h-[84px] lg:px-7 xl:px-9">
+
           {/* LEFT */}
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={openSidebar}
               aria-label="Open sidebar"
-              className={`sr-header-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition lg:hidden ${controlClass}`}
+              className="sr-premium-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-white text-[#10264d] lg:hidden"
             >
               <Menu size={21} />
             </button>
 
             <div className="min-w-0 flex-1">
-              <div
-                className={`mb-1 hidden items-center gap-1.5 text-[11px] font-medium sm:flex ${mutedClass}`}
-              >
+              <div className="mb-1 hidden items-center gap-1.5 text-[10px] font-semibold tracking-[0.04em] text-[#8b9bb3] sm:flex">
+                <Camera size={12} />
                 <span>Studio Management</span>
                 <ChevronRight size={12} />
                 <span>Workspace</span>
@@ -862,9 +952,7 @@ export default function Header({
 
               <h1
                 key={activePage}
-                className={`sr-header-title truncate text-sm font-extrabold tracking-tight min-[390px]:text-base sm:text-xl lg:text-2xl xl:text-[26px] ${
-                  isDark ? "text-white" : "text-[#10264d]"
-                }`}
+                className="sr-premium-title truncate text-sm font-extrabold tracking-[-0.035em] text-[#10264d] min-[390px]:text-base sm:text-xl lg:text-2xl xl:text-[26px]"
               >
                 {title}
               </h1>
@@ -873,14 +961,16 @@ export default function Header({
 
           {/* RIGHT */}
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
-            {/* DESKTOP SEARCH */}
-            <div ref={searchRef} className="relative hidden xl:block">
-              <div
-                className={`sr-search-box flex h-11 w-[210px] items-center gap-2 rounded-xl border px-3 transition focus-within:border-[#5c86c5] 2xl:w-[280px] ${controlClass}`}
-              >
+
+            {/* PREMIUM DESKTOP SEARCH */}
+            <div
+              ref={searchRef}
+              className="relative hidden xl:block"
+            >
+              <div className="sr-premium-search group flex h-12 w-[225px] items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-3.5 2xl:w-[300px]">
                 <Search
-                  size={17}
-                  className={`shrink-0 ${mutedClass}`}
+                  size={19}
+                  className="sr-search-icon shrink-0 text-[#8195b2]"
                 />
 
                 <input
@@ -889,16 +979,12 @@ export default function Header({
                   onChange={(event) =>
                     setSearch(event.target.value)
                   }
-                  placeholder="Search pages..."
+                  placeholder="Search workspace..."
                   aria-label="Search workspace pages"
-                  className={`w-full min-w-0 flex-1 bg-transparent text-sm outline-none ${
-                    isDark
-                      ? "text-white placeholder:text-[#8fa9cb]"
-                      : "text-[#10264d] placeholder:text-[#91a0b4]"
-                  }`}
+                  className="w-full min-w-0 flex-1 bg-transparent text-sm font-medium text-[#10264d] outline-none placeholder:text-[#91a0b4]"
                 />
 
-                {search && (
+                {search ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -906,35 +992,27 @@ export default function Header({
                       setSearch("");
                     }}
                     aria-label="Clear search"
-                    className={mutedClass}
+                    className="text-[#8195b2] transition hover:text-[#10264d]"
                   >
-                    <X size={15} />
+                    <X size={16} />
                   </button>
+                ) : (
+                  <span className="flex h-6 shrink-0 items-center gap-0.5 rounded-md border border-[#e1e8f2] bg-white px-1.5 text-[10px] font-bold text-[#8195b2]">
+                    <Command size={11} /> K
+                  </span>
                 )}
               </div>
 
-              {search.trim() && (
-                <div className="absolute left-0 right-0 top-full z-50">
-                  <SearchResults />
-                </div>
-              )}
+              {search.trim() && <SearchResults />}
             </div>
 
             {/* BRANCH */}
-            <div
-              className={`hidden h-11 items-center gap-2 rounded-xl border px-3 2xl:flex ${controlClass}`}
-            >
-              <div
-                className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                  isDark
-                    ? "bg-white/10 text-white"
-                    : "bg-[#eaf1fc] text-[#173d77]"
-                }`}
-              >
+            <div className="hidden h-11 items-center gap-2 rounded-2xl border border-[#e1e8f2] bg-[#f8fbff] px-3 2xl:flex">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#e8f0fb] text-[#244d8b]">
                 <Building2 size={15} />
-              </div>
+              </span>
 
-              <span className="text-xs font-bold">
+              <span className="text-xs font-bold text-[#344c6d]">
                 Main Branch
               </span>
             </div>
@@ -947,11 +1025,17 @@ export default function Header({
                 setProfileOpen(false);
                 setSearchOpen((previous) => !previous);
               }}
-              aria-label={searchOpen ? "Close search" : "Open search"}
+              aria-label={
+                searchOpen ? "Close search" : "Open search"
+              }
               aria-expanded={searchOpen}
-              className={`sr-header-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 xl:hidden ${controlClass}`}
+              className="sr-premium-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-[#f8fbff] text-[#10264d] sm:h-11 sm:w-11 xl:hidden"
             >
-              {searchOpen ? <X size={19} /> : <Search size={19} />}
+              {searchOpen ? (
+                <X size={19} />
+              ) : (
+                <Search size={19} />
+              )}
             </button>
 
             {/* NOTIFICATIONS */}
@@ -960,21 +1044,21 @@ export default function Header({
               onClick={() => navigateTo("notifications")}
               aria-label="Open notifications"
               title="Notifications"
-              className={`sr-header-control sr-notification-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition sm:h-11 sm:w-11 ${controlClass}`}
+              className="sr-premium-control sr-premium-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-[#f8fbff] text-[#10264d] sm:h-11 sm:w-11"
             >
               <Bell size={19} />
 
-              <span className="sr-notification-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#5c86c5]" />
+              <span className="sr-premium-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#315b99]" />
             </button>
 
-            <div
-              className={`mx-0.5 hidden h-8 w-px sm:block ${
-                isDark ? "bg-[#375477]" : "bg-[#dce5f2]"
-              }`}
-            />
+            {/* DIVIDER */}
+            <div className="mx-0.5 hidden h-8 w-px bg-[#e1e8f2] sm:block" />
 
             {/* PROFILE */}
-            <div ref={profileRef} className="relative shrink-0">
+            <div
+              ref={profileRef}
+              className="relative shrink-0"
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -985,41 +1069,31 @@ export default function Header({
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
-                className={`sr-header-control flex items-center gap-1.5 rounded-xl border border-transparent p-0.5 transition sm:gap-2 sm:p-1 ${
-                  isDark
-                    ? "hover:border-[#375477] hover:bg-white/10"
-                    : "hover:border-[#dce5f2] hover:bg-[#f5f8fd]"
+                className={`sr-premium-control flex items-center gap-2 rounded-2xl border p-1 transition-all duration-300 ${
+                  profileOpen
+                    ? "border-[#244d8b] bg-[#eef5ff] shadow-[0_0_0_3px_rgba(36,77,139,0.08)]"
+                    : "border-transparent hover:border-[#dce5f2] hover:bg-[#f5f8fd]"
                 }`}
               >
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold sm:h-10 sm:w-10 lg:h-11 lg:w-11 ${
-                    isDark
-                      ? "bg-white text-[#10264d]"
-                      : "bg-[#10264d] text-white"
-                  }`}
-                >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#10264d] to-[#315b99] text-xs font-extrabold text-white shadow-[0_5px_14px_rgba(16,38,77,0.18)] sm:h-10 sm:w-10">
                   {getInitials(profile.name)}
                 </div>
 
                 <div className="hidden min-w-0 text-left 2xl:block">
-                  <p
-                    className={`max-w-32 truncate text-sm font-bold ${
-                      isDark ? "text-white" : "text-[#10264d]"
-                    }`}
-                  >
+                  <p className="max-w-32 truncate text-sm font-extrabold text-[#10264d]">
                     {profile.name}
                   </p>
 
-                  <p className={`text-[11px] ${mutedClass}`}>
+                  <p className="text-[11px] text-[#8195b2]">
                     {profile.role}
                   </p>
                 </div>
 
                 <ChevronDown
                   size={15}
-                  className={`hidden shrink-0 transition-transform duration-300 sm:block ${
+                  className={`hidden shrink-0 text-[#8195b2] transition-transform duration-300 sm:block ${
                     profileOpen ? "rotate-180" : ""
-                  } ${mutedClass}`}
+                  }`}
                 />
               </button>
 
@@ -1027,14 +1101,12 @@ export default function Header({
               {profileOpen && (
                 <div
                   role="menu"
-                  className={`sr-profile-menu absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-2xl border shadow-[0_20px_55px_rgba(16,38,77,0.18)] ${
-                    isDark
-                      ? "border-[#375477] bg-[#132746]"
-                      : "border-[#dce5f2] bg-white"
-                  }`}
+                  className="sr-premium-dropdown absolute right-0 top-full z-50 mt-3 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-[20px] border border-[#dce5f2] bg-white shadow-[0_20px_55px_rgba(16,38,77,0.16)]"
                 >
-                  <div className="bg-[#10264d] p-4 text-white">
-                    <div className="flex items-center gap-3">
+                  <div className="relative overflow-hidden bg-[#10264d] p-4 text-white">
+                    <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-300/15 blur-2xl" />
+
+                    <div className="relative flex items-center gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-sm font-extrabold">
                         {getInitials(profile.name)}
                       </div>
@@ -1050,7 +1122,7 @@ export default function Header({
                       </div>
                     </div>
 
-                    <p className="mt-3 truncate border-t border-white/15 pt-3 text-[11px] text-blue-100">
+                    <p className="relative mt-3 truncate border-t border-white/15 pt-3 text-[11px] text-blue-100">
                       {profile.email}
                     </p>
                   </div>
@@ -1060,30 +1132,24 @@ export default function Header({
                       type="button"
                       role="menuitem"
                       onClick={openEditProfile}
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${
-                        isDark
-                          ? "text-white hover:bg-white/10"
-                          : "text-[#10264d] hover:bg-[#eaf1fc]"
-                      }`}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:bg-[#eef5ff]"
                     >
                       <Pencil size={17} />
                       Edit Profile
-                      <ChevronRight size={15} className="ml-auto" />
+
+                      <ChevronRight
+                        size={15}
+                        className="ml-auto transition-transform group-hover:translate-x-1"
+                      />
                     </button>
 
-                    <div
-                      className={`my-1 border-t ${
-                        isDark
-                          ? "border-[#375477]"
-                          : "border-[#e7edf6]"
-                      }`}
-                    />
+                    <div className="my-1 border-t border-[#e7edf6]" />
 
                     <button
                       type="button"
                       role="menuitem"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-rose-500 transition hover:bg-rose-500/10"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-rose-500 transition hover:bg-rose-50"
                     >
                       <LogOut size={17} />
                       Logout
@@ -1097,20 +1163,12 @@ export default function Header({
 
         {/* MOBILE SEARCH PANEL */}
         {searchOpen && (
-          <div
-            className={`sr-dropdown-enter border-t px-3 py-3 sm:px-5 xl:hidden ${
-              isDark
-                ? "border-[#375477] bg-[#10264d]"
-                : "border-[#e7edf6] bg-white"
-            }`}
-          >
+          <div className="sr-search-results border-t border-[#e7edf6] bg-white px-3 py-4 sm:px-5 xl:hidden">
             <div className="mx-auto max-w-3xl">
-              <div
-                className={`sr-search-box flex min-w-0 items-center gap-2 rounded-xl border px-3 ${controlClass}`}
-              >
+              <div className="sr-premium-search flex min-w-0 items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-4">
                 <Search
-                  size={18}
-                  className={`shrink-0 ${mutedClass}`}
+                  size={19}
+                  className="sr-search-icon shrink-0 text-[#8195b2]"
                 />
 
                 <input
@@ -1122,11 +1180,7 @@ export default function Header({
                   }
                   placeholder="Search workspace pages..."
                   aria-label="Search workspace pages"
-                  className={`w-full min-w-0 flex-1 bg-transparent py-3 text-sm outline-none ${
-                    isDark
-                      ? "text-white placeholder:text-[#8fa9cb]"
-                      : "text-[#10264d] placeholder:text-[#91a0b4]"
-                  }`}
+                  className="w-full min-w-0 flex-1 bg-transparent py-3.5 text-sm font-medium text-[#10264d] outline-none placeholder:text-[#91a0b4]"
                 />
 
                 {search && (
@@ -1137,14 +1191,14 @@ export default function Header({
                       setSearch("");
                     }}
                     aria-label="Clear search"
-                    className={mutedClass}
+                    className="text-[#8195b2]"
                   >
                     <X size={17} />
                   </button>
                 )}
               </div>
 
-              <SearchResults />
+              <SearchResults mobile />
             </div>
           </div>
         )}
@@ -1156,7 +1210,6 @@ export default function Header({
           profile={profile}
           onClose={() => setEditOpen(false)}
           onSave={saveProfile}
-          theme={theme}
           playSound={playSound}
         />
       )}
