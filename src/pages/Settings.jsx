@@ -849,18 +849,18 @@ export default function Settings() {
       {/* HEADER */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#315b99]">
+          {/* <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#315b99]">
             <SettingsIcon size={15} />
             Studio Administration
-          </div>
+          </div> */}
 
-          <h1 className="text-2xl font-extrabold  text-blue-900 sm:text-3xl">
+          {/* <h1 className="text-2xl font-extrabold  text-blue-900 sm:text-3xl">
             Settings
-          </h1>
+          </h1> */}
 
-          <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+          {/* <p className="mt-2 text-xs text-slate-500 sm:text-sm">
             Manage studio information and team members.
-          </p>
+          </p> */}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

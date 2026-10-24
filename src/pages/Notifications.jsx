@@ -1685,20 +1685,20 @@ export default function Notifications() {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#315b99]">
-            <span className="h-2 w-2 rounded-full bg-[#173d77]" />
-            Studio Raw / Communication
+            {/* <span className="h-2 w-2 rounded-full bg-[#173d77]" />
+            Studio Raw / Communication */}
           </div>
 
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+          {/* <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Notifications
-          </h1>
+          </h1> */}
 
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[#526581]">
+          {/* <p className="mt-2 max-w-xl text-sm leading-6 text-[#526581]">
             Track enquiries, wedding photography,
             wedding videography, bookings,
             customers, videography and deliveries
             in one place.
-          </p>
+          </p> */}
 
           {isDemo && (
             <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#d9e3f2] bg-[#eaf1fc] px-3 py-1 text-xs font-bold text-[#173d77]">
@@ -1709,7 +1709,7 @@ export default function Notifications() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          {/* <button
             type="button"
             onClick={() => {
               setSoundEnabled(
@@ -1722,22 +1722,22 @@ export default function Notifications() {
                 : "Enable Sounds"
             }
             className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9e3f2] bg-white text-[#10264d] shadow-sm hover:bg-[#eaf1fc]"
-          >
-            {soundEnabled ? (
+          > */}
+            {/* {soundEnabled ? (
               <Volume2 size={19} />
             ) : (
               <VolumeX size={19} />
             )}
-          </button>
+          </button> */}
 
-          <button
+          {/* <button
             type="button"
             onClick={resetDemo}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#d9e3f2] bg-white px-4 text-sm font-bold text-[#10264d] shadow-sm hover:bg-[#eaf1fc]"
           >
             <RefreshCw size={17} />
             Reset Demo
-          </button>
+          </button> */}
 
           <button
             type="button"

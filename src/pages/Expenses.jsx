@@ -726,15 +726,15 @@ export default function Expenses() {
     <div className="min-h-screen w-full min-w-0 bg-[#f6f8fc] px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
+          {/* <p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
             Studio Raw / Finance
-          </p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+          </p> */}
+          {/* <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
             Expense &amp; Profit Management
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
+          </h1> */}
+          {/* <p className="mt-2 text-sm text-slate-500">
             Track studio expenses, income and estimated profit.
-          </p>
+          </p> */}
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

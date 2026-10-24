@@ -1372,25 +1372,25 @@ export default function Payments() {
       {/* HEADER */}
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#d6bd87] bg-gradient-to-br from-[#102f62] to-[#1d4c84] text-[#f0dba9] shadow-lg">
+        {/* <div className="flex min-w-0 items-center gap-3"> */}
+          {/* <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#d6bd87] bg-gradient-to-br from-[#102f62] to-[#1d4c84] text-[#f0dba9] shadow-lg">
             <Wallet size={25} />
-          </div>
+          </div> */}
           <div>
             <div className="mb-1 flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#c5a66a]" />
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a47b37]">
+              {/* <span className="h-1.5 w-1.5 rounded-full bg-[#c5a66a]" /> */}
+              {/* <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a47b37]">
                 Studio Raw Picturez
-              </p>
+              </p> */}
             </div>
-            <h1 className="text-xl font-black sm:text-2xl">
+            {/* <h1 className="text-xl font-black sm:text-2xl">
               Payment & Billing
-            </h1>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+            </h1> */}
+            {/* <p className="mt-1 text-xs text-slate-500 sm:text-sm">
               Premium invoices, receipts and customer balances
-            </p>
+            </p> */}
           </div>
-        </div>
+        {/* </div> */}
 
         <div className="flex flex-wrap gap-2 rounded-2xl border border-[#e1e8f2] bg-white p-1.5 shadow-sm">
           {[

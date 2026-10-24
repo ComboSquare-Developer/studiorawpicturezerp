@@ -1660,19 +1660,19 @@ export default function Delivery() {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <span className="sd-label text-[11px] font-bold uppercase tracking-[.2em]">
+            {/* <span className="sd-label text-[11px] font-bold uppercase tracking-[.2em]">
               Studio Raw / Operations
-            </span>
-            <Sparkles size={14} className="text-violet-500" />
+            </span> */}
+            {/* <Sparkles size={14} className="text-violet-500" /> */}
           </div>
 
-          <h1 className="sd-title text-2xl font-black tracking-tight sm:text-3xl">
+          {/* <h1 className="sd-title text-2xl font-black tracking-tight sm:text-3xl">
             Delivery & Photo Selection
-          </h1>
+          </h1> */}
 
-          <p className="sd-muted mt-2 text-xs leading-6 sm:text-sm">
+          {/* <p className="sd-muted mt-2 text-xs leading-6 sm:text-sm">
             Manage client photo selections, follow-ups and final deliveries.
-          </p>
+          </p> */}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
