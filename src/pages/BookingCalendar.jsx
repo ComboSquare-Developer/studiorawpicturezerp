@@ -2593,7 +2593,7 @@ export default function BookingCalendar() {
                       />
                     </FormField>
 
-                    <FormField label="Photography Package">
+                    {/* <FormField label="Photography Package">
                       <CustomDropdown
                         value={form.package}
                         options={packages}
@@ -2604,7 +2604,7 @@ export default function BookingCalendar() {
                           )
                         }
                       />
-                    </FormField>
+                    </FormField> */}
 
                     <FormField label="Booking Status">
                       <CustomDropdown
