@@ -1,7 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Settings as SettingsIcon,
   Building2,
   Save,
   Phone,
@@ -12,8 +11,6 @@ import {
   AlertCircle,
   FileText,
   Camera,
-  Sparkles,
-  Aperture,
   RotateCcw,
 } from "lucide-react";
 
@@ -70,223 +67,38 @@ function readStudioSettings() {
 }
 
 /* ==========================================
-   DESIGN STYLES
+   STYLES
 ========================================== */
 
 const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#cbd8ea] bg-white px-3.5 py-3 text-[13px] font-bold text-[#10264d] outline-none transition-all duration-300 placeholder:text-[#526581] hover:border-[#8cadd3] focus:border-[#10264d] focus:ring-4 focus:ring-[#e2edfb]";
+  "block w-full min-w-0 rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-3 text-[13px] font-semibold text-[#334155] outline-none transition-colors duration-200 placeholder:text-[#94a3b8] hover:border-[#cbd5e1] focus:border-[#a78bfa] focus:ring-4 focus:ring-[#f3e8ff]";
 
 const PAGE_CSS = `
   .sr-settings {
     color-scheme: light;
-    isolation: isolate;
-    color: #10264d;
+    color: #334155;
     min-height: 100%;
     overflow-x: hidden;
-    overflow-y: visible;
   }
 
   .sr-settings input,
   .sr-settings textarea {
     color-scheme: light !important;
-    color: #10264d !important;
-    -webkit-text-fill-color: #10264d;
-    caret-color: #10264d;
+    color: #334155 !important;
+    -webkit-text-fill-color: #334155;
+    caret-color: #334155;
   }
 
   .sr-settings input::placeholder,
   .sr-settings textarea::placeholder {
-    color: #526581 !important;
+    color: #94a3b8 !important;
     opacity: 1;
   }
 
   .sr-settings label {
-    color: #10264d !important;
-  }
-
-  @keyframes srEnter {
-    from {
-      opacity: 0;
-      transform: translateY(16px) scale(.985);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes srFloat {
-    0%, 100% {
-      transform: translate3d(0,0,0) rotate(-8deg);
-    }
-    50% {
-      transform: translate3d(0,-14px,12px) rotate(8deg);
-    }
-  }
-
-  @keyframes srOrbit {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes srPulse {
-    0%, 100% {
-      opacity: .5;
-      transform: scale(.95);
-    }
-    50% {
-      opacity: .85;
-      transform: scale(1.05);
-    }
-  }
-
-  @keyframes srShine {
-    from {
-      transform: translateX(-150%) skewX(-22deg);
-    }
-    to {
-      transform: translateX(350%) skewX(-22deg);
-    }
-  }
-
-  .sr-enter {
-    animation: srEnter .6s cubic-bezier(.22,1,.36,1) both;
-  }
-
-  .sr-float {
-    animation: srFloat 7s ease-in-out infinite;
-  }
-
-  .sr-orbit {
-    animation: srOrbit 22s linear infinite;
-  }
-
-  .sr-pulse {
-    animation: srPulse 5s ease-in-out infinite;
-  }
-
-  .sr-glass {
-    background: rgba(255,255,255,.97);
-    backdrop-filter: blur(14px);
-  }
-
-  .sr-tilt {
-    transform-style: preserve-3d;
-    transition:
-      transform .2s ease-out,
-      box-shadow .3s ease;
-  }
-
-  .sr-tilt-content {
-    transform: translateZ(10px);
-  }
-
-  .sr-shine {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .sr-shine::after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -40%;
-    width: 35%;
-    height: 200%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255,255,255,.2),
-      transparent
-    );
-    transform: translateX(-150%) skewX(-22deg);
-    pointer-events: none;
-  }
-
-  .sr-shine:hover::after {
-    animation: srShine .75s ease-out;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sr-enter,
-    .sr-float,
-    .sr-orbit,
-    .sr-pulse {
-      animation: none !important;
-    }
-
-    .sr-tilt {
-      transform: none !important;
-    }
-
-    html {
-      scroll-behavior: auto;
-    }
+    color: #475569;
   }
 `;
-
-/* ==========================================
-   3D TILT CARD
-========================================== */
-
-function TiltCard({ children, className = "" }) {
-  const cardRef = useRef(null);
-
-  const handleMove = (event) => {
-    if (!cardRef.current) return;
-
-    if (
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches
-    ) {
-      return;
-    }
-
-    if (
-      window.matchMedia("(pointer: coarse)").matches
-    ) {
-      return;
-    }
-
-    const rect =
-      cardRef.current.getBoundingClientRect();
-
-    const x =
-      (event.clientX - rect.left) / rect.width;
-
-    const y =
-      (event.clientY - rect.top) / rect.height;
-
-    const rotateY = (x - 0.5) * 4;
-    const rotateX = (0.5 - y) * 4;
-
-    cardRef.current.style.transform =
-      `perspective(1100px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-  };
-
-  const reset = () => {
-    if (!cardRef.current) return;
-
-    cardRef.current.style.transform =
-      "perspective(1100px) rotateX(0deg) rotateY(0deg)";
-  };
-
-  return (
-    <div
-      ref={cardRef}
-      onMouseMove={handleMove}
-      onMouseLeave={reset}
-      className={`sr-tilt ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
 
 /* ==========================================
    INPUT FIELD
@@ -300,23 +112,26 @@ function Field({
   type = "text",
   required = false,
   maxLength,
+  iconColor = "text-violet-500",
+  iconBg = "bg-violet-50",
 }) {
   return (
     <div className="min-w-0">
-      <label className="mb-1.5 flex items-center gap-1 text-[11px] font-extrabold text-[#10264d]">
+      <label className="mb-2 flex items-center gap-1 text-[12px] font-bold text-slate-600">
         {label}
 
         {required && (
-          <span className="text-rose-600">*</span>
+          <span className="text-rose-500">*</span>
         )}
       </label>
 
       <div className="relative">
         {Icon && (
-          <Icon
-            size={15}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#244d8b]"
-          />
+          <div
+            className={`pointer-events-none absolute left-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}
+          >
+            <Icon size={15} />
+          </div>
         )}
 
         <input
@@ -329,9 +144,41 @@ function Field({
           maxLength={maxLength}
           placeholder={label}
           className={`${inputClass} ${
-            Icon ? "pl-9" : ""
+            Icon ? "pl-12" : ""
           }`}
         />
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================
+   SECTION HEADING
+========================================== */
+
+function SectionHeading({
+  icon: Icon,
+  title,
+  subtitle,
+  iconBg,
+  iconColor,
+}) {
+  return (
+    <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg} ${iconColor}`}
+      >
+        <Icon size={20} />
+      </div>
+
+      <div>
+        <h3 className="text-sm font-extrabold text-[#334155]">
+          {title}
+        </h3>
+
+        <p className="mt-1 text-[11px] font-medium text-slate-400">
+          {subtitle}
+        </p>
       </div>
     </div>
   );
@@ -469,42 +316,29 @@ export default function Settings() {
   };
 
   return (
-    <div className="sr-settings relative w-full min-w-0 bg-[#f4f8fe] px-3 py-4 text-[#10264d] sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+    <div className="sr-settings min-h-screen w-full min-w-0 bg-[#f8faff] px-3 py-5 sm:px-6 lg:px-8">
       <style>{PAGE_CSS}</style>
 
-      {/* ANIMATED BACKGROUND */}
+      <div className="mx-auto max-w-[1450px] space-y-5">
 
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="sr-pulse absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#dceaff] opacity-60 blur-3xl" />
+        {/* MINIMAL HEADER */}
 
-        <div className="sr-pulse absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-[#d5e6ff] opacity-50 blur-3xl" />
-
-        <div className="sr-float absolute right-[8%] top-[14%] hidden h-24 w-24 rounded-[28px] border border-[#c8dcf5] bg-white/40 shadow-[12px_20px_35px_rgba(16,38,77,.08)] lg:block" />
-
-        <div className="sr-float absolute bottom-[10%] left-[4%] hidden h-16 w-16 rounded-2xl border border-[#bdd6f5] bg-[#dfeeff]/60 shadow-lg lg:block" />
-
-        <div className="sr-orbit absolute right-[18%] top-[25%] hidden h-48 w-48 rounded-full border border-dashed border-[#b6cdeb]/70 lg:block" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-[1450px]">
-        {/* HEADER */}
-
-        <div className="sr-enter mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#10264d]">
-              {/* <SettingsIcon size={14} />
-              Studio Administration */}
+        <div className="rounded-[22px] border border-[#e8eaf3] bg-white px-5 py-5 shadow-sm sm:px-7 sm:py-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f3e8ff] text-[#9333ea]">
+              <Building2 size={23} />
             </div>
 
-            {/* <h1 className="mt-1 text-xl font-black tracking-tight text-[#10264d] sm:text-2xl">
-              Studio Settings
-            </h1> */}
-          </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-extrabold tracking-tight text-[#334155] sm:text-2xl">
+                Studio Settings
+              </h1>
 
-          {/* <div className="flex items-center gap-2 rounded-xl border border-[#d5e2f3] bg-white px-3 py-2 text-[11px] font-extrabold text-[#10264d] shadow-sm">
-            {/* <ShieldCheck size={16} /> */}
-            {/* Studio Raw Picturez ERP */} 
-          {/* </div> */}
+              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                Manage your studio information and business preferences.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* STATUS MESSAGE */}
@@ -512,16 +346,16 @@ export default function Settings() {
         {(savedMessage || error) && (
           <div
             role="status"
-            className={`sr-enter mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold ${
+            className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold ${
               error
-                ? "border-rose-200 bg-rose-50 text-rose-800"
-                : "border-[#cbdcf1] bg-white text-[#10264d]"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
             }`}
           >
             {error ? (
-              <AlertCircle size={16} />
+              <AlertCircle size={17} />
             ) : (
-              <CheckCircle2 size={16} />
+              <CheckCircle2 size={17} />
             )}
 
             {error || savedMessage}
@@ -530,238 +364,226 @@ export default function Settings() {
 
         {/* MAIN FORM */}
 
-        <form onSubmit={saveStudio} className="sr-enter">
-          <div className="sr-glass overflow-hidden rounded-[24px] border border-[#d8e5f5] shadow-[0_14px_45px_rgba(16,38,77,.08)]">
-            {/* HEADER BANNER */}
+        <form
+          onSubmit={saveStudio}
+          className="overflow-hidden rounded-[24px] border border-[#e8eaf3] bg-white shadow-[0_8px_35px_rgba(30,41,59,0.04)]"
+        >
+          {/* FORM HEADER */}
 
-            <div className="relative overflow-hidden bg-gradient-to-r from-[#10264d] to-[#244d8b] px-5 py-5 text-white sm:px-6">
-              <div className="pointer-events-none absolute -right-4 -top-12 h-36 w-36 rounded-full border-[20px] border-white/10" />
+          <div className="flex items-center gap-3 border-b border-[#edf0f5] bg-white px-5 py-5 sm:px-7">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e0f2fe] text-[#0284c7]">
+              <Camera size={21} />
+            </div>
 
-              <div className="pointer-events-none absolute right-28 top-0 h-28 w-28 rounded-full border border-white/15" />
+            <div>
+              <h2 className="text-base font-extrabold text-[#334155]">
+                Studio Information
+              </h2>
 
-              <div className="relative flex items-center gap-3">
-                <div className="sr-float flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 shadow-lg">
-                  <Aperture size={23} />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Update your business profile and studio details.
+              </p>
+            </div>
+          </div>
+
+          {/* FORM CONTENT */}
+
+          <div className="grid grid-cols-1 gap-5 p-4 sm:p-6 lg:grid-cols-12">
+
+            {/* LEFT PANEL */}
+
+            <section className="rounded-[20px] border border-[#e8eaf3] bg-white p-4 sm:p-5 lg:col-span-7">
+              <SectionHeading
+                icon={Building2}
+                title="Business & Contact Details"
+                subtitle="Primary studio information"
+                iconBg="bg-[#f3e8ff]"
+                iconColor="text-[#9333ea]"
+              />
+
+              <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+                <Field
+                  label="Studio Name"
+                  value={studio.name}
+                  onChange={(value) =>
+                    updateStudio("name", value)
+                  }
+                  icon={Building2}
+                  required
+                  iconBg="bg-violet-50"
+                  iconColor="text-violet-500"
+                />
+
+                <Field
+                  label="Email Address"
+                  value={studio.email}
+                  onChange={(value) =>
+                    updateStudio("email", value)
+                  }
+                  icon={Mail}
+                  type="email"
+                  iconBg="bg-sky-50"
+                  iconColor="text-sky-500"
+                />
+
+                <Field
+                  label="Phone Number"
+                  value={studio.phone}
+                  onChange={(value) =>
+                    updateStudio("phone", value)
+                  }
+                  icon={Phone}
+                  type="tel"
+                  maxLength={10}
+                  iconBg="bg-emerald-50"
+                  iconColor="text-emerald-500"
+                />
+
+                <Field
+                  label="WhatsApp Number"
+                  value={studio.whatsapp}
+                  onChange={(value) =>
+                    updateStudio("whatsapp", value)
+                  }
+                  icon={Phone}
+                  type="tel"
+                  maxLength={10}
+                  iconBg="bg-teal-50"
+                  iconColor="text-teal-500"
+                />
+
+                <div className="sm:col-span-2">
+                  <Field
+                    label="Studio Address"
+                    value={studio.address}
+                    onChange={(value) =>
+                      updateStudio("address", value)
+                    }
+                    icon={MapPin}
+                    iconBg="bg-orange-50"
+                    iconColor="text-orange-500"
+                  />
                 </div>
 
-                <div className="min-w-0">
-                  <h2 className="text-base font-black text-white sm:text-lg">
-                    Studio Information
-                  </h2>
+                <Field
+                  label="City"
+                  value={studio.city}
+                  onChange={(value) =>
+                    updateStudio("city", value)
+                  }
+                  icon={MapPin}
+                  iconBg="bg-pink-50"
+                  iconColor="text-pink-500"
+                />
 
-                  <p className="mt-1 text-[11px] font-semibold text-white">
-                    Manage your business profile and studio details.
-                  </p>
-                </div>
-
-                <Sparkles
-                  size={20}
-                  className="ml-auto hidden text-white sm:block"
+                <Field
+                  label="State"
+                  value={studio.state}
+                  onChange={(value) =>
+                    updateStudio("state", value)
+                  }
+                  icon={MapPin}
+                  iconBg="bg-amber-50"
+                  iconColor="text-amber-500"
                 />
               </div>
-            </div>
+            </section>
 
-            {/* CONTENT */}
+            {/* RIGHT PANEL */}
 
-            <div className="grid grid-cols-1 gap-4 p-3 sm:p-5 lg:grid-cols-12 lg:gap-5">
-              {/* LEFT PANEL */}
+            <section className="flex flex-col rounded-[20px] border border-[#e8eaf3] bg-white p-4 sm:p-5 lg:col-span-5">
+              <SectionHeading
+                icon={FileText}
+                title="Business Preferences"
+                subtitle="Tax and studio description"
+                iconBg="bg-[#fff1e6]"
+                iconColor="text-[#ea580c]"
+              />
 
-              <TiltCard className="rounded-2xl border border-[#dce5f2] bg-white p-4 shadow-sm lg:col-span-7">
-                <div className="sr-tilt-content">
-                  <div className="mb-4 flex items-center gap-2 border-b border-[#e8eef7] pb-3">
-                    <div className="rounded-lg bg-[#eaf1fc] p-2 text-[#10264d]">
-                      <Building2 size={17} />
-                    </div>
+              <Field
+                label="GST Number"
+                value={studio.gst}
+                onChange={(value) =>
+                  updateStudio("gst", value)
+                }
+                icon={FileText}
+                iconBg="bg-orange-50"
+                iconColor="text-orange-500"
+              />
 
-                    <div>
-                      <h3 className="text-xs font-black text-[#10264d] sm:text-sm">
-                        Business & Contact Details
-                      </h3>
+              <div className="mt-5 flex flex-1 flex-col">
+                <label className="mb-2 text-[12px] font-bold text-slate-600">
+                  Studio Description
+                </label>
 
-                      <p className="text-[10px] font-bold text-[#10264d]">
-                        Primary studio information
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
-                    <Field
-                      label="Studio Name"
-                      value={studio.name}
-                      onChange={(value) =>
-                        updateStudio("name", value)
-                      }
-                      icon={Building2}
-                      required
-                    />
-
-                    <Field
-                      label="Email Address"
-                      value={studio.email}
-                      onChange={(value) =>
-                        updateStudio("email", value)
-                      }
-                      icon={Mail}
-                      type="email"
-                    />
-
-                    <Field
-                      label="Phone Number"
-                      value={studio.phone}
-                      onChange={(value) =>
-                        updateStudio("phone", value)
-                      }
-                      icon={Phone}
-                      type="tel"
-                      maxLength={10}
-                    />
-
-                    <Field
-                      label="WhatsApp Number"
-                      value={studio.whatsapp}
-                      onChange={(value) =>
-                        updateStudio("whatsapp", value)
-                      }
-                      icon={Phone}
-                      type="tel"
-                      maxLength={10}
-                    />
-
-                    <div className="sm:col-span-2">
-                      <Field
-                        label="Studio Address"
-                        value={studio.address}
-                        onChange={(value) =>
-                          updateStudio("address", value)
-                        }
-                        icon={MapPin}
-                      />
-                    </div>
-
-                    <Field
-                      label="City"
-                      value={studio.city}
-                      onChange={(value) =>
-                        updateStudio("city", value)
-                      }
-                      icon={MapPin}
-                    />
-
-                    <Field
-                      label="State"
-                      value={studio.state}
-                      onChange={(value) =>
-                        updateStudio("state", value)
-                      }
-                      icon={MapPin}
-                    />
-                  </div>
-                </div>
-              </TiltCard>
-
-              {/* RIGHT PANEL */}
-
-              <TiltCard className="flex flex-col rounded-2xl border border-[#dce5f2] bg-white p-4 shadow-sm lg:col-span-5">
-                <div className="sr-tilt-content flex h-full flex-col">
-                  <div className="mb-4 flex items-center gap-2 border-b border-[#e8eef7] pb-3">
-                    <div className="rounded-lg bg-[#eaf1fc] p-2 text-[#10264d]">
-                      <FileText size={17} />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xs font-black text-[#10264d] sm:text-sm">
-                        Business Preferences
-                      </h3>
-
-                      <p className="text-[10px] font-bold text-[#10264d]">
-                        Tax and studio description
-                      </p>
-                    </div>
-                  </div>
-
-                  <Field
-                    label="GST Number"
-                    value={studio.gst}
-                    onChange={(value) =>
-                      updateStudio("gst", value)
-                    }
-                    icon={FileText}
-                  />
-
-                  <div className="mt-4 flex flex-1 flex-col">
-                    <label className="mb-1.5 text-[11px] font-extrabold text-[#10264d]">
-                      Studio Description
-                    </label>
-
-                    <textarea
-                      rows={5}
-                      value={studio.description}
-                      onChange={(event) =>
-                        updateStudio(
-                          "description",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter studio description"
-                      className={`${inputClass} min-h-[120px] resize-y`}
-                    />
-                  </div>
-
-                  {/* 3D DECORATION */}
-
-                  <div className="relative mt-4 hidden min-h-[100px] overflow-hidden rounded-xl border border-[#dce8f8] bg-gradient-to-r from-[#eef5ff] to-white p-4 xl:block">
-                    <div className="relative z-10 flex items-center gap-3">
-                      <div className="sr-float flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#10264d] text-white shadow-[6px_8px_15px_rgba(16,38,77,.2)]">
-                        <Camera size={23} />
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-black text-[#10264d]">
-                          Studio Raw Picturez
-                        </p>
-
-                        <p className="mt-1 text-[10px] font-bold text-[#10264d]">
-                          Creative Studio Management
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="sr-orbit pointer-events-none absolute -right-7 -top-12 h-32 w-32 rounded-full border-[12px] border-[#d4e4f9]" />
-                  </div>
-                </div>
-              </TiltCard>
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e1eaf6] bg-white px-4 py-4 sm:px-6">
-              <div className="flex items-center gap-2 text-[11px] font-bold text-[#10264d]">
-                <ShieldCheck size={15} />
-                Settings saved locally in your browser
+                <textarea
+                  rows={6}
+                  value={studio.description}
+                  onChange={(event) =>
+                    updateStudio(
+                      "description",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Enter studio description"
+                  className={`${inputClass} min-h-[145px] resize-y`}
+                />
               </div>
 
-              <div className="flex w-full gap-2 sm:w-auto">
-                <button
-                  type="button"
-                  onClick={restoreSaved}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#d5e2f3] bg-white px-4 py-3 text-xs font-extrabold text-[#10264d] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#eaf1fc] sm:flex-none"
-                >
-                  <RotateCcw size={15} />
-                  Reset Changes
-                </button>
+              {/* STUDIO INFO */}
 
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="sr-shine inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-extrabold text-white shadow-[0_5px_15px_rgba(16,38,77,.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#244d8b] hover:shadow-lg disabled:opacity-60 sm:flex-none"
-                >
-                  <Save size={16} />
+              <div className="mt-5 rounded-2xl border border-[#e9e5fb] bg-[#faf7ff] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ede9fe] text-[#8b5cf6]">
+                    <Camera size={21} />
+                  </div>
 
-                  {saving
-                    ? "Saving..."
-                    : "Save Settings"}
-                </button>
+                  <div>
+                    <p className="text-xs font-extrabold text-[#475569]">
+                      Studio Raw Picturez
+                    </p>
+
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Creative Studio Management
+                    </p>
+                  </div>
+                </div>
               </div>
+            </section>
+          </div>
+
+          {/* FOOTER */}
+
+          <div className="flex flex-col gap-4 border-t border-[#edf0f5] bg-[#fcfdff] px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+              <ShieldCheck
+                size={16}
+                className="text-emerald-500"
+              />
+              Settings saved locally in your browser
+            </div>
+
+            <div className="flex w-full gap-3 sm:w-auto">
+              <button
+                type="button"
+                onClick={restoreSaved}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-4 py-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 sm:flex-none"
+              >
+                <RotateCcw size={15} />
+                Reset Changes
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#7c3aed] disabled:opacity-60 sm:flex-none"
+              >
+                <Save size={16} />
+
+                {saving
+                  ? "Saving..."
+                  : "Save Settings"}
+              </button>
             </div>
           </div>
         </form>

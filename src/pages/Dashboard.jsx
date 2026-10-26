@@ -15,7 +15,6 @@ import {
   RefreshCw,
   ChartNoAxesCombined,
   CircleGauge,
-  Sparkles,
 } from "lucide-react";
 
 /* ==========================================
@@ -46,11 +45,9 @@ const UPDATE_EVENT = "studioraw:data-updated";
 function readArray(key) {
   try {
     const raw = localStorage.getItem(key);
-
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
-
     if (Array.isArray(parsed)) return parsed;
 
     if (parsed && typeof parsed === "object") {
@@ -179,10 +176,6 @@ function paymentTransactions(payment) {
     .find(Array.isArray);
 
   /*
-   * FIX:
-   * Empty transactions array should not block
-   * legacy advance payment calculation.
-   *
    * When transactions exist, they are the source
    * of truth. Advance is NOT added separately.
    */
@@ -224,8 +217,7 @@ function paymentTransactions(payment) {
   }
 
   /*
-   * LEGACY PAYMENT FALLBACK:
-   * Supports older invoice records.
+   * LEGACY PAYMENT FALLBACK
    */
 
   const received = Math.max(
@@ -325,7 +317,6 @@ function parseDate(value) {
   }
 
   const raw = String(value).trim();
-
   let date;
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
@@ -356,7 +347,6 @@ function dateKey(date) {
 
 function formatDate(value) {
   const date = parseDate(value);
-
   if (!date) return "Not scheduled";
 
   return date.toLocaleDateString("en-IN", {
@@ -426,7 +416,6 @@ function AnimatedNumber({
     }
 
     const start = performance.now();
-
     let frame;
 
     function animate(now) {
@@ -844,7 +833,6 @@ function RevenueLineChart({
       paymentTransactions(payment).forEach(
         (transaction) => {
           const date = parseDate(transaction.date);
-
           if (!date) return;
 
           const bucket = buckets.find(
@@ -1151,7 +1139,6 @@ function SalesGauge({
 
   useEffect(() => {
     let frame;
-
     const start = performance.now();
 
     function animate(now) {
@@ -1754,8 +1741,6 @@ export default function Dashboard() {
 
   /* ========================================
      MONTHLY CHART
-     BOOKINGS = EVENT DATE
-     REVENUE = PAYMENT TRANSACTION DATE
   ======================================== */
 
   const monthlyChart = useMemo(() => {
@@ -1765,7 +1750,6 @@ export default function Dashboard() {
         const date = new Date();
 
         date.setDate(1);
-
         date.setMonth(
           date.getMonth() - (5 - index)
         );
@@ -1807,7 +1791,6 @@ export default function Dashboard() {
       paymentTransactions(payment).forEach(
         (transaction) => {
           const date = parseDate(transaction.date);
-
           if (!date) return;
 
           const month = months.find(
@@ -1846,56 +1829,48 @@ export default function Dashboard() {
       icon: Users,
       subtitle: "Registered customers",
     },
-
     {
       title: "Total Enquiries",
       value: stats.enquiries,
       icon: MessageSquare,
       subtitle: "Customer enquiries",
     },
-
     {
       title: "Total Bookings",
       value: stats.bookings,
       icon: CalendarDays,
       subtitle: "Studio bookings",
     },
-
     {
       title: "Amount Received",
       value: stats.paid,
       icon: IndianRupee,
       subtitle: "Recorded payments",
     },
-
     {
       title: "Pending Balance",
       value: stats.pending,
       icon: Wallet,
       subtitle: "Outstanding amount",
     },
-
     {
       title: "Photo Shoots",
       value: stats.shoots,
       icon: Camera,
       subtitle: "Recorded shoots",
     },
-
     {
       title: "Editing Pending",
       value: stats.editingPending,
       icon: Images,
       subtitle: "Editing not completed",
     },
-
     {
       title: "Album Projects",
       value: stats.albumsPending,
       icon: BookOpen,
       subtitle: "Not yet printed",
     },
-
     {
       title: "Pending Deliveries",
       value: stats.deliveriesPending,
@@ -1908,9 +1883,7 @@ export default function Dashboard() {
     <div className="sr-dashboard-premium min-h-screen w-full min-w-0 max-w-full overflow-x-hidden px-3 py-5 text-[#10264d] sm:px-6 lg:px-8 lg:py-8">
       <style>{`
 
-        /* ==========================================
-           DASHBOARD BACKGROUND
-        ========================================== */
+        /* DASHBOARD BACKGROUND */
 
         .sr-dashboard-premium {
           color-scheme: light;
@@ -1935,9 +1908,7 @@ export default function Dashboard() {
             );
         }
 
-        /* ==========================================
-           PASTEL 3D HEADER
-        ========================================== */
+        /* PASTEL 3D HEADER */
 
         .sr-dashboard-premium .sr-gradient-animated {
           position: relative;
@@ -2054,9 +2025,7 @@ export default function Dashboard() {
             0 6px 15px rgba(140,105,160,.10);
         }
 
-        /* ==========================================
-           PREMIUM CARDS
-        ========================================== */
+        /* PREMIUM CARDS */
 
         .sr-dashboard-premium .sr-premium-card {
           background:
@@ -2091,9 +2060,7 @@ export default function Dashboard() {
             );
         }
 
-        /* ==========================================
-           ANIMATIONS - NO AUTOMATIC SOUND
-        ========================================== */
+        /* ANIMATIONS - NO AUTOMATIC SOUND */
 
         @keyframes srRotate {
           from {
@@ -2263,20 +2230,12 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* PREMIUM HEADER */}
+      {/* PREMIUM HEADER - STAR & BUSINESS OVERVIEW REMOVED */}
 
       <ScrollReveal className="mb-7">
         <div className="sr-gradient-animated relative overflow-hidden rounded-[28px] p-5 sm:p-8">
           <div className="relative flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <div className="sr-hero-badge mb-4 flex w-fit items-center gap-2 rounded-full px-3 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-
-                <span className="text-[11px] font-bold text-[#756d85]">
-                  Business Overview
-                </span>
-              </div>
-
               <h2 className="mt-3 text-xl font-extrabold text-[#4a435e] sm:text-2xl lg:text-3xl">
                 Manage Your Studio Smarter
               </h2>
@@ -2287,10 +2246,6 @@ export default function Dashboard() {
                 deliveries from one beautifully
                 connected dashboard.
               </p>
-            </div>
-
-            <div className="sr-hero-icon hidden rounded-2xl p-5 sm:block">
-              <Sparkles size={36} />
             </div>
           </div>
 

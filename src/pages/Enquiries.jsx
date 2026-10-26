@@ -296,7 +296,6 @@ function cleanEnquiry(item) {
     return null;
   }
 
-  // Keep existing fields except the removed function field.
   const { function: removedFunction, ...rest } = item;
 
   return rest;
@@ -378,7 +377,7 @@ const inputClass =
 
 /* =========================================
    SCROLL REVEAL
-   ANIMATES EVERY TIME ELEMENT ENTERS VIEW
+   PAGE CARDS ANIMATION UNCHANGED
 ========================================= */
 
 function useScrollReveal(containerRef, dependencies = []) {
@@ -432,49 +431,30 @@ function useScrollReveal(containerRef, dependencies = []) {
 
 /* =========================================
    ANIMATION STYLES
+   FORM 3D ANIMATION REMOVED
 ========================================= */
 
 function EnquiryAnimations() {
   return (
     <style>{`
-      @keyframes enquiryModalIn {
-        from {
-          opacity: 0;
-          transform: perspective(1100px)
-            translateY(24px)
-            rotateX(6deg)
-            scale(0.96);
-        }
-        to {
-          opacity: 1;
-          transform: perspective(1100px)
-            translateY(0)
-            rotateX(0)
-            scale(1);
-        }
-      }
-
-      @keyframes enquiry3DEnter {
-        from {
-          opacity: 0;
-          transform: perspective(1100px)
-            translateY(35px)
-            rotateX(9deg)
-            scale(0.96);
-        }
-        to {
-          opacity: 1;
-          transform: perspective(1100px)
-            translateY(0)
-            rotateX(0)
-            scale(1);
-        }
-      }
+      /* NORMAL FORM - NO 3D ANIMATION */
 
       .enquiry-modal {
-        animation: enquiryModalIn 0.4s
-          cubic-bezier(0.22,1,0.36,1) both;
+        animation: none !important;
+        transform: none !important;
       }
+
+      .enquiry-form-field {
+        animation: none !important;
+        transform: none !important;
+        transition: none !important;
+      }
+
+      .enquiry-form-field:hover {
+        transform: none !important;
+      }
+
+      /* PAGE CARD ANIMATIONS UNCHANGED */
 
       [data-enquiry-reveal] {
         opacity: 0;
@@ -483,11 +463,13 @@ function EnquiryAnimations() {
           rotateX(9deg)
           scale(0.96);
         transform-origin: center center;
+
         transition:
           opacity 0.6s ease,
           transform 0.65s
             cubic-bezier(0.22,1,0.36,1),
           box-shadow 0.3s ease;
+
         transition-delay: var(--reveal-delay, 0ms);
       }
 
@@ -504,34 +486,19 @@ function EnquiryAnimations() {
           translateY(-5px)
           rotateX(2deg)
           rotateY(-1deg);
+
         box-shadow:
           0 16px 30px rgba(16,43,83,0.11);
       }
 
-      .enquiry-form-field {
-        animation: enquiry3DEnter 0.55s ease both;
-        animation-delay: var(--field-delay, 0ms);
-      }
-
-      .enquiry-form-field:hover {
-        transform: translateY(-2px);
-        transition: transform 0.25s ease;
-      }
-
       @media (prefers-reduced-motion: reduce) {
-        .enquiry-modal,
-        .enquiry-form-field {
-          animation: none !important;
-        }
-
         [data-enquiry-reveal] {
           opacity: 1 !important;
           transform: none !important;
           transition: none !important;
         }
 
-        [data-enquiry-reveal]:hover,
-        .enquiry-form-field:hover {
+        [data-enquiry-reveal]:hover {
           transform: none !important;
         }
       }
@@ -617,7 +584,7 @@ function StatusBadge({ status }) {
 }
 
 /* =========================================
-   MODAL
+   MODAL - NORMAL STYLE
 ========================================= */
 
 function Modal({
@@ -681,7 +648,7 @@ function Modal({
 }
 
 /* =========================================
-   FORM FIELD
+   FORM FIELD - NO 3D
 ========================================= */
 
 function FormField({
@@ -698,12 +665,7 @@ function FormField({
   index = 0,
 }) {
   return (
-    <label
-      className="enquiry-form-field block space-y-2.5"
-      style={{
-        "--field-delay": `${index * 45}ms`,
-      }}
-    >
+    <label className="enquiry-form-field block space-y-2.5">
       <span className="flex items-center gap-2 text-xs font-bold text-[#30496c]">
         {Icon && (
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#3970ad]">
@@ -770,6 +732,7 @@ function FormField({
 
 /* =========================================
    ADD ENQUIRY MODAL
+   NORMAL FORM - NO ANIMATION
 ========================================= */
 
 function AddEnquiryModal({
@@ -781,46 +744,6 @@ function AddEnquiryModal({
   });
 
   const [errors, setErrors] = useState({});
-
-  const scrollRef = useRef(null);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-
-    const fields = root.querySelectorAll(
-      ".enquiry-form-field"
-    );
-
-    if (
-      !("IntersectionObserver" in window) ||
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-      ).matches
-    ) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.style.animation = "none";
-            void entry.target.offsetWidth;
-            entry.target.style.animation = "";
-          }
-        });
-      },
-      {
-        root,
-        threshold: 0.3,
-      }
-    );
-
-    fields.forEach((field) => observer.observe(field));
-
-    return () => observer.disconnect();
-  }, []);
 
   const change = (event) => {
     const { name, value } = event.target;
@@ -904,10 +827,7 @@ function AddEnquiryModal({
         onSubmit={submit}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div
-          ref={scrollRef}
-          className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f9fbff] px-5 py-6 sm:px-7"
-        >
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f9fbff] px-5 py-6 sm:px-7">
           <FormField
             index={0}
             label="Customer Name"
@@ -1004,12 +924,7 @@ function AddEnquiryModal({
             options={statusOptions}
           />
 
-          <label
-            className="enquiry-form-field block space-y-2.5"
-            style={{
-              "--field-delay": "405ms",
-            }}
-          >
+          <label className="enquiry-form-field block space-y-2.5">
             <span className="flex items-center gap-2 text-xs font-bold text-[#30496c]">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#3970ad]">
                 <FileText size={14} />

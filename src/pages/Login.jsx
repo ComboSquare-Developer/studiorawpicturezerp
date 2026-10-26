@@ -14,13 +14,59 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const LOGO = "/assets/favicon.png";
+/* ==========================================
+   LOGO
+========================================== */
+
+const LOGO = "/favicon.png";
+const FALLBACK_LOGO = "/assets/favicon.png";
+
+function StudioLogo({ className = "" }) {
+  const [logoSrc, setLogoSrc] = useState(LOGO);
+  const [logoError, setLogoError] = useState(false);
+
+  const handleLogoError = () => {
+    if (logoSrc !== FALLBACK_LOGO) {
+      setLogoSrc(FALLBACK_LOGO);
+    } else {
+      setLogoError(true);
+    }
+  };
+
+  if (logoError) {
+    return (
+      <div
+        className={`flex shrink-0 items-center justify-center rounded-xl bg-[#e9d5b0] text-[#102b53] ${className}`}
+        aria-label="Studio Raw Picturez"
+      >
+        <span className="text-sm font-black">SR</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={logoSrc}
+      alt="Studio Raw Picturez Logo"
+      onError={handleLogoError}
+      className={`shrink-0 object-contain ${className}`}
+    />
+  );
+}
+
+/* ==========================================
+   FEATURES
+========================================== */
 
 const features = [
   { icon: CalendarDays, title: "Bookings" },
   { icon: UsersRound, title: "Clients & Team" },
   { icon: ChartNoAxesCombined, title: "Analytics" },
 ];
+
+/* ==========================================
+   LOGIN PAGE
+========================================== */
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -50,19 +96,18 @@ export default function Login({ onLogin }) {
     >
       <div className="flex h-full w-full">
 
-        {/* LEFT BRAND SECTION */}
+        {/* ==========================================
+            LEFT BRAND SECTION
+        ========================================== */}
+
         <section className="relative hidden h-full w-[52%] flex-col justify-between overflow-hidden bg-[#0b1f3a] px-9 py-6 text-white lg:flex xl:px-14 xl:py-8 2xl:px-16">
 
-          {/* Brand Header */}
+          {/* BRAND HEADER */}
+
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-3">
 
-              {/* Studio Logo */}
-              <img
-                src="/favicon.png"
-                alt="Studio Raw Picturez Logo"
-                className="h-12 w-12 shrink-0 object-contain"
-              />
+              <StudioLogo className="h-12 w-12" />
 
               <div>
                 <h1 className="text-sm font-bold tracking-[0.12em] xl:text-base">
@@ -76,16 +121,19 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Main Content */}
+          {/* MAIN CONTENT */}
+
           <div className="relative z-10 my-auto max-w-[620px] py-3">
 
-            {/* Workspace Badge */}
+            {/* WORKSPACE BADGE */}
+
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d5bb8e]/25 bg-[#d5bb8e]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#e6d0a8]">
               <Sparkles size={13} />
               Your Vision, Our Creation
             </div>
 
-            {/* Main Heading */}
+            {/* MAIN HEADING */}
+
             <h2 className="text-[clamp(32px,3.2vw,54px)] font-semibold leading-[1.13] tracking-[-0.045em]">
               Beyond the Lens
               <br />
@@ -96,14 +144,16 @@ export default function Login({ onLogin }) {
               </span>
             </h2>
 
-            {/* Description */}
+            {/* DESCRIPTION */}
+
             <p className="mt-4 max-w-[470px] text-[13px] leading-[1.8] text-[#b7c4d7] xl:text-sm">
               One creative space. Endless possibilities.
               Simplify your workflow, stay organized,
               and focus on what you do best.
             </p>
 
-            {/* Feature Cards */}
+            {/* FEATURE CARDS */}
+
             <div className="mt-6 grid grid-cols-3 gap-3">
               {features.map(({ icon: Icon, title }) => (
                 <div
@@ -121,7 +171,8 @@ export default function Login({ onLogin }) {
               ))}
             </div>
 
-            {/* Benefits */}
+            {/* BENEFITS */}
+
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
               {[
                 "Unified Operations",
@@ -142,16 +193,21 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Left Footer */}
+          {/* LEFT FOOTER */}
+
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-4 text-1xl text-[#8396b0]">
             <p>© 2026 Studio Raw Picturez</p>
           </div>
         </section>
 
-        {/* RIGHT LOGIN SECTION */}
+        {/* ==========================================
+            RIGHT LOGIN SECTION
+        ========================================== */}
+
         <section className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#f6f8fc] px-4 py-3 sm:px-8 lg:w-[48%] lg:px-7 xl:px-12">
 
-          {/* Right Background */}
+          {/* BACKGROUND */}
+
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#e7edf7] blur-[80px]" />
             <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[#edf0f7] blur-[80px]" />
@@ -159,22 +215,27 @@ export default function Login({ onLogin }) {
 
           <div className="relative z-10 w-full max-w-[450px]">
 
-            {/* Mobile Brand */}
-            <div className="mb-5 flex items-center gap-3 lg:hidden">
-              <img
-                src={LOGO}
-                alt="Studio Raw Picturez Logo"
-                className="h-12 w-12 shrink-0 object-contain"
-              />
+            {/* ==========================================
+                MOBILE LOGO - FIXED
+            ========================================== */}
 
-              <div>
-                <p className="text-sm font-bold tracking-[0.07em] text-[#102b53]">
+            <div className="mb-5 flex items-center justify-center gap-3 lg:hidden">
+
+              <StudioLogo className="h-14 w-14 sm:h-16 sm:w-16" />
+
+              <div className="min-w-0">
+                <p className="text-sm font-bold tracking-[0.07em] text-[#102b53] sm:text-base">
                   STUDIO RAW PICTUREZ
+                </p>
+
+                <p className="mt-1 text-[10px] font-semibold tracking-[0.2em] text-[#b19464]">
+                  ERP &amp; CRM
                 </p>
               </div>
             </div>
 
             {/* WHITE LOGIN CARD */}
+
             <div
               className="rounded-[24px] border border-[#e7ebf2] !bg-white p-6 text-[#102b53] shadow-[0_20px_60px_rgba(16,43,83,0.08)] sm:p-8 lg:p-9"
               style={{
@@ -183,7 +244,8 @@ export default function Login({ onLogin }) {
               }}
             >
 
-              {/* Login Heading */}
+              {/* LOGIN HEADING */}
+
               <div className="mb-6">
 
                 <div className="mb-3.5 flex items-center justify-between gap-3">
@@ -206,13 +268,15 @@ export default function Login({ onLogin }) {
                 </p>
               </div>
 
-              {/* Login Form */}
+              {/* LOGIN FORM */}
+
               <form
                 onSubmit={handleSubmit}
                 className="space-y-5"
               >
 
-                {/* Email */}
+                {/* EMAIL */}
+
                 <div>
                   <label
                     htmlFor="login-email"
@@ -243,7 +307,8 @@ export default function Login({ onLogin }) {
                   </div>
                 </div>
 
-                {/* Password */}
+                {/* PASSWORD */}
+
                 <div>
                   <label
                     htmlFor="login-password"
@@ -293,7 +358,8 @@ export default function Login({ onLogin }) {
                   </div>
                 </div>
 
-                {/* Error */}
+                {/* ERROR */}
+
                 {error && (
                   <p
                     role="alert"
@@ -303,7 +369,8 @@ export default function Login({ onLogin }) {
                   </p>
                 )}
 
-                {/* Sign In */}
+                {/* SIGN IN */}
+
                 <button
                   type="submit"
                   className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)]"
@@ -318,7 +385,8 @@ export default function Login({ onLogin }) {
               </form>
             </div>
 
-            {/* Footer */}
+            {/* FOOTER */}
+
             <p className="mt-5 text-center text-1xl text-black">
               © 2026 Studio Raw Picturez. All rights reserved.
             </p>
