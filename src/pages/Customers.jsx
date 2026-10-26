@@ -33,6 +33,7 @@ import {
   Camera,
   ShieldCheck,
   ArrowRight,
+  PackageCheck,
 } from "lucide-react";
 
 /* =========================================
@@ -43,6 +44,8 @@ const STORAGE_KEY = "studio_raw_customers";
 const DEMO_KEY = "studio_raw_customers_demo_v4_100";
 const PAYMENT_KEY = "studioraw_payments";
 const BOOKING_KEY = "studioraw_bookings";
+const DELIVERY_KEY = "studioraw_deliveries";
+const SELECTION_KEY = "studioraw_photo_selections";
 const UPDATE_EVENT = "studioraw:data-updated";
 const PAGE_SIZE = 10;
 
@@ -214,7 +217,9 @@ function recordMatchesCustomer(record, customer) {
 function hasCustomerLinkedRecords(
   customer,
   payments,
-  bookings
+  bookings,
+  deliveries = [],
+  selections = []
 ) {
   return (
     payments.some((payment) =>
@@ -222,6 +227,12 @@ function hasCustomerLinkedRecords(
     ) ||
     bookings.some((booking) =>
       recordMatchesCustomer(booking, customer)
+    ) ||
+    deliveries.some((delivery) =>
+      recordMatchesCustomer(delivery, customer)
+    ) ||
+    selections.some((selection) =>
+      recordMatchesCustomer(selection, customer)
     )
   );
 }
@@ -1281,10 +1292,20 @@ function CustomerFormModal({
 
 function CustomerViewModal({
   customer,
+  deliveries = [],
+  selections = [],
   onClose,
   onEdit,
   onDelete,
 }) {
+  const customerDeliveries = useMemo(
+    () => deliveries.filter((d) => recordMatchesCustomer(d, customer)),
+    [deliveries, customer]
+  );
+  const customerSelections = useMemo(
+    () => selections.filter((s) => recordMatchesCustomer(s, customer)),
+    [selections, customer]
+  );
   const details = [
     {
       label: "Gender",
@@ -1464,6 +1485,95 @@ function CustomerViewModal({
           </p>
         </div>
 
+        {/* DELIVERABLES & PHOTO SELECTIONS */}
+
+        <div className="mt-4 rounded-[20px] border border-[#e3eaf4] bg-white p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PackageCheck
+                size={16}
+                className="text-[#102b53]"
+              />
+
+              <h3 className="text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+                Deliverables & Photo Selections
+              </h3>
+            </div>
+
+            <span className="rounded-lg bg-[#edf5ff] px-2.5 py-1 text-[11px] font-bold text-[#24558d]">
+              {customerDeliveries.length + customerSelections.length} Records
+            </span>
+          </div>
+
+          {customerDeliveries.length === 0 && customerSelections.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No deliverables or photo selections recorded yet for this customer.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {customerDeliveries.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between rounded-xl bg-[#f8fbff] p-3 text-xs"
+                >
+                  <div>
+                    <span className="font-extrabold text-[#102b53]">
+                      {d.item || "Delivery"}
+                    </span>
+                    <span className="ml-2 text-[11px] text-[#6b829e]">
+                      {d.event || ""}
+                    </span>
+                    <p className="mt-0.5 text-[11px] text-[#8091a9]">
+                      Method: {d.deliveryMethod || "Studio Pickup"} · Exp: {formatDate(d.expectedDate)}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold ${
+                      d.status === "Delivered"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : d.status === "Dispatched"
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {d.status || "Pending"}
+                  </span>
+                </div>
+              ))}
+
+              {customerSelections.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between rounded-xl bg-[#f8fbff] p-3 text-xs"
+                >
+                  <div>
+                    <span className="font-extrabold text-[#102b53]">
+                      Photo Selection
+                    </span>
+                    <span className="ml-2 text-[11px] text-[#6b829e]">
+                      {s.project || ""}
+                    </span>
+                    <p className="mt-0.5 text-[11px] text-[#8091a9]">
+                      Shared: {s.photoCount || 0} photos · Selected: {s.selectedCount || 0}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold ${
+                      s.returnedDate
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-blue-50 text-blue-700"
+                    }`}
+                  >
+                    {s.returnedDate ? "Returned" : "In Selection"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* ACTIONS */}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0f5] pt-5">
@@ -1581,6 +1691,14 @@ export default function Customers() {
     readStoredArray(BOOKING_KEY)
   );
 
+  const [deliveries, setDeliveries] = useState(() =>
+    readStoredArray(DELIVERY_KEY)
+  );
+
+  const [selections, setSelections] = useState(() =>
+    readStoredArray(SELECTION_KEY)
+  );
+
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] =
     useState("All");
@@ -1632,6 +1750,8 @@ export default function Customers() {
           STORAGE_KEY,
           PAYMENT_KEY,
           BOOKING_KEY,
+          DELIVERY_KEY,
+          SELECTION_KEY,
         ].includes(key)
       ) {
         return;
@@ -1665,6 +1785,24 @@ export default function Customers() {
         setBookings((previous) =>
           JSON.stringify(previous) ===
           JSON.stringify(latest)
+            ? previous
+            : latest
+        );
+      }
+
+      if (!key || key === DELIVERY_KEY) {
+        const latest = readStoredArray(DELIVERY_KEY);
+        setDeliveries((previous) =>
+          JSON.stringify(previous) === JSON.stringify(latest)
+            ? previous
+            : latest
+        );
+      }
+
+      if (!key || key === SELECTION_KEY) {
+        const latest = readStoredArray(SELECTION_KEY);
+        setSelections((previous) =>
+          JSON.stringify(previous) === JSON.stringify(latest)
             ? previous
             : latest
         );
@@ -1791,7 +1929,9 @@ export default function Customers() {
       hasCustomerLinkedRecords(
         currentDeleteCustomer,
         payments,
-        bookings
+        bookings,
+        deliveries,
+        selections
       )
   );
 
@@ -1867,15 +2007,25 @@ export default function Customers() {
     const latestBookings =
       readStoredArray(BOOKING_KEY);
 
+    const latestDeliveries =
+      readStoredArray(DELIVERY_KEY);
+
+    const latestSelections =
+      readStoredArray(SELECTION_KEY);
+
     if (
       hasCustomerLinkedRecords(
         currentDeleteCustomer,
         latestPayments,
-        latestBookings
+        latestBookings,
+        latestDeliveries,
+        latestSelections
       )
     ) {
       setPayments(latestPayments);
       setBookings(latestBookings);
+      setDeliveries(latestDeliveries);
+      setSelections(latestSelections);
 
       setToast(
         "Cannot delete customer with linked records."
@@ -2396,6 +2546,8 @@ export default function Customers() {
       {currentViewCustomer && (
         <CustomerViewModal
           customer={currentViewCustomer}
+          deliveries={deliveries}
+          selections={selections}
           onClose={() => setViewCustomer(null)}
           onEdit={openEdit}
           onDelete={(customer) => {

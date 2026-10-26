@@ -1,10 +1,5 @@
 
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -17,6 +12,7 @@ import {
   Plus,
   X,
   Trash2,
+  Pencil,
   HeartHandshake,
   Cake,
   Baby,
@@ -33,10 +29,14 @@ import {
 } from "lucide-react";
 
 /* =========================================
-   STORAGE & DEMO DATA
+   STORAGE
 ========================================= */
 
 const STORAGE_KEY = "studioraw_enquiries";
+const LEGACY_ENQUIRY_KEY = "studio_raw_enquiries";
+const CUSTOMER_STORAGE_KEY = "studio_raw_customers";
+const BOOKING_STORAGE_KEY = "studioraw_bookings";
+const DATA_UPDATED_EVENT = "studioraw:data-updated";
 
 const demoData = [
   {
@@ -210,10 +210,6 @@ const emptyForm = {
   status: "New",
 };
 
-/* =========================================
-   OPTIONS
-========================================= */
-
 const eventOptions = [
   "Wedding Photography",
   "Traditional photography",
@@ -251,34 +247,67 @@ const statusOptions = [
    HELPERS
 ========================================= */
 
-function initials(name = "") {
-  return String(name)
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0] || "")
-    .join("")
-    .toUpperCase();
+function readRecords(key) {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem(key) || "[]"
+    );
+
+    if (Array.isArray(value)) return value;
+
+    for (const field of [
+      "customers",
+      "bookings",
+      "data",
+      "records",
+      "items",
+      "list",
+    ]) {
+      if (Array.isArray(value?.[field])) {
+        return value[field];
+      }
+    }
+  } catch (error) {
+    console.error("Storage read failed:", key, error);
+  }
+
+  return [];
 }
 
-function formatDate(value) {
-  if (!value) return "Not specified";
+function notifyDataChanged(key, module) {
+  window.dispatchEvent(
+    new CustomEvent(DATA_UPDATED_EVENT, {
+      detail: { key, module },
+    })
+  );
+}
 
-  const date = new Date(
-    `${String(value).slice(0, 10)}T12:00:00`
+function normalizePhone(value) {
+  return String(value ?? "")
+    .replace(/\D/g, "")
+    .slice(-10);
+}
+
+function normalizeDate(value) {
+  const raw = String(value || "").trim();
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+    return raw.split("/").reverse().join("-");
+  }
+
+  return raw.slice(0, 10);
+}
+
+function parseAmount(value) {
+  const amount = Number(
+    String(value ?? "").replace(/[^\d.]/g, "")
   );
 
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 function formatBudget(value) {
-  const raw = String(value || "").trim();
+  const raw = String(value ?? "").trim();
 
   if (!raw) return "Not specified";
 
@@ -291,41 +320,248 @@ function formatBudget(value) {
     : raw;
 }
 
+function formatDate(value) {
+  if (!value) return "Not specified";
+
+  const date = new Date(
+    `${normalizeDate(value)}T12:00:00`
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function initials(name = "") {
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0] || "")
+    .join("")
+    .toUpperCase();
+}
+
 function cleanEnquiry(item) {
   if (!item || typeof item !== "object") {
     return null;
   }
 
   const { function: removedFunction, ...rest } = item;
-
   return rest;
 }
 
 function loadEnquiries() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_ENQUIRY_KEY);
 
     if (saved !== null) {
       const parsed = JSON.parse(saved);
 
       if (Array.isArray(parsed)) {
-        return parsed
-          .map(cleanEnquiry)
-          .filter(Boolean);
+        return parsed.map(cleanEnquiry).filter(Boolean);
       }
     }
   } catch (error) {
-    console.error(
-      "Unable to load enquiries:",
-      error
-    );
+    console.error("Unable to load enquiries:", error);
   }
 
   return demoData.map(cleanEnquiry);
 }
 
 /* =========================================
-   COLOUR THEMES
+   CUSTOMER + BOOKING AUTO SYNC
+========================================= */
+
+function syncEnquiryToModules(enquiry) {
+  if (!enquiry || typeof enquiry !== "object") {
+    return enquiry;
+  }
+
+  const enquiryId = String(enquiry.id);
+  const name = String(enquiry.name || "").trim();
+  const phone = normalizePhone(
+    enquiry.number || enquiry.phone
+  );
+
+  if (!name || phone.length !== 10) {
+    throw new Error(
+      "Customer name and valid phone number are required."
+    );
+  }
+
+  const now = new Date().toISOString();
+  const email = String(enquiry.email || "").trim();
+  const city = String(enquiry.city || "").trim();
+  const eventName = String(
+    enquiry.mainEvent || "Wedding Photography"
+  ).trim();
+
+  const date = normalizeDate(enquiry.eventDate);
+  const budget = parseAmount(enquiry.budget);
+
+  const customers = readRecords(CUSTOMER_STORAGE_KEY);
+  const bookings = readRecords(BOOKING_STORAGE_KEY);
+
+  // Find customer using linked ID or phone.
+  const customerIndex = customers.findIndex((customer) => {
+    const customerPhone = normalizePhone(
+      customer.phone || customer.mobile
+    );
+
+    return (
+      (enquiry.customerId &&
+        String(customer.id) === String(enquiry.customerId)) ||
+      (customer.enquiryId != null &&
+        String(customer.enquiryId) === enquiryId) ||
+      (customerPhone.length === 10 &&
+        customerPhone === phone)
+    );
+  });
+
+  const previousCustomer =
+    customerIndex >= 0 ? customers[customerIndex] : null;
+
+  const customerId =
+    previousCustomer?.id || `CUS-ENQ-${enquiryId}`;
+
+  const updatedCustomer = {
+    ...(previousCustomer || {}),
+    id: customerId,
+    name,
+    phone,
+    email,
+    address: city || previousCustomer?.address || "",
+    city,
+    gender: previousCustomer?.gender || "",
+    language: previousCustomer?.language || "Tamil",
+    source: previousCustomer?.source || "Enquiry",
+    notes: enquiry.notes || "",
+    enquiryId:
+      previousCustomer?.enquiryId || enquiry.id,
+    createdAt:
+      previousCustomer?.createdAt || now.slice(0, 10),
+    updatedAt: now,
+    isDemo: false,
+  };
+
+  // Find only the booking belonging to this enquiry.
+  // Same customer can have multiple event bookings.
+  let bookingIndex = bookings.findIndex((booking) => {
+    return (
+      (booking.enquiryId != null &&
+        String(booking.enquiryId) === enquiryId) ||
+      (enquiry.bookingId &&
+        String(booking.id) === String(enquiry.bookingId))
+    );
+  });
+
+  if (bookingIndex < 0) {
+    bookingIndex = bookings.findIndex((booking) => {
+      return (
+        !booking.enquiryId &&
+        normalizePhone(booking.phone) === phone &&
+        normalizeDate(booking.date) === date &&
+        String(booking.event || "")
+          .trim()
+          .toLowerCase() === eventName.toLowerCase()
+      );
+    });
+  }
+
+  const previousBooking =
+    bookingIndex >= 0 ? bookings[bookingIndex] : null;
+
+  const bookingId =
+    previousBooking?.id || `BOOK-ENQ-${enquiryId}`;
+
+  const confirmed =
+    String(enquiry.status || "")
+      .trim()
+      .toLowerCase() === "confirmed";
+
+  const bookingStatus =
+    previousBooking?.status === "Completed"
+      ? "Completed"
+      : confirmed
+      ? "Confirmed"
+      : "Pending";
+
+  const updatedBooking = {
+    ...(previousBooking || {}),
+    id: bookingId,
+    enquiryId: enquiry.id,
+    customerId,
+    customer: name,
+    customerName: name,
+    phone,
+    email,
+    event: eventName,
+    eventType: eventName,
+    date: date || previousBooking?.date || "",
+    eventDate: date || previousBooking?.eventDate || "",
+    time: previousBooking?.time || "10:00",
+    location:
+      city || previousBooking?.location || "",
+    city,
+    photographer:
+      previousBooking?.photographer || "Not Assigned",
+    totalAmount: budget,
+    amount: budget,
+    status: bookingStatus,
+    source: "Enquiry",
+    weddingCoverage: enquiry.weddingCoverage || "",
+    notes: enquiry.notes || "",
+    createdAt: previousBooking?.createdAt || now,
+    updatedAt: now,
+  };
+
+  const nextCustomers = [...customers];
+  const nextBookings = [...bookings];
+
+  if (customerIndex >= 0) {
+    nextCustomers[customerIndex] = updatedCustomer;
+  } else {
+    nextCustomers.unshift(updatedCustomer);
+  }
+
+  if (bookingIndex >= 0) {
+    nextBookings[bookingIndex] = updatedBooking;
+  } else {
+    nextBookings.unshift(updatedBooking);
+  }
+
+  // Save both linked records before notifying pages.
+  localStorage.setItem(
+    CUSTOMER_STORAGE_KEY,
+    JSON.stringify(nextCustomers)
+  );
+
+  localStorage.setItem(
+    BOOKING_STORAGE_KEY,
+    JSON.stringify(nextBookings)
+  );
+
+  notifyDataChanged(CUSTOMER_STORAGE_KEY, "customers");
+  notifyDataChanged(BOOKING_STORAGE_KEY, "bookings");
+
+  return {
+    ...enquiry,
+    customerId,
+    bookingId,
+  };
+}
+
+/* =========================================
+   COLORS
 ========================================= */
 
 const statColors = {
@@ -376,8 +612,7 @@ const inputClass =
   "w-full rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm text-[#102b53] outline-none transition placeholder:text-slate-400 focus:border-[#3b73b9] focus:ring-[3px] focus:ring-[#e7f0ff]";
 
 /* =========================================
-   SCROLL REVEAL
-   PAGE CARDS ANIMATION UNCHANGED
+   ANIMATIONS
 ========================================= */
 
 function useScrollReveal(containerRef, dependencies = []) {
@@ -405,9 +640,7 @@ function useScrollReveal(containerRef, dependencies = []) {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add(
-              "enquiry-visible"
-            );
+            entry.target.classList.add("enquiry-visible");
           } else {
             entry.target.classList.remove(
               "enquiry-visible"
@@ -421,24 +654,15 @@ function useScrollReveal(containerRef, dependencies = []) {
       }
     );
 
-    elements.forEach((element) => {
-      observer.observe(element);
-    });
+    elements.forEach((element) => observer.observe(element));
 
     return () => observer.disconnect();
   }, [containerRef, ...dependencies]);
 }
 
-/* =========================================
-   ANIMATION STYLES
-   FORM 3D ANIMATION REMOVED
-========================================= */
-
 function EnquiryAnimations() {
   return (
     <style>{`
-      /* NORMAL FORM - NO 3D ANIMATION */
-
       .enquiry-modal {
         animation: none !important;
         transform: none !important;
@@ -454,8 +678,6 @@ function EnquiryAnimations() {
         transform: none !important;
       }
 
-      /* PAGE CARD ANIMATIONS UNCHANGED */
-
       [data-enquiry-reveal] {
         opacity: 0;
         transform: perspective(1100px)
@@ -463,13 +685,10 @@ function EnquiryAnimations() {
           rotateX(9deg)
           scale(0.96);
         transform-origin: center center;
-
         transition:
           opacity 0.6s ease,
-          transform 0.65s
-            cubic-bezier(0.22,1,0.36,1),
+          transform 0.65s cubic-bezier(0.22,1,0.36,1),
           box-shadow 0.3s ease;
-
         transition-delay: var(--reveal-delay, 0ms);
       }
 
@@ -486,7 +705,6 @@ function EnquiryAnimations() {
           translateY(-5px)
           rotateX(2deg)
           rotateY(-1deg);
-
         box-shadow:
           0 16px 30px rgba(16,43,83,0.11);
       }
@@ -507,7 +725,7 @@ function EnquiryAnimations() {
 }
 
 /* =========================================
-   STATS
+   STAT CARD
 ========================================= */
 
 function StatCard({
@@ -584,7 +802,7 @@ function StatusBadge({ status }) {
 }
 
 /* =========================================
-   MODAL - NORMAL STYLE
+   MODAL
 ========================================= */
 
 function Modal({
@@ -599,9 +817,7 @@ function Modal({
   }, [onClose]);
 
   useEffect(() => {
-    const oldOverflow =
-      document.body.style.overflow;
-
+    const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
@@ -610,19 +826,11 @@ function Modal({
       }
     };
 
-    window.addEventListener(
-      "keydown",
-      handleEscape
-    );
+    window.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.body.style.overflow =
-        oldOverflow;
-
-      window.removeEventListener(
-        "keydown",
-        handleEscape
-      );
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
@@ -648,7 +856,7 @@ function Modal({
 }
 
 /* =========================================
-   FORM FIELD - NO 3D
+   FORM FIELD
 ========================================= */
 
 function FormField({
@@ -662,7 +870,6 @@ function FormField({
   placeholder = "",
   required = false,
   error,
-  index = 0,
 }) {
   return (
     <label className="enquiry-form-field block space-y-2.5">
@@ -688,12 +895,15 @@ function FormField({
             onChange={onChange}
             className={`${inputClass} appearance-none pr-10`}
           >
-            {value &&
-              !options.includes(value) && (
-                <option value={value}>
-                  {value}
-                </option>
-              )}
+            {value && !options.includes(value) && (
+              <option value={value}>{value}</option>
+            )}
+
+            {!value && (
+              <option value="">
+                Select {label}
+              </option>
+            )}
 
             {options.map((option) => (
               <option key={option} value={option}>
@@ -731,16 +941,17 @@ function FormField({
 }
 
 /* =========================================
-   ADD ENQUIRY MODAL
-   NORMAL FORM - NO ANIMATION
+   ADD / EDIT ENQUIRY MODAL
 ========================================= */
 
 function AddEnquiryModal({
   onClose,
   onSave,
+  initialData = null,
 }) {
   const [form, setForm] = useState({
     ...emptyForm,
+    ...(initialData || {}),
   });
 
   const [errors, setErrors] = useState({});
@@ -765,8 +976,7 @@ function AddEnquiryModal({
     const nextErrors = {};
 
     if (!form.name.trim()) {
-      nextErrors.name =
-        "Customer name is required.";
+      nextErrors.name = "Customer name is required.";
     }
 
     if (!/^\d{10}$/.test(form.number.trim())) {
@@ -804,11 +1014,15 @@ function AddEnquiryModal({
             </p>
 
             <h2 className="mt-1 text-lg font-black text-[#102b53]">
-              Add New Enquiry
+              {initialData
+                ? "Edit Enquiry"
+                : "Add New Enquiry"}
             </h2>
 
             <p className="mt-1 text-xs text-slate-400">
-              Create a new photography enquiry
+              {initialData
+                ? "Update existing enquiry details"
+                : "Create a new photography enquiry"}
             </p>
           </div>
         </div>
@@ -829,7 +1043,6 @@ function AddEnquiryModal({
       >
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f9fbff] px-5 py-6 sm:px-7">
           <FormField
-            index={0}
             label="Customer Name"
             name="name"
             icon={UserRound}
@@ -841,7 +1054,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={1}
             label="Phone Number"
             name="number"
             type="tel"
@@ -854,7 +1066,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={2}
             label="Email Address"
             name="email"
             type="email"
@@ -865,7 +1076,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={3}
             label="City / Location"
             name="city"
             icon={MapPin}
@@ -875,7 +1085,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={4}
             label="Main Event"
             name="mainEvent"
             icon={Camera}
@@ -885,7 +1094,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={5}
             label="Event Date"
             name="eventDate"
             type="date"
@@ -895,7 +1103,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={6}
             label="Coverage Type"
             name="weddingCoverage"
             icon={Camera}
@@ -905,7 +1112,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={7}
             label="Estimated Budget (₹)"
             name="budget"
             icon={IndianRupee}
@@ -915,7 +1121,6 @@ function AddEnquiryModal({
           />
 
           <FormField
-            index={8}
             label="Enquiry Status"
             name="status"
             icon={CheckCircle2}
@@ -957,7 +1162,9 @@ function AddEnquiryModal({
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#102b53] px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#244d80]"
           >
             <Save size={17} />
-            Save Enquiry
+            {initialData
+              ? "Save Changes"
+              : "Save Enquiry"}
           </button>
         </div>
       </form>
@@ -973,6 +1180,7 @@ function EnquiryDetailsModal({
   enquiry,
   onClose,
   onDelete,
+  onEdit,
 }) {
   const details = [
     ["Event Date", formatDate(enquiry.eventDate)],
@@ -983,10 +1191,7 @@ function EnquiryDetailsModal({
   ];
 
   return (
-    <Modal
-      onClose={onClose}
-      width="max-w-[610px]"
-    >
+    <Modal onClose={onClose} width="max-w-[610px]">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#102b53] font-black text-white">
@@ -1003,8 +1208,7 @@ function EnquiryDetailsModal({
             </h2>
 
             <p className="mt-1 text-xs text-slate-400">
-              #ENQ-
-              {String(enquiry.id).padStart(4, "0")}
+              #ENQ-{String(enquiry.id).padStart(4, "0")}
             </p>
           </div>
         </div>
@@ -1097,13 +1301,23 @@ function EnquiryDetailsModal({
             Delete
           </button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl bg-[#102b53] px-7 py-3 text-xs font-bold text-white hover:bg-[#244d80]"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onEdit(enquiry)}
+              className="rounded-xl border border-[#102b53] px-5 py-3 text-xs font-bold text-[#102b53] hover:bg-[#f4f7fc]"
+            >
+              Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-[#102b53] px-7 py-3 text-xs font-bold text-white hover:bg-[#244d80]"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -1111,7 +1325,7 @@ function EnquiryDetailsModal({
 }
 
 /* =========================================
-   MOBILE ENQUIRY CARD
+   MOBILE CARD
 ========================================= */
 
 function MobileEnquiryCard({
@@ -1153,8 +1367,7 @@ function MobileEnquiryCard({
             </h3>
 
             <p className="mt-1 text-[11px] text-slate-400">
-              #ENQ-
-              {String(item.id).padStart(4, "0")}
+              #ENQ-{String(item.id).padStart(4, "0")}
             </p>
           </div>
         </div>
@@ -1218,7 +1431,7 @@ function MobileEnquiryCard({
 }
 
 /* =========================================
-   GRID ENQUIRY CARD
+   GRID CARD
 ========================================= */
 
 function GridEnquiryCard({
@@ -1260,8 +1473,7 @@ function GridEnquiryCard({
             </h3>
 
             <p className="mt-1 text-[11px] text-slate-400">
-              #ENQ-
-              {String(item.id).padStart(4, "0")}
+              #ENQ-{String(item.id).padStart(4, "0")}
             </p>
           </div>
         </div>
@@ -1339,26 +1551,50 @@ function GridEnquiryCard({
 export default function Enquiries() {
   const pageRef = useRef(null);
 
-  const [enquiries, setEnquiries] =
-    useState(loadEnquiries);
-
+  const [enquiries, setEnquiries] = useState(loadEnquiries);
   const [search, setSearch] = useState("");
-  const [eventFilter, setEventFilter] =
-    useState("All");
-  const [cityFilter, setCityFilter] =
-    useState("All");
+  const [eventFilter, setEventFilter] = useState("All");
+  const [cityFilter, setCityFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("table");
+  const [addOpen, setAddOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [toast, setToast] = useState("");
 
-  const [viewMode, setViewMode] =
-    useState("table");
+  /* =========================================
+     INITIAL SYNC
+  ========================================= */
 
-  const [addOpen, setAddOpen] =
-    useState(false);
-  const [selected, setSelected] =
-    useState(null);
-  const [toast, setToast] =
-    useState("");
+  useEffect(() => {
+    try {
+      const existing = loadEnquiries();
+      const updated = existing.map((item) => {
+        try {
+          return syncEnquiryToModules(item);
+        } catch (error) {
+          console.error(
+            "Enquiry sync failed:",
+            item.id,
+            error
+          );
+          return item;
+        }
+      });
 
-  /* SAVE DATA */
+      setEnquiries(updated);
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(updated)
+      );
+    } catch (error) {
+      console.error("Initial enquiry sync failed:", error);
+    }
+  }, []);
+
+  /* =========================================
+     SAVE ENQUIRIES
+  ========================================= */
 
   useEffect(() => {
     try {
@@ -1385,47 +1621,57 @@ export default function Enquiries() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  /* STATS */
+  /* =========================================
+     STATS
+  ========================================= */
 
-  const stats = useMemo(() => ({
-    total: enquiries.length,
-
-    weddings: enquiries.filter(
-      (item) => item.mainEvent === "Wedding"
-    ).length,
-
-    other: enquiries.filter(
-      (item) => item.mainEvent !== "Wedding"
-    ).length,
-
-    cities: new Set(
-      enquiries
-        .map((item) =>
-          String(item.city || "")
-            .trim()
+  const stats = useMemo(
+    () => ({
+      total: enquiries.length,
+      weddings: enquiries.filter((item) =>
+        String(item.mainEvent || "")
+          .toLowerCase()
+          .includes("wedding")
+      ).length,
+      other: enquiries.filter(
+        (item) =>
+          !String(item.mainEvent || "")
             .toLowerCase()
-        )
-        .filter(Boolean)
-    ).size,
-  }), [enquiries]);
+            .includes("wedding")
+      ).length,
+      cities: new Set(
+        enquiries
+          .map((item) =>
+            String(item.city || "")
+              .trim()
+              .toLowerCase()
+          )
+          .filter(Boolean)
+      ).size,
+    }),
+    [enquiries]
+  );
 
-  /* CITY OPTIONS */
+  const cityOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          enquiries
+            .map((item) =>
+              String(item.city || "").trim()
+            )
+            .filter(Boolean)
+        ),
+      ].sort((a, b) => a.localeCompare(b)),
+    [enquiries]
+  );
 
-  const cityOptions = useMemo(() => [
-    ...new Set(
-      enquiries
-        .map((item) =>
-          String(item.city || "").trim()
-        )
-        .filter(Boolean)
-    ),
-  ].sort((a, b) => a.localeCompare(b)), [enquiries]);
-
-  /* SEARCH AND FILTER */
+  /* =========================================
+     FILTER
+  ========================================= */
 
   const filtered = useMemo(() => {
-    const keyword =
-      search.trim().toLowerCase();
+    const keyword = search.trim().toLowerCase();
 
     return enquiries.filter((item) => {
       const matchesEvent =
@@ -1467,14 +1713,11 @@ export default function Enquiries() {
     cityFilter,
   ]);
 
-  /* SCROLL ANIMATIONS */
+  useScrollReveal(pageRef, [viewMode, filtered]);
 
-  useScrollReveal(pageRef, [
-    viewMode,
-    filtered,
-  ]);
-
-  /* ACTIONS */
+  /* =========================================
+     ACTIONS
+  ========================================= */
 
   const clearFilters = () => {
     setSearch("");
@@ -1486,22 +1729,100 @@ export default function Enquiries() {
     const nextId =
       Math.max(
         0,
-        ...enquiries.map(
-          (item) => Number(item.id) || 0
+        ...enquiries.map((item) =>
+          Number(item.id) || 0
         )
       ) + 1;
 
-    setEnquiries((previous) => [
-      {
-        ...cleanEnquiry(data),
-        id: nextId,
-      },
-      ...previous,
-    ]);
+    const newData = {
+      ...cleanEnquiry(data),
+      id: nextId,
+    };
+
+    let savedEnquiry;
+
+    try {
+      savedEnquiry = syncEnquiryToModules(newData);
+    } catch (error) {
+      console.error("Enquiry sync failed:", error);
+      setToast(
+        "Unable to sync Customer and Booking. Please try again."
+      );
+      return;
+    }
+
+    const updatedEnquiries = [
+      savedEnquiry,
+      ...enquiries,
+    ];
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(updatedEnquiries)
+      );
+    } catch (error) {
+      console.error("Enquiry save failed:", error);
+      setToast("Unable to save enquiry.");
+      return;
+    }
+
+    setEnquiries(updatedEnquiries);
+    notifyDataChanged(STORAGE_KEY, "enquiries");
 
     setAddOpen(false);
+
     setToast(
-      "Enquiry added successfully."
+      "Enquiry, Customer & Booking added successfully."
+    );
+  };
+
+  const updateEnquiry = (data) => {
+    if (!editing) return;
+
+    const newData = {
+      ...editing,
+      ...cleanEnquiry(data),
+      id: editing.id,
+    };
+
+    let updated;
+
+    try {
+      updated = syncEnquiryToModules(newData);
+    } catch (error) {
+      console.error("Enquiry update sync failed:", error);
+      setToast(
+        "Unable to sync Customer and Booking. Please try again."
+      );
+      return;
+    }
+
+    const updatedEnquiries = enquiries.map((item) =>
+      String(item.id) === String(editing.id)
+        ? updated
+        : item
+    );
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(updatedEnquiries)
+      );
+    } catch (error) {
+      console.error("Enquiry update failed:", error);
+      setToast("Unable to update enquiry.");
+      return;
+    }
+
+    setEnquiries(updatedEnquiries);
+    notifyDataChanged(STORAGE_KEY, "enquiries");
+
+    setEditing(null);
+    setSelected(null);
+
+    setToast(
+      "Enquiry, Customer & Booking updated successfully."
     );
   };
 
@@ -1512,16 +1833,27 @@ export default function Enquiries() {
 
     if (!confirmed) return;
 
-    setEnquiries((previous) =>
-      previous.filter(
-        (item) => item.id !== id
-      )
+    const updatedEnquiries = enquiries.filter(
+      (item) => String(item.id) !== String(id)
     );
 
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(updatedEnquiries)
+      );
+    } catch (error) {
+      console.error("Enquiry delete failed:", error);
+      setToast("Unable to delete enquiry.");
+      return;
+    }
+
+    setEnquiries(updatedEnquiries);
+    notifyDataChanged(STORAGE_KEY, "enquiries");
+
+    // Linked Customer and Booking records are preserved.
     setSelected(null);
-    setToast(
-      "Enquiry deleted successfully."
-    );
+    setToast("Enquiry deleted successfully.");
   };
 
   const openDetails = (item) => {
@@ -1538,6 +1870,10 @@ export default function Enquiries() {
       openDetails(item);
     }
   };
+
+  /* =========================================
+     UI
+  ========================================= */
 
   return (
     <div
@@ -1768,7 +2104,7 @@ export default function Enquiries() {
               </span>
             </div>
 
-            {/* MOBILE: ONE BOX PER ENQUIRY */}
+            {/* MOBILE CARDS */}
 
             <div className="space-y-4 p-3 sm:p-4 lg:hidden">
               {filtered.map((item, index) => (
@@ -1843,7 +2179,10 @@ export default function Enquiries() {
 
                             <p className="mt-1 text-[10px] text-slate-400">
                               #ENQ-
-                              {String(item.id).padStart(4, "0")}
+                              {String(item.id).padStart(
+                                4,
+                                "0"
+                              )}
                             </p>
                           </div>
                         </div>
@@ -1870,7 +2209,9 @@ export default function Enquiries() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <EventBadge event={item.mainEvent} />
+                        <EventBadge
+                          event={item.mainEvent}
+                        />
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-600">
@@ -1890,22 +2231,40 @@ export default function Enquiries() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <StatusBadge status={item.status} />
+                        <StatusBadge
+                          status={item.status}
+                        />
                       </td>
 
                       <td className="px-4 py-4">
-                        <button
-                          type="button"
-                          title="Delete enquiry"
-                          aria-label={`Delete enquiry for ${item.name}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteEnquiry(item.id);
-                          }}
-                          className="rounded-xl bg-red-50 p-2.5 text-red-500 transition hover:bg-red-100"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            title="Edit enquiry"
+                            aria-label={`Edit enquiry for ${item.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelected(null);
+                              setEditing({ ...item });
+                            }}
+                            className="rounded-xl border border-[#102b53] p-2.5 text-[#102b53] transition hover:bg-[#eef5ff]"
+                          >
+                            <Pencil size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            title="Delete enquiry"
+                            aria-label={`Delete enquiry for ${item.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              deleteEnquiry(item.id);
+                            }}
+                            className="rounded-xl bg-red-50 p-2.5 text-red-500 transition hover:bg-red-100"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1984,6 +2343,16 @@ export default function Enquiries() {
         />
       )}
 
+      {/* EDIT ENQUIRY */}
+
+      {editing && (
+        <AddEnquiryModal
+          initialData={editing}
+          onClose={() => setEditing(null)}
+          onSave={updateEnquiry}
+        />
+      )}
+
       {/* VIEW DETAILS */}
 
       {selected && (
@@ -1991,6 +2360,10 @@ export default function Enquiries() {
           enquiry={selected}
           onClose={() => setSelected(null)}
           onDelete={deleteEnquiry}
+          onEdit={(item) => {
+            setSelected(null);
+            setEditing(item);
+          }}
         />
       )}
     </div>

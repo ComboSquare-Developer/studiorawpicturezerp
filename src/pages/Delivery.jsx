@@ -45,7 +45,50 @@ import {
 const DELIVERY_KEY = "studioraw_deliveries";
 const SELECTION_KEY = "studioraw_photo_selections";
 const SOUND_KEY = "studioraw_delivery_sounds";
+const CUSTOMER_KEY = "studio_raw_customers";
+const BOOKING_KEY = "studioraw_bookings";
 const UPDATE_EVENT = "studioraw:data-updated";
+
+function readStoredRecords(key, fallbackKey) {
+  try {
+    const raw =
+      localStorage.getItem(key) ||
+      (fallbackKey ? localStorage.getItem(fallbackKey) : null);
+
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+
+    if (Array.isArray(parsed)) return parsed;
+
+    for (const field of [
+      "data",
+      "records",
+      "items",
+      "list",
+      "customers",
+      "bookings",
+      "deliveries",
+      "selections",
+    ]) {
+      if (Array.isArray(parsed?.[field])) return parsed[field];
+    }
+  } catch {}
+
+  return [];
+}
+
+const normalizePhone = (value) =>
+  String(value ?? "").replace(/\D/g, "").slice(-10);
+
+const customerNameOf = (c) =>
+  String(c?.name || c?.customerName || c?.customer || "").trim();
+
+const customerPhoneOf = (c) =>
+  normalizePhone(c?.phone || c?.mobile || c?.contactNumber);
+
+const customerAddressOf = (c) =>
+  String(c?.address || c?.city || "").trim();
 
 const EVENTS = [
   "Wedding Photography",
@@ -237,6 +280,8 @@ function getSelectionProgress(item) {
 
 function createEmptyDelivery() {
   return {
+    customerId: "",
+    bookingId: "",
     customer: "",
     phone: "",
     event: EVENTS[0],
@@ -257,6 +302,8 @@ function createEmptyDelivery() {
 
 function createEmptySelection() {
   return {
+    customerId: "",
+    bookingId: "",
     customer: "",
     phone: "",
     project: EVENTS[0],
@@ -1163,7 +1210,7 @@ function DeliveryCard({
             </h3>
 
             <p className="sd-muted mt-1 truncate text-[11px]">
-              {item.deliveryId || item.id}
+              {item.customerId ? `${item.customerId} · ` : ""}{item.deliveryId || item.id}
             </p>
           </div>
         </div>
@@ -1359,7 +1406,7 @@ function SelectionCard({
               </h3>
 
               <p className="sd-muted mt-1 truncate text-[11px]">
-                {item.id}
+                {item.customerId ? `${item.customerId} · ` : ""}{item.id}
               </p>
             </div>
           </div>
@@ -1516,6 +1563,14 @@ export default function Delivery() {
     readStorage(SELECTION_KEY, DEMO_SELECTIONS)
   );
 
+  const [customers, setCustomers] = useState(() =>
+    readStoredRecords(CUSTOMER_KEY, "studioraw_customers")
+  );
+
+  const [bookings, setBookings] = useState(() =>
+    readStoredRecords(BOOKING_KEY, "studio_raw_bookings")
+  );
+
   const [activeTab, setActiveTab] = useState("selection");
 
   const [deliveryForm, setDeliveryForm] = useState(
@@ -1537,6 +1592,25 @@ export default function Delivery() {
 
   const [error, setError] = useState("");
   const [statusError, setStatusError] = useState("");
+
+  /* ---------------- REAL-TIME SYNC ---------------- */
+
+  useEffect(() => {
+    const syncData = () => {
+      setCustomers(readStoredRecords(CUSTOMER_KEY, "studioraw_customers"));
+      setBookings(readStoredRecords(BOOKING_KEY, "studio_raw_bookings"));
+    };
+
+    window.addEventListener("storage", syncData);
+    window.addEventListener(UPDATE_EVENT, syncData);
+    window.addEventListener("focus", syncData);
+
+    return () => {
+      window.removeEventListener("storage", syncData);
+      window.removeEventListener(UPDATE_EVENT, syncData);
+      window.removeEventListener("focus", syncData);
+    };
+  }, []);
 
   /* ---------------- STORAGE ---------------- */
 
@@ -1623,8 +1697,14 @@ export default function Delivery() {
     setError("");
   };
 
+  const refreshLinkedData = () => {
+    setCustomers(readStoredRecords(CUSTOMER_KEY, "studioraw_customers"));
+    setBookings(readStoredRecords(BOOKING_KEY, "studio_raw_bookings"));
+  };
+
   const openCreate = () => {
     playSound("open");
+    refreshLinkedData();
 
     setEditingId(null);
     setViewType(null);
@@ -1641,10 +1721,20 @@ export default function Delivery() {
 
   const openEditDelivery = (item) => {
     playSound("open");
+    refreshLinkedData();
+
+    const matchedCust = customers.find(
+      (c) =>
+        (item.customerId && String(c.id) === String(item.customerId)) ||
+        (customerPhoneOf(c) && customerPhoneOf(c) === normalizePhone(item.phone)) ||
+        (customerNameOf(c).toLowerCase() === String(item.customer || "").trim().toLowerCase())
+    );
 
     setDeliveryForm({
       ...createEmptyDelivery(),
       ...item,
+      customerId: item.customerId || (matchedCust ? String(matchedCust.id) : ""),
+      bookingId: item.bookingId || "",
     });
 
     setEditingId(item.id);
@@ -1655,10 +1745,20 @@ export default function Delivery() {
 
   const openEditSelection = (item) => {
     playSound("open");
+    refreshLinkedData();
+
+    const matchedCust = customers.find(
+      (c) =>
+        (item.customerId && String(c.id) === String(item.customerId)) ||
+        (customerPhoneOf(c) && customerPhoneOf(c) === normalizePhone(item.phone)) ||
+        (customerNameOf(c).toLowerCase() === String(item.customer || "").trim().toLowerCase())
+    );
 
     setSelectionForm({
       ...createEmptySelection(),
       ...item,
+      customerId: item.customerId || (matchedCust ? String(matchedCust.id) : ""),
+      bookingId: item.bookingId || "",
     });
 
     setEditingId(item.id);
@@ -1671,6 +1771,128 @@ export default function Delivery() {
     playSound("open");
     setViewType(type);
     setViewId(item.id);
+  };
+
+  /* ---------------- CUSTOMER LINKING HELPERS ---------------- */
+
+  const availableDeliveryBookings = useMemo(() => {
+    if (!deliveryForm.customerId && !deliveryForm.phone) return [];
+    const phone = normalizePhone(deliveryForm.phone);
+    return bookings.filter(
+      (b) =>
+        (deliveryForm.customerId && String(b.customerId) === String(deliveryForm.customerId)) ||
+        (phone && normalizePhone(b.phone) === phone)
+    );
+  }, [bookings, deliveryForm.customerId, deliveryForm.phone]);
+
+  const availableSelectionBookings = useMemo(() => {
+    if (!selectionForm.customerId && !selectionForm.phone) return [];
+    const phone = normalizePhone(selectionForm.phone);
+    return bookings.filter(
+      (b) =>
+        (selectionForm.customerId && String(b.customerId) === String(selectionForm.customerId)) ||
+        (phone && normalizePhone(b.phone) === phone)
+    );
+  }, [bookings, selectionForm.customerId, selectionForm.phone]);
+
+  const onSelectDeliveryCustomer = (selectedId) => {
+    if (!selectedId) {
+      setDeliveryForm((previous) => ({
+        ...previous,
+        customerId: "",
+        bookingId: "",
+      }));
+      return;
+    }
+
+    const c = customers.find((item) => String(item.id) === String(selectedId));
+    if (!c) return;
+
+    const name = customerNameOf(c);
+    const phone = customerPhoneOf(c);
+    const address = customerAddressOf(c);
+
+    const custBookings = bookings.filter(
+      (b) =>
+        (b.customerId && String(b.customerId) === String(c.id)) ||
+        (phone && normalizePhone(b.phone) === phone)
+    );
+    const primary = custBookings[0];
+    const eventName = primary ? (primary.event || primary.package || "") : "";
+
+    setDeliveryForm((previous) => ({
+      ...previous,
+      customerId: String(c.id),
+      bookingId: primary ? String(primary.id) : previous.bookingId,
+      customer: name,
+      phone: phone || previous.phone,
+      address: address || previous.address,
+      event: eventName && EVENTS.includes(eventName) ? eventName : previous.event,
+    }));
+    setError("");
+  };
+
+  const onSelectSelectionCustomer = (selectedId) => {
+    if (!selectedId) {
+      setSelectionForm((previous) => ({
+        ...previous,
+        customerId: "",
+        bookingId: "",
+      }));
+      return;
+    }
+
+    const c = customers.find((item) => String(item.id) === String(selectedId));
+    if (!c) return;
+
+    const name = customerNameOf(c);
+    const phone = customerPhoneOf(c);
+
+    const custBookings = bookings.filter(
+      (b) =>
+        (b.customerId && String(b.customerId) === String(c.id)) ||
+        (phone && normalizePhone(b.phone) === phone)
+    );
+    const primary = custBookings[0];
+    const eventName = primary ? (primary.event || primary.package || "") : "";
+
+    setSelectionForm((previous) => ({
+      ...previous,
+      customerId: String(c.id),
+      bookingId: primary ? String(primary.id) : previous.bookingId,
+      customer: name,
+      phone: phone || previous.phone,
+      project: eventName && EVENTS.includes(eventName) ? eventName : previous.project,
+    }));
+    setError("");
+  };
+
+  const onSelectDeliveryBooking = (bId) => {
+    const booking = bookings.find((b) => String(b.id) === String(bId));
+    if (!booking) {
+      setDeliveryForm((prev) => ({ ...prev, bookingId: "" }));
+      return;
+    }
+    const eventName = booking.event || booking.package || "";
+    setDeliveryForm((prev) => ({
+      ...prev,
+      bookingId: String(booking.id),
+      event: eventName && EVENTS.includes(eventName) ? eventName : prev.event,
+    }));
+  };
+
+  const onSelectSelectionBooking = (bId) => {
+    const booking = bookings.find((b) => String(b.id) === String(bId));
+    if (!booking) {
+      setSelectionForm((prev) => ({ ...prev, bookingId: "" }));
+      return;
+    }
+    const eventName = booking.event || booking.package || "";
+    setSelectionForm((prev) => ({
+      ...prev,
+      bookingId: String(booking.id),
+      project: eventName && EVENTS.includes(eventName) ? eventName : prev.project,
+    }));
   };
 
   /* ---------------- DELIVERY ACTIONS ---------------- */
@@ -1721,9 +1943,68 @@ export default function Delivery() {
       return fail("Please enter delivery address.");
     }
 
+    // End-to-end customer sync with main customer registry
+    let effectiveCustomerId = deliveryForm.customerId;
+    const phoneNorm = normalizePhone(phone);
+
+    const existingCustomerIndex = customers.findIndex(
+      (c) =>
+        (effectiveCustomerId && String(c.id) === String(effectiveCustomerId)) ||
+        (phoneNorm && customerPhoneOf(c) === phoneNorm) ||
+        (customerNameOf(c).toLowerCase() === customer.toLowerCase())
+    );
+
+    let updatedCustomers = [...customers];
+    let customerStorageChanged = false;
+
+    if (existingCustomerIndex >= 0) {
+      const existingCust = updatedCustomers[existingCustomerIndex];
+      effectiveCustomerId = String(existingCust.id);
+      if (!existingCust.address && deliveryForm.address) {
+        updatedCustomers[existingCustomerIndex] = {
+          ...existingCust,
+          address: deliveryForm.address,
+          updatedAt: new Date().toISOString(),
+        };
+        customerStorageChanged = true;
+      }
+    } else {
+      // Auto-create customer record in main customer database so workflow is 100% end-to-end
+      effectiveCustomerId = `CUS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const newCustomerRecord = {
+        id: effectiveCustomerId,
+        name: customer,
+        phone: phoneNorm || phone,
+        email: "",
+        gender: "",
+        language: "Tamil",
+        source: "Deliverable",
+        address: deliveryForm.address || "",
+        notes: deliveryForm.notes ? `Delivery: ${deliveryForm.notes}` : "Created from Deliveries",
+        createdAt: todayKey(),
+        updatedAt: new Date().toISOString(),
+        isDemo: false,
+      };
+      updatedCustomers = [newCustomerRecord, ...updatedCustomers];
+      customerStorageChanged = true;
+    }
+
+    if (customerStorageChanged) {
+      try {
+        localStorage.setItem(CUSTOMER_KEY, JSON.stringify(updatedCustomers));
+        setCustomers(updatedCustomers);
+        window.dispatchEvent(
+          new CustomEvent(UPDATE_EVENT, { detail: { key: CUSTOMER_KEY, module: "customers" } })
+        );
+      } catch (err) {
+        console.error("Failed to sync customer:", err);
+      }
+    }
+
     const record = {
       ...deliveryForm,
       id: editingId || createId("DEL"),
+      customerId: effectiveCustomerId,
       customer,
       phone,
       quantity,
@@ -1874,9 +2155,59 @@ export default function Delivery() {
       );
     }
 
+    // End-to-end customer sync with main customer registry
+    let effectiveCustomerId = selectionForm.customerId;
+    const phoneNorm = normalizePhone(phone);
+
+    const existingCustomerIndex = customers.findIndex(
+      (c) =>
+        (effectiveCustomerId && String(c.id) === String(effectiveCustomerId)) ||
+        (phoneNorm && customerPhoneOf(c) === phoneNorm) ||
+        (customerNameOf(c).toLowerCase() === customer.toLowerCase())
+    );
+
+    let updatedCustomers = [...customers];
+    let customerStorageChanged = false;
+
+    if (existingCustomerIndex >= 0) {
+      effectiveCustomerId = String(updatedCustomers[existingCustomerIndex].id);
+    } else {
+      // Auto-create customer record in main customer database
+      effectiveCustomerId = `CUS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const newCustomerRecord = {
+        id: effectiveCustomerId,
+        name: customer,
+        phone: phoneNorm || phone,
+        email: "",
+        gender: "",
+        language: "Tamil",
+        source: "Deliverable",
+        address: "",
+        notes: selectionForm.notes ? `Photo Selection: ${selectionForm.notes}` : "Created from Photo Selection",
+        createdAt: todayKey(),
+        updatedAt: new Date().toISOString(),
+        isDemo: false,
+      };
+      updatedCustomers = [newCustomerRecord, ...updatedCustomers];
+      customerStorageChanged = true;
+    }
+
+    if (customerStorageChanged) {
+      try {
+        localStorage.setItem(CUSTOMER_KEY, JSON.stringify(updatedCustomers));
+        setCustomers(updatedCustomers);
+        window.dispatchEvent(
+          new CustomEvent(UPDATE_EVENT, { detail: { key: CUSTOMER_KEY, module: "customers" } })
+        );
+      } catch (err) {
+        console.error("Failed to sync customer:", err);
+      }
+    }
+
     const record = {
       ...selectionForm,
       id: editingId || createId("SEL"),
+      customerId: effectiveCustomerId,
       customer,
       phone,
       photoCount,
@@ -1954,6 +2285,8 @@ export default function Delivery() {
       const match = [
         item.id,
         item.deliveryId,
+        item.customerId,
+        item.bookingId,
         item.customer,
         item.phone,
         item.event,
@@ -1982,6 +2315,8 @@ export default function Delivery() {
     return selections.filter((item) => {
       const match = [
         item.id,
+        item.customerId,
+        item.bookingId,
         item.customer,
         item.phone,
         item.project,
@@ -2633,10 +2968,41 @@ export default function Delivery() {
             <SectionHeading
               icon={UserRound}
               title="Customer Information"
-              subtitle="Customer and photography project details"
+              subtitle="Select registered customer or enter details"
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FormField label="Select Registered Customer">
+                  <select
+                    value={selectionForm.customerId || ""}
+                    onChange={(event) =>
+                      onSelectSelectionCustomer(event.target.value)
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      -- Select Existing Customer / Enter Manually --
+                    </option>
+                    {customers.map((c) => {
+                      const cName = customerNameOf(c);
+                      const cPhone = customerPhoneOf(c);
+                      return (
+                        <option key={c.id} value={String(c.id)}>
+                          {cName} {cPhone ? `· ${cPhone}` : ""} ({c.id})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {selectionForm.customerId && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                      <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+                      Connected to Customer: {selectionForm.customer} ({selectionForm.customerId}) · Auto-filled
+                    </p>
+                  )}
+                </FormField>
+              </div>
+
               <FormField label="Customer Name" required>
                 <input
                   required
@@ -2669,6 +3035,25 @@ export default function Delivery() {
                   className={inputClass}
                 />
               </FormField>
+
+              {availableSelectionBookings.length > 0 && (
+                <div className="sm:col-span-2">
+                  <FormField label="Linked Shoot / Booking">
+                    <select
+                      value={selectionForm.bookingId || ""}
+                      onChange={(e) => onSelectSelectionBooking(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">-- Choose Shoot / Booking --</option>
+                      {availableSelectionBookings.map((b) => (
+                        <option key={b.id} value={String(b.id)}>
+                          {b.event || "Shoot"} ({b.date || "Scheduled"}) · {b.id}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+              )}
 
               <div className="sm:col-span-2">
                 <FormField label="Photography Package">
@@ -2873,9 +3258,41 @@ export default function Delivery() {
             <SectionHeading
               icon={UserRound}
               title="Customer Information"
+              subtitle="Select registered customer or enter details"
             />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FormField label="Select Registered Customer">
+                  <select
+                    value={deliveryForm.customerId || ""}
+                    onChange={(event) =>
+                      onSelectDeliveryCustomer(event.target.value)
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      -- Select Existing Customer / Enter Manually --
+                    </option>
+                    {customers.map((c) => {
+                      const cName = customerNameOf(c);
+                      const cPhone = customerPhoneOf(c);
+                      return (
+                        <option key={c.id} value={String(c.id)}>
+                          {cName} {cPhone ? `· ${cPhone}` : ""} ({c.id})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {deliveryForm.customerId && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                      <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+                      Connected to Customer: {deliveryForm.customer} ({deliveryForm.customerId}) · Details & Address auto-filled
+                    </p>
+                  )}
+                </FormField>
+              </div>
+
               <FormField label="Customer Name" required>
                 <input
                   required
@@ -2908,6 +3325,25 @@ export default function Delivery() {
                   className={inputClass}
                 />
               </FormField>
+
+              {availableDeliveryBookings.length > 0 && (
+                <div className="sm:col-span-2">
+                  <FormField label="Linked Shoot / Booking">
+                    <select
+                      value={deliveryForm.bookingId || ""}
+                      onChange={(e) => onSelectDeliveryBooking(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">-- Choose Shoot / Booking --</option>
+                      {availableDeliveryBookings.map((b) => (
+                        <option key={b.id} value={String(b.id)}>
+                          {b.event || "Shoot"} ({b.date || "Scheduled"}) · {b.id}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+              )}
 
               <FormField label="Event Type">
                 <CustomDropdown
@@ -3180,6 +3616,22 @@ export default function Delivery() {
               icon={Phone}
             />
 
+            {selectedView.customerId && (
+              <InfoBox
+                label="Customer Profile ID"
+                value={selectedView.customerId}
+                icon={Hash}
+              />
+            )}
+
+            {selectedView.bookingId && (
+              <InfoBox
+                label="Linked Booking"
+                value={selectedView.bookingId}
+                icon={Camera}
+              />
+            )}
+
             <div className="col-span-2">
               <InfoBox
                 label="Photography Package"
@@ -3309,6 +3761,22 @@ export default function Delivery() {
               value={selectedView.phone}
               icon={Phone}
             />
+
+            {selectedView.customerId && (
+              <InfoBox
+                label="Customer Profile ID"
+                value={selectedView.customerId}
+                icon={Hash}
+              />
+            )}
+
+            {selectedView.bookingId && (
+              <InfoBox
+                label="Linked Booking"
+                value={selectedView.bookingId}
+                icon={Camera}
+              />
+            )}
 
             <InfoBox
               label="Event"
