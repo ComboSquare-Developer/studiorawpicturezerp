@@ -27,7 +27,7 @@ import {
 
 const STORAGE = {
   customers: "studio_raw_customers",
-  enquiries: "studio_raw_enquiries",
+  enquiries: "studioraw_enquiries",
   bookings: "studioraw_bookings",
   payments: "studioraw_payments",
   photoshoots: "studioraw_photoshoots",
@@ -175,11 +175,6 @@ function paymentTransactions(payment) {
     .map((field) => payment?.[field])
     .find(Array.isArray);
 
-  /*
-   * When transactions exist, they are the source
-   * of truth. Advance is NOT added separately.
-   */
-
   if (transactions && transactions.length > 0) {
     return transactions
       .filter((transaction) => {
@@ -215,10 +210,6 @@ function paymentTransactions(payment) {
       }))
       .filter((transaction) => transaction.amount > 0);
   }
-
-  /*
-   * LEGACY PAYMENT FALLBACK
-   */
 
   const received = Math.max(
     0,
@@ -528,27 +519,6 @@ const CARD_THEMES = {
     border: "#fde68a",
     iconBg: "#fef3c7",
     accent: "#d97706",
-  },
-
-  "Photo Shoots": {
-    bg: "#ecfeff",
-    border: "#a5f3fc",
-    iconBg: "#cffafe",
-    accent: "#0891b2",
-  },
-
-  "Editing Pending": {
-    bg: "#fff7ed",
-    border: "#fed7aa",
-    iconBg: "#ffedd5",
-    accent: "#ea580c",
-  },
-
-  "Album Projects": {
-    bg: "#faf5ff",
-    border: "#e9d5ff",
-    iconBg: "#f3e8ff",
-    accent: "#9333ea",
   },
 
   "Pending Deliveries": {
@@ -1583,39 +1553,6 @@ export default function Dashboard() {
       paid: roundMoney(paid),
       pending: roundMoney(pending),
 
-      shoots: data.photoshoots.length,
-
-      editingPending: data.editing.filter(
-        (item) =>
-          ![
-            "completed",
-            "complete",
-            "done",
-          ].includes(
-            String(
-              item.editingStatus ||
-                item.status ||
-                ""
-            ).toLowerCase()
-          )
-      ).length,
-
-      albumsPending: data.albums.filter(
-        (item) =>
-          ![
-            "printed",
-            "delivered",
-            "completed",
-            "complete",
-          ].includes(
-            String(
-              item.printingStatus ||
-                item.status ||
-                ""
-            ).toLowerCase()
-          )
-      ).length,
-
       deliveriesPending: data.deliveries.filter(
         (item) =>
           ![
@@ -1819,7 +1756,7 @@ export default function Dashboard() {
   );
 
   /* ========================================
-     DASHBOARD CARDS
+     DASHBOARD CARDS - 6 ONLY
   ======================================== */
 
   const cards = [
@@ -1852,24 +1789,6 @@ export default function Dashboard() {
       value: stats.pending,
       icon: Wallet,
       subtitle: "Outstanding amount",
-    },
-    {
-      title: "Photo Shoots",
-      value: stats.shoots,
-      icon: Camera,
-      subtitle: "Recorded shoots",
-    },
-    {
-      title: "Editing Pending",
-      value: stats.editingPending,
-      icon: Images,
-      subtitle: "Editing not completed",
-    },
-    {
-      title: "Album Projects",
-      value: stats.albumsPending,
-      icon: BookOpen,
-      subtitle: "Not yet printed",
     },
     {
       title: "Pending Deliveries",
