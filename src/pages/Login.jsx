@@ -6,12 +6,14 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   CalendarDays,
   UsersRound,
   ChartNoAxesCombined,
   CheckCircle2,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
 /* ==========================================
@@ -77,11 +79,24 @@ const features = [
    LOGIN PAGE
 ========================================== */
 
-export default function Login({ onLogin }) {
+export default function Login({
+  onLogin,
+  onForgotPassword,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  /* ==========================================
+     LOGIN
+  ========================================== */
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -95,6 +110,74 @@ export default function Login({ onLogin }) {
 
     if (typeof onLogin === "function") {
       onLogin();
+    }
+  };
+
+  /* ==========================================
+     FORGOT PASSWORD
+  ========================================== */
+
+  const openForgotPassword = () => {
+    setRecoveryEmail(email);
+    setRecoveryError("");
+    setRecoverySuccess(false);
+    setForgotOpen(true);
+  };
+
+  const backToLogin = () => {
+    setForgotOpen(false);
+    setRecoveryError("");
+    setRecoverySuccess(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    setRecoveryError("");
+    setRecoverySuccess(false);
+
+    const cleanEmail = recoveryEmail.trim();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
+    ) {
+      setRecoveryError(
+        "Please enter a valid email address."
+      );
+      return;
+    }
+
+    if (typeof onForgotPassword !== "function") {
+      setRecoveryError(
+        "Password recovery email service is not connected yet."
+      );
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const result = await onForgotPassword({
+        email: cleanEmail,
+      });
+
+      if (
+        result === true ||
+        result?.success === true
+      ) {
+        setRecoverySuccess(true);
+      } else {
+        setRecoveryError(
+          result?.message ||
+            "Unable to send the recovery link. Please try again."
+        );
+      }
+    } catch {
+      setRecoveryError(
+        "Unable to send the recovery link. Please try again."
+      );
+    } finally {
+      setSending(false);
     }
   };
 
@@ -251,145 +334,284 @@ export default function Login({ onLogin }) {
               }}
             >
 
-              {/* LOGIN HEADING */}
+              {!forgotOpen ? (
+                <>
+                  {/* LOGIN HEADING */}
 
-              <div className="mb-6">
+                  <div className="mb-6">
 
-                <div className="mb-3.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5 rounded-full border border-[#e7ebf2] bg-[#f8fafc] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#65748a]">
-                    <ShieldCheck size={13} />
-                    Workspace
+                    <div className="mb-3.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 rounded-full border border-[#e7ebf2] bg-[#f8fafc] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#65748a]">
+                        <ShieldCheck size={13} />
+                        Workspace
+                      </div>
+                    </div>
+
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b19464]">
+                      Studio Management Portal
+                    </p>
+
+                    <h2 className="text-[28px] font-bold tracking-[-0.035em] text-[#102b53] sm:text-[34px]">
+                      Welcome back
+                    </h2>
+
+                    <p className="mt-2 text-[13px] leading-relaxed text-[#8793a6]">
+                      Sign in to continue to your studio workspace.
+                    </p>
                   </div>
-                </div>
 
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b19464]">
-                  Studio Management Portal
-                </p>
+                  {/* LOGIN FORM */}
 
-                <h2 className="text-[28px] font-bold tracking-[-0.035em] text-[#102b53] sm:text-[34px]">
-                  Welcome back
-                </h2>
-
-                <p className="mt-2 text-[13px] leading-relaxed text-[#8793a6]">
-                  Sign in to continue to your studio workspace.
-                </p>
-              </div>
-
-              {/* LOGIN FORM */}
-
-              <form
-                onSubmit={handleSubmit}
-                className="space-y-5"
-              >
-
-                {/* EMAIL */}
-
-                <div>
-                  <label
-                    htmlFor="login-email"
-                    className="mb-2 block text-[12px] font-semibold text-[#34445f]"
+                  <form
+                    onSubmit={handleSubmit}
+                    className="space-y-5"
                   >
-                    Email Address
-                  </label>
 
-                  <div className="relative">
-                    <Mail
-                      size={18}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa8ba]"
-                    />
+                    {/* EMAIL */}
 
-                    <input
-                      id="login-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (error) setError("");
-                      }}
-                      placeholder="name@studio.com"
-                      autoComplete="username"
-                      required
-                      className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
-                    />
+                    <div>
+                      <label
+                        htmlFor="login-email"
+                        className="mb-2 block text-[12px] font-semibold text-[#34445f]"
+                      >
+                        Email Address
+                      </label>
+
+                      <div className="relative">
+                        <Mail
+                          size={18}
+                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa8ba]"
+                        />
+
+                        <input
+                          id="login-email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (error) setError("");
+                          }}
+                          placeholder="name@studio.com"
+                          autoComplete="username"
+                          required
+                          className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PASSWORD */}
+
+                    <div>
+                      <label
+                        htmlFor="login-password"
+                        className="mb-2 block text-[12px] font-semibold text-[#34445f]"
+                      >
+                        Password
+                      </label>
+
+                      <div className="relative">
+                        <LockKeyhole
+                          size={18}
+                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa8ba]"
+                        />
+
+                        <input
+                          id="login-password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (error) setError("");
+                          }}
+                          placeholder="Enter your password"
+                          autoComplete="current-password"
+                          required
+                          className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-11 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword((previous) => !previous)
+                          }
+                          aria-label={
+                            showPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9aa8ba] transition hover:text-[#102b53]"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* FORGOT PASSWORD BUTTON */}
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={openForgotPassword}
+                        className="text-xs font-semibold text-[#102b53] transition hover:text-[#1b4380] hover:underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+
+                    {/* LOGIN ERROR */}
+
+                    {error && (
+                      <p
+                        role="alert"
+                        className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-xs text-red-600"
+                      >
+                        {error}
+                      </p>
+                    )}
+
+                    {/* SIGN IN */}
+
+                    <button
+                      type="submit"
+                      className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)]"
+                    >
+                      Sign In to Dashboard
+
+                      <ArrowRight
+                        size={18}
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                      />
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  {/* FORGOT PASSWORD FORM */}
+
+                  <div className="mb-6">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#eef3fa] text-[#102b53]">
+                      <LockKeyhole size={23} />
+                    </div>
+
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b19464]">
+                      Account Recovery
+                    </p>
+
+                    <h2 className="text-[28px] font-bold tracking-[-0.035em] text-[#102b53] sm:text-[34px]">
+                      Forgot Password?
+                    </h2>
+
+                    <p className="mt-2 text-[13px] leading-relaxed text-[#8793a6]">
+                      Enter your registered email address
+                      to receive a password reset link.
+                    </p>
                   </div>
-                </div>
 
-                {/* PASSWORD */}
-
-                <div>
-                  <label
-                    htmlFor="login-password"
-                    className="mb-2 block text-[12px] font-semibold text-[#34445f]"
+                  <form
+                    onSubmit={handleForgotPassword}
+                    className="space-y-5"
                   >
-                    Password
-                  </label>
+                    <div>
+                      <label
+                        htmlFor="recovery-email"
+                        className="mb-2 block text-[12px] font-semibold text-[#34445f]"
+                      >
+                        Email Address
+                      </label>
 
-                  <div className="relative">
-                    <LockKeyhole
-                      size={18}
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa8ba]"
-                    />
+                      <div className="relative">
+                        <Mail
+                          size={18}
+                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9aa8ba]"
+                        />
 
-                    <input
-                      id="login-password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (error) setError("");
-                      }}
-                      placeholder="Enter your password"
-                      autoComplete="current-password"
-                      required
-                      className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-11 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
-                    />
+                        <input
+                          id="recovery-email"
+                          type="email"
+                          value={recoveryEmail}
+                          onChange={(e) => {
+                            setRecoveryEmail(e.target.value);
+                            setRecoveryError("");
+                            setRecoverySuccess(false);
+                          }}
+                          placeholder="name@studio.com"
+                          autoComplete="email"
+                          required
+                          className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* RECOVERY ERROR */}
+
+                    {recoveryError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-xs text-red-600"
+                      >
+                        <AlertCircle
+                          size={16}
+                          className="shrink-0"
+                        />
+                        <span>{recoveryError}</span>
+                      </div>
+                    )}
+
+                    {/* RECOVERY SUCCESS */}
+
+                    {recoverySuccess && (
+                      <div
+                        role="status"
+                        className="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 px-3.5 py-3 text-xs leading-relaxed text-green-700"
+                      >
+                        <CheckCircle2
+                          size={17}
+                          className="shrink-0"
+                        />
+
+                        <span>
+                          If your email is registered,
+                          recovery instructions will be
+                          sent shortly. Check your inbox
+                          and spam folder.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* SEND RESET LINK */}
+
+                    <button
+                      type="submit"
+                      disabled={sending}
+                      className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {sending
+                        ? "Sending..."
+                        : "Send Reset Link"}
+
+                      <ArrowRight
+                        size={18}
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                      />
+                    </button>
+
+                    {/* BACK TO LOGIN */}
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword((previous) => !previous)
-                      }
-                      aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9aa8ba] transition hover:text-[#102b53]"
+                      onClick={backToLogin}
+                      className="flex w-full items-center justify-center gap-2 py-1 text-xs font-semibold text-[#102b53] transition hover:text-[#1b4380] hover:underline"
                     >
-                      {showPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
+                      <ArrowLeft size={16} />
+                      Back to Login
                     </button>
-                  </div>
-                </div>
-
-                {/* ERROR */}
-
-                {error && (
-                  <p
-                    role="alert"
-                    className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-2.5 text-xs text-red-600"
-                  >
-                    {error}
-                  </p>
-                )}
-
-                {/* SIGN IN */}
-
-                <button
-                  type="submit"
-                  className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)]"
-                >
-                  Sign In to Dashboard
-
-                  <ArrowRight
-                    size={18}
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                  />
-                </button>
-              </form>
+                  </form>
+                </>
+              )}
             </div>
 
             {/* FOOTER */}

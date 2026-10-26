@@ -397,7 +397,7 @@ function EditProfileModal({
       }
 
       setError(
-        "For security, change your password using Reset Password from the profile menu. You must verify your current password."
+        "For security, change your password using Forgot Password from the profile menu. You must verify your current password."
       );
       return;
     }
@@ -945,7 +945,7 @@ function ResetPasswordModal({
                   id="reset-password-title"
                   className="text-lg font-extrabold text-white sm:text-xl"
                 >
-                  Reset Password
+                  Forgot Password
                 </h2>
 
                 <p className="mt-1 text-xs text-blue-100">
@@ -1612,7 +1612,7 @@ export default function Header({
                       />
                     </button>
 
-                    {/* RESET PASSWORD */}
+                    {/* FORGOT PASSWORD */}
 
                     <button
                       type="button"
@@ -1622,7 +1622,7 @@ export default function Header({
                     >
                       <KeyRound size={17} />
 
-                      Reset Password
+                      Forgot Password
 
                       <ChevronRight
                         size={15}
