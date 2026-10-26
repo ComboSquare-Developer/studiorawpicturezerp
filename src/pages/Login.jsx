@@ -15,42 +15,51 @@ import {
 } from "lucide-react";
 
 /* ==========================================
-   LOGO
+   RESPONSIVE STUDIO LOGO
 ========================================== */
 
-const LOGO = "/favicon.png";
-const FALLBACK_LOGO = "/assets/favicon.png";
+const LOGO_PATHS = [
+  "/favicon.png",
+  "/assets/favicon.png",
+];
 
-function StudioLogo({ className = "" }) {
-  const [logoSrc, setLogoSrc] = useState(LOGO);
-  const [logoError, setLogoError] = useState(false);
+function StudioLogo({ size = "desktop" }) {
+  const [logoIndex, setLogoIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
 
-  const handleLogoError = () => {
-    if (logoSrc !== FALLBACK_LOGO) {
-      setLogoSrc(FALLBACK_LOGO);
-    } else {
-      setLogoError(true);
-    }
-  };
+  const sizeClass =
+    size === "mobile"
+      ? "h-14 w-14 sm:h-16 sm:w-16"
+      : "h-12 w-12 xl:h-14 xl:w-14";
 
-  if (logoError) {
+  if (failed) {
     return (
       <div
-        className={`flex shrink-0 items-center justify-center rounded-xl bg-[#e9d5b0] text-[#102b53] ${className}`}
+        className={`flex shrink-0 items-center justify-center rounded-xl bg-[#e9d5b0] font-black text-[#102b53] ${sizeClass}`}
         aria-label="Studio Raw Picturez"
       >
-        <span className="text-sm font-black">SR</span>
+        SR
       </div>
     );
   }
 
   return (
-    <img
-      src={logoSrc}
-      alt="Studio Raw Picturez Logo"
-      onError={handleLogoError}
-      className={`shrink-0 object-contain ${className}`}
-    />
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden ${sizeClass}`}
+    >
+      <img
+        src={LOGO_PATHS[logoIndex]}
+        alt="Studio Raw Picturez Logo"
+        onError={() => {
+          if (logoIndex < LOGO_PATHS.length - 1) {
+            setLogoIndex((previous) => previous + 1);
+          } else {
+            setFailed(true);
+          }
+        }}
+        className="block h-full w-full object-contain"
+      />
+    </div>
   );
 }
 
@@ -107,7 +116,7 @@ export default function Login({ onLogin }) {
           <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-3">
 
-              <StudioLogo className="h-12 w-12" />
+              <StudioLogo size="desktop" />
 
               <div>
                 <h1 className="text-sm font-bold tracking-[0.12em] xl:text-base">
@@ -215,13 +224,11 @@ export default function Login({ onLogin }) {
 
           <div className="relative z-10 w-full max-w-[450px]">
 
-            {/* ==========================================
-                MOBILE LOGO - FIXED
-            ========================================== */}
+            {/* MOBILE LOGO */}
 
             <div className="mb-5 flex items-center justify-center gap-3 lg:hidden">
 
-              <StudioLogo className="h-14 w-14 sm:h-16 sm:w-16" />
+              <StudioLogo size="mobile" />
 
               <div className="min-w-0">
                 <p className="text-sm font-bold tracking-[0.07em] text-[#102b53] sm:text-base">
