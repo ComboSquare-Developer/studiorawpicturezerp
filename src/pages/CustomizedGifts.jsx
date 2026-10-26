@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Gift,
@@ -17,6 +16,9 @@ import {
   UserRound,
   CalendarDays,
   IndianRupee,
+  RotateCcw,
+  Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
 const KEY = "studioraw_customized_gifts";
@@ -33,7 +35,6 @@ const GIFT_TYPES = [
   "Handmade Calligraphy",
   "Handmade Gifts",
   "Custom Package",
-  
 ];
 
 const OCCASIONS = [
@@ -46,7 +47,6 @@ const OCCASIONS = [
   "3D Name / Modelling",
   "Handmade Calligraphy",
   "Custom Package",
- 
 ];
 
 const SIZES = [
@@ -79,12 +79,7 @@ const STATUSES = [
   "Cancelled",
 ];
 
-const PAYMENT_MODES = [
-  "Cash",
-  "UPI",
-  "Bank Transfer",
-  "Card",
-];
+const PAYMENT_MODES = ["Cash", "UPI", "Bank Transfer", "Card"];
 
 const demoData = [
   {
@@ -204,25 +199,146 @@ const today = () => {
 const emptyForm = () => ({
   customer: "",
   phone: "",
-  giftType: "Photo Frame",
-  occasion: "Birthday",
+  giftType: "",
+  occasion: "",
   quantity: "1",
   orderDate: today(),
   deliveryDate: "",
   customization: "",
-  size: "Standard",
+  size: "",
   amount: "",
   advance: "",
-  paymentMode: "Cash",
-  status: "Pending",
+  paymentMode: "",
+  status: "",
   notes: "",
 });
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
+const balanceOf = (gift) =>
+  Math.max(
+    0,
+    Number(gift.amount || 0) - Number(gift.advance || 0)
+  );
+
 const inputClass =
-  "w-full min-w-0 rounded-xl border border-[#dce5f1] bg-white px-3.5 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#1c477e] focus:ring-2 focus:ring-blue-100";
+  "w-full min-w-0 rounded-xl border border-[#cfe2f7] bg-white px-3.5 py-3 text-sm text-[#183c68] outline-none transition placeholder:text-[#94abc4] focus:border-[#63a6e7] focus:ring-4 focus:ring-[#dcefff]";
+
+const statusClass = (status) => {
+  const styles = {
+    Pending: "border-amber-200 bg-amber-50 text-amber-700",
+    Designing: "border-violet-200 bg-violet-50 text-violet-700",
+    Printing: "border-sky-200 bg-sky-50 text-sky-700",
+    Ready: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    Delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  };
+
+  return styles[status] || "border-slate-200 bg-slate-50 text-slate-600";
+};
+
+function useCountUp(target, replayKey = 0, duration = 1350) {
+  const [display, setDisplay] = useState(0);
+  const currentRef = useRef(0);
+
+  useEffect(() => {
+    const end = Number(target) || 0;
+
+    if (
+      typeof window === "undefined" ||
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      currentRef.current = end;
+      setDisplay(end);
+      return;
+    }
+
+    const start = replayKey ? 0 : currentRef.current;
+    let frame;
+    let startTime;
+
+    currentRef.current = start;
+    setDisplay(start);
+
+    const animate = (timestamp) => {
+      if (startTime === undefined) startTime = timestamp;
+
+      const progress = Math.min(
+        (timestamp - startTime) / duration,
+        1
+      );
+
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Math.round(start + (end - start) * eased);
+
+      currentRef.current = next;
+      setDisplay(next);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        currentRef.current = end;
+        setDisplay(end);
+      }
+    };
+
+    frame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(frame);
+  }, [target, replayKey, duration]);
+
+  return display;
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  currency = false,
+  shade,
+}) {
+  const [replay, setReplay] = useState(0);
+  const animated = useCountUp(value, replay);
+
+  return (
+    <button
+      type="button"
+      onClick={() => setReplay((previous) => previous + 1)}
+      title="Click to replay counting animation"
+      aria-label={`Replay ${title} count animation`}
+      className="group relative w-full min-w-0 overflow-hidden rounded-[22px] border border-[#cfe5fb] bg-white p-5 text-left shadow-[0_8px_28px_rgba(50,112,180,0.07)] transition duration-300 hover:-translate-y-1 hover:border-[#8ac2f4] hover:shadow-[0_14px_35px_rgba(50,112,180,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-200"
+    >
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[5px] bg-gradient-to-r ${shade}`}
+      />
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-[#6685a6] sm:text-sm">
+            {title}
+          </p>
+
+          <h2 className="mt-4 truncate text-[25px] font-extrabold tracking-tight text-[#164579] sm:text-[28px]">
+            {currency ? money(animated) : animated.toLocaleString("en-IN")}
+          </h2>
+        </div>
+
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#d5e9fd] bg-gradient-to-br from-[#e5f4ff] to-[#c9e6ff] text-[#2873b7]">
+          <Icon size={23} strokeWidth={2.1} />
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-1.5 text-[11px] font-medium text-[#8aa6c1]">
+        <RotateCcw
+          size={12}
+          className="transition-transform duration-500 group-hover:rotate-90"
+        />
+        Click to replay
+      </div>
+    </button>
+  );
+}
 
 function Field({
   label,
@@ -235,27 +351,31 @@ function Field({
   required = false,
   min,
 }) {
+  const id = `gift-${name}`;
+
   return (
     <div className="min-w-0 space-y-1.5">
       <label
-        htmlFor={`gift-${name}`}
-        className="block text-xs font-semibold text-[#344767]"
+        htmlFor={id}
+        className="block text-xs font-bold text-[#315b85]"
       >
         {label}
-        {required && (
-          <span className="ml-1 text-red-500">*</span>
-        )}
+        {required && <span className="ml-1 text-rose-500">*</span>}
       </label>
 
       {options ? (
         <div className="relative">
           <select
-            id={`gift-${name}`}
+            id={id}
             value={value ?? ""}
-            onChange={(e) => onChange(name, e.target.value)}
+            onChange={(event) => onChange(name, event.target.value)}
             required={required}
             className={`${inputClass} appearance-none pr-10`}
           >
+            <option value="">
+              Select {label.toLowerCase()}
+            </option>
+
             {[
               ...new Set(
                 value && !options.includes(value)
@@ -270,16 +390,23 @@ function Field({
           </select>
 
           <ChevronDown
-            size={16}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#607b9f]"
+            size={17}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6592bd]"
           />
         </div>
       ) : (
         <input
-          id={`gift-${name}`}
+          id={id}
           type={type}
           value={value ?? ""}
-          onChange={(e) => onChange(name, e.target.value)}
+          onChange={(event) =>
+            onChange(
+              name,
+              type === "tel"
+                ? event.target.value.replace(/\D/g, "").slice(0, 10)
+                : event.target.value
+            )
+          }
           placeholder={placeholder}
           required={required}
           min={min ?? (type === "number" ? 0 : undefined)}
@@ -290,6 +417,8 @@ function Field({
                 : "0.01"
               : undefined
           }
+          inputMode={type === "tel" ? "numeric" : undefined}
+          maxLength={type === "tel" ? 10 : undefined}
           className={inputClass}
         />
       )}
@@ -299,30 +428,17 @@ function Field({
 
 function SectionTitle({ icon: Icon, title }) {
   return (
-    <div className="mb-4 flex items-center gap-3 border-b border-[#e7edf5] pb-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eaf1fa] text-[#102f62]">
+    <div className="mb-4 flex items-center gap-3 border-b border-[#dcebf9] pb-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#e7f5ff] to-[#cde8ff] text-[#2873b7]">
         <Icon size={18} />
       </div>
 
-      <h3 className="text-sm font-bold text-[#10264d]">
+      <h3 className="text-sm font-extrabold text-[#164579]">
         {title}
       </h3>
     </div>
   );
 }
-
-const statusClass = (status) => {
-  const styles = {
-    Pending: "bg-amber-50 text-amber-700",
-    Designing: "bg-purple-50 text-purple-700",
-    Printing: "bg-blue-50 text-blue-700",
-    Ready: "bg-cyan-50 text-cyan-700",
-    Delivered: "bg-green-50 text-green-700",
-    Cancelled: "bg-red-50 text-red-700",
-  };
-
-  return styles[status] || "bg-slate-100 text-slate-700";
-};
 
 function playSound(type, enabled) {
   if (!enabled) return;
@@ -349,7 +465,6 @@ function playSound(type, enabled) {
 
     oscillator.connect(gain);
     gain.connect(context.destination);
-
     oscillator.start();
     oscillator.stop(context.currentTime + 0.13);
 
@@ -357,7 +472,7 @@ function playSound(type, enabled) {
       context.close().catch(() => {});
     };
   } catch {
-    // Audio is optional.
+    // Sound is optional.
   }
 }
 
@@ -369,7 +484,6 @@ export default function CustomizedGifts() {
       if (saved === null) return demoData;
 
       const parsed = JSON.parse(saved);
-
       return Array.isArray(parsed) ? parsed : demoData;
     } catch {
       return demoData;
@@ -384,8 +498,9 @@ export default function CustomizedGifts() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
+  const [soundEnabled] = useState(() => {
     try {
       return localStorage.getItem(SOUND_KEY) === "true";
     } catch {
@@ -397,20 +512,16 @@ export default function CustomizedGifts() {
     try {
       localStorage.setItem(KEY, JSON.stringify(gifts));
     } catch {
-      // Keep current session data if storage is unavailable.
+      // Keep session data when storage is unavailable.
     }
   }, [gifts]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        SOUND_KEY,
-        String(soundEnabled)
-      );
-    } catch {
-      // Sound preference is optional.
-    }
-  }, [soundEnabled]);
+    if (!notice) return;
+
+    const timer = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     if (!open) return;
@@ -418,8 +529,12 @@ export default function CustomizedGifts() {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const onKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setEditingId(null);
+        setError("");
+      }
     };
 
     window.addEventListener("keydown", onKey);
@@ -441,29 +556,22 @@ export default function CustomizedGifts() {
         gift.occasion,
         gift.customization,
         gift.status,
+        gift.paymentMode,
       ].some((value) =>
         String(value || "").toLowerCase().includes(query)
       );
 
       return (
         matchesSearch &&
-        (statusFilter === "All" ||
-          gift.status === statusFilter) &&
-        (typeFilter === "All" ||
-          gift.giftType === typeFilter)
+        (statusFilter === "All" || gift.status === statusFilter) &&
+        (typeFilter === "All" || gift.giftType === typeFilter)
       );
     });
   }, [gifts, search, statusFilter, typeFilter]);
 
-  const pendingBalance = gifts.reduce(
-    (sum, gift) =>
-      sum +
-      Math.max(
-        0,
-        Number(gift.amount || 0) -
-          Number(gift.advance || 0)
-      ),
-    0
+  const pendingBalance = useMemo(
+    () => gifts.reduce((sum, gift) => sum + balanceOf(gift), 0),
+    [gifts]
   );
 
   const stats = [
@@ -471,37 +579,44 @@ export default function CustomizedGifts() {
       title: "Total Gift Orders",
       value: gifts.length,
       icon: Gift,
-      color: "bg-[#eaf1fa] text-[#102f62]",
+      shade: "from-[#4a9be7] to-[#9bd6ff]",
     },
     {
       title: "Pending Orders",
       value: gifts.filter((gift) =>
-        ["Pending", "Designing", "Printing"].includes(
-          gift.status
-        )
+        ["Pending", "Designing", "Printing"].includes(gift.status)
       ).length,
       icon: Clock3,
-      color: "bg-amber-50 text-amber-700",
+      shade: "from-[#5a9ee7] to-[#b6ddff]",
     },
     {
       title: "Delivered Gifts",
-      value: gifts.filter(
-        (gift) => gift.status === "Delivered"
-      ).length,
+      value: gifts.filter((gift) => gift.status === "Delivered").length,
       icon: CheckCircle2,
-      color: "bg-green-50 text-green-700",
+      shade: "from-[#3688d0] to-[#8bc8f4]",
     },
     {
       title: "Pending Balance",
-      value: money(pendingBalance),
+      value: pendingBalance,
       icon: Wallet,
-      color: "bg-red-50 text-red-700",
+      currency: true,
+      shade: "from-[#2372bd] to-[#8fc9f5]",
     },
   ];
 
+  const giftTypeOptions = useMemo(
+    () => [
+      ...new Set([
+        ...GIFT_TYPES,
+        ...gifts.map((gift) => gift.giftType).filter(Boolean),
+      ]),
+    ],
+    [gifts]
+  );
+
   const updateForm = (name, value) => {
-    setForm((prev) => ({
-      ...prev,
+    setForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
 
@@ -534,14 +649,24 @@ export default function CustomizedGifts() {
     setError("");
   };
 
-  const saveGift = (e) => {
-    e.preventDefault();
+  const saveGift = (event) => {
+    event.preventDefault();
 
-    if (
-      !String(form.customer).trim() ||
-      !String(form.phone).trim()
-    ) {
+    const customer = String(form.customer || "").trim();
+    const phone = String(form.phone || "").trim();
+
+    if (!customer || !phone) {
       setError("Please enter customer details.");
+      return;
+    }
+
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    if (!form.giftType || !form.orderDate || !form.deliveryDate) {
+      setError("Please enter gift type, order date and delivery date.");
       return;
     }
 
@@ -570,11 +695,7 @@ export default function CustomizedGifts() {
       return;
     }
 
-    if (
-      form.deliveryDate &&
-      form.orderDate &&
-      form.deliveryDate < form.orderDate
-    ) {
+    if (form.deliveryDate < form.orderDate) {
       setError("Delivery date cannot be before order date.");
       return;
     }
@@ -584,20 +705,24 @@ export default function CustomizedGifts() {
       id:
         editingId !== null
           ? editingId
-          : `GIFT-${Date.now()}`,
+          : `GIFT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      customer,
+      phone,
       quantity: Number(form.quantity),
       amount: Number(form.amount),
       advance: Number(form.advance),
     };
 
     if (editingId !== null) {
-      setGifts((prev) =>
-        prev.map((gift) =>
+      setGifts((previous) =>
+        previous.map((gift) =>
           gift.id === editingId ? record : gift
         )
       );
+      setNotice("Gift order updated successfully.");
     } else {
-      setGifts((prev) => [record, ...prev]);
+      setGifts((previous) => [record, ...previous]);
+      setNotice("Gift order added successfully.");
     }
 
     playSound("save", soundEnabled);
@@ -607,92 +732,70 @@ export default function CustomizedGifts() {
   const deleteGift = (id) => {
     if (!window.confirm("Delete this gift order?")) return;
 
-    setGifts((prev) =>
-      prev.filter((gift) => gift.id !== id)
+    setGifts((previous) =>
+      previous.filter((gift) => gift.id !== id)
     );
 
     playSound("delete", soundEnabled);
+    setNotice("Gift order deleted successfully.");
   };
 
-  const balanceOf = (gift) =>
-    Math.max(
-      0,
-      Number(gift.amount || 0) -
-        Number(gift.advance || 0)
-    );
-
   return (
-    <div className="min-h-screen min-w-0 bg-[#f3f6fb] p-3 text-[#10264d] sm:p-5 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen min-w-0 bg-gradient-to-br from-[#f5faff] via-[#eaf5ff] to-[#dceeff] p-3 text-[#183c68] sm:p-5 lg:p-8">
+      <div className="mx-auto max-w-[1500px] space-y-6">
+        {notice &&
+          createPortal(
+            <div className="fixed left-3 right-3 top-4 z-[10001] flex items-center gap-3 rounded-2xl border border-[#b9ddf9] bg-white px-4 py-3 shadow-xl sm:left-auto sm:right-5 sm:max-w-md">
+              <CheckCircle2
+                size={20}
+                className="shrink-0 text-[#348acb]"
+              />
+              <p className="flex-1 text-sm font-semibold text-[#164579]">
+                {notice}
+              </p>
+              <button
+                type="button"
+                onClick={() => setNotice("")}
+                aria-label="Close notification"
+              >
+                <X size={17} />
+              </button>
+            </div>,
+            document.body
+          )}
+
         {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            {/* <div className="rounded-xl bg-[#102f62] p-3 text-white shadow-sm">
-              <Gift size={23} />
-            </div> */}
-
-            <div className="min-w-0">
-              {/* <h1 className="text-xl font-bold sm:text-2xl">
-                Customized Gifts
-              </h1> */}
-
-              {/* <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-                Manage personalized gift orders and deliveries
-              </p> */}
-            </div>
+            {/* Existing page heading intentionally hidden */}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={openAdd}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e] sm:flex-none"
-            > 
-           <Plus size={18} />
-              Add Gift Order
-            </button> 
-          </div>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#368bd0] to-[#1c65a9] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(45,126,195,0.18)] transition hover:from-[#287fc5] hover:to-[#15558f]"
+          >
+            <Plus size={18} />
+            Add Gift Order
+          </button>
         </div>
 
-        {/* STATS */}
+        {/* ANIMATED STATS */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-
-            return (
-              <div
-                key={stat.title}
-                className="rounded-2xl border border-[#e0e8f2] bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-slate-500">
-                    {stat.title}
-                  </p>
-
-                  <div
-                    className={`shrink-0 rounded-xl p-2.5 ${stat.color}`}
-                  >
-                    <Icon size={19} />
-                  </div>
-                </div>
-
-                <h2 className="mt-4 truncate whitespace-nowrap text-lg font-bold text-[#10264d] sm:text-xl xl:text-2xl">
-                  {stat.value}
-                </h2>
-              </div>
-            );
-          })}
+          {stats.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
         </div>
 
-        {/* ORDERS */}
-        <div className="overflow-hidden rounded-2xl border border-[#e0e8f2] bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-[#e9eef5] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+        {/* GIFT ORDERS */}
+        <section className="overflow-hidden rounded-[24px] border border-[#cfe5fb] bg-white shadow-[0_12px_36px_rgba(49,110,176,0.08)]">
+          <div className="flex flex-col gap-4 border-b border-[#dcecfb] bg-gradient-to-r from-[#f5fbff] to-[#e8f4ff] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#10264d]">
+              <h2 className="flex items-center gap-2 text-lg font-extrabold text-[#164579]">
+                <Package size={20} className="text-[#388ac9]" />
                 Gift Orders
               </h2>
-
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-[#7898b7]">
                 {filtered.length} orders found
               </p>
             </div>
@@ -701,13 +804,12 @@ export default function CustomizedGifts() {
               <div className="relative sm:col-span-2 xl:col-span-1">
                 <Search
                   size={17}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78a4c9]"
                 />
-
                 <input
                   type="search"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search gifts..."
                   className={`${inputClass} pl-10`}
                 />
@@ -716,74 +818,62 @@ export default function CustomizedGifts() {
               <div className="relative">
                 <select
                   value={typeFilter}
-                  onChange={(e) =>
-                    setTypeFilter(e.target.value)
-                  }
+                  onChange={(event) => setTypeFilter(event.target.value)}
                   className={`${inputClass} appearance-none pr-10`}
                 >
                   <option value="All">All Gift Types</option>
-
-                  {GIFT_TYPES.map((type) => (
+                  {giftTypeOptions.map((type) => (
                     <option key={type} value={type}>
                       {type}
                     </option>
                   ))}
                 </select>
-
                 <ChevronDown
                   size={16}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6592bd]"
                 />
               </div>
 
               <div className="relative">
                 <select
                   value={statusFilter}
-                  onChange={(e) =>
-                    setStatusFilter(e.target.value)
-                  }
+                  onChange={(event) => setStatusFilter(event.target.value)}
                   className={`${inputClass} appearance-none pr-10`}
                 >
                   <option value="All">All Status</option>
-
                   {STATUSES.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
                   ))}
                 </select>
-
                 <ChevronDown
                   size={16}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6592bd]"
                 />
               </div>
             </div>
           </div>
 
-          {/* MOBILE / TABLET CARDS */}
+          {/* MOBILE / TABLET */}
           <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
             {filtered.map((item) => (
-              <div
+              <article
                 key={item.id}
-                className="min-w-0 overflow-hidden rounded-xl border border-[#e0e8f2] bg-white"
+                className="min-w-0 overflow-hidden rounded-2xl border border-[#d2e7fb] bg-white shadow-sm"
               >
-                <div className="flex items-start justify-between gap-3 bg-[#f5f8fd] p-4">
+                <div className="flex items-start justify-between gap-3 border-b border-[#e0effc] bg-gradient-to-r from-[#f0f9ff] to-[#e1f1ff] p-4">
                   <div className="min-w-0">
-                    <h3 className="break-words font-bold text-[#10264d]">
+                    <h3 className="break-words font-extrabold text-[#164579]">
                       {item.customer}
                     </h3>
-
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-[#7898b7]">
                       {item.phone}
                     </p>
-
                     <span
-                      className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(
-                        item.status
-                      )}`}
+                      className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(item.status)}`}
                     >
-                      {item.status}
+                      {item.status || "—"}
                     </span>
                   </div>
 
@@ -792,11 +882,10 @@ export default function CustomizedGifts() {
                       type="button"
                       onClick={() => openEdit(item)}
                       title="Edit order"
-                      className="rounded-lg border border-blue-100 bg-white p-2 text-[#17477e]"
+                      className="rounded-lg border border-[#c6e2fa] bg-white p-2 text-[#2873b7]"
                     >
                       <Pencil size={16} />
                     </button>
-
                     <button
                       type="button"
                       onClick={() => deleteGift(item.id)}
@@ -813,28 +902,25 @@ export default function CustomizedGifts() {
                     ["Gift Type", item.giftType],
                     ["Occasion", item.occasion],
                     ["Quantity", item.quantity],
-                    ["Size", item.size || "—"],
+                    ["Size", item.size],
                     ["Order Date", item.orderDate],
                     ["Delivery Date", item.deliveryDate],
                     ["Total", money(item.amount)],
                     ["Balance", money(balanceOf(item))],
                   ].map(([label, value]) => (
                     <div key={label} className="min-w-0">
-                      <p className="text-xs text-slate-400">
-                        {label}
-                      </p>
-
-                      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
-                        {value || "—"}
+                      <p className="text-xs text-[#8aa6c1]">{label}</p>
+                      <p className="mt-1 break-words text-sm font-bold text-[#164579]">
+                        {value === "" || value == null ? "—" : value}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </article>
             ))}
 
             {filtered.length === 0 && (
-              <div className="py-12 text-center text-sm text-slate-500 sm:col-span-2">
+              <div className="rounded-xl border border-dashed border-[#cfe5fb] bg-[#f7fbff] py-12 text-center text-sm text-[#7898b7] sm:col-span-2">
                 No gift orders found.
               </div>
             )}
@@ -842,9 +928,9 @@ export default function CustomizedGifts() {
 
           {/* DESKTOP TABLE */}
           <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full min-w-[1100px] text-left text-sm">
-              <thead className="bg-[#102f62] text-xs uppercase text-white">
-                <tr>
+            <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+              <thead className="bg-gradient-to-r from-[#e1f1ff] to-[#cce6fc]">
+                <tr className="text-[11px] font-extrabold uppercase tracking-wide text-[#326b9f]">
                   {[
                     "Customer",
                     "Gift Type",
@@ -859,7 +945,7 @@ export default function CustomizedGifts() {
                   ].map((heading) => (
                     <th
                       key={heading}
-                      className="whitespace-nowrap px-4 py-4 font-semibold"
+                      className="whitespace-nowrap px-4 py-4"
                     >
                       {heading}
                     </th>
@@ -867,57 +953,48 @@ export default function CustomizedGifts() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#edf1f6]">
+              <tbody className="divide-y divide-[#e5f0fb]">
                 {filtered.map((item) => (
                   <tr
                     key={item.id}
-                    className="transition hover:bg-[#f4f8fe]"
+                    className="transition hover:bg-[#f2f9ff]"
                   >
                     <td className="px-4 py-4">
-                      <p className="font-semibold text-[#10264d]">
+                      <p className="font-bold text-[#164579]">
                         {item.customer}
                       </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[#89a3bb]">
                         {item.phone}
                       </p>
                     </td>
 
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 text-[#42698f]">
                       {item.giftType}
                     </td>
-
-                    <td className="px-4 py-4">
-                      {item.occasion}
+                    <td className="px-4 py-4 text-[#42698f]">
+                      {item.occasion || "—"}
                     </td>
-
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 text-[#42698f]">
                       {item.quantity}
                     </td>
-
-                    <td className="px-4 py-4">
+                    <td className="whitespace-nowrap px-4 py-4 text-[#42698f]">
                       {item.orderDate}
                     </td>
-
-                    <td className="px-4 py-4">
-                      {item.deliveryDate}
+                    <td className="whitespace-nowrap px-4 py-4 text-[#42698f]">
+                      {item.deliveryDate || "—"}
                     </td>
-
-                    <td className="px-4 py-4 font-semibold">
+                    <td className="whitespace-nowrap px-4 py-4 font-bold text-[#164579]">
                       {money(item.amount)}
                     </td>
-
-                    <td className="px-4 py-4 font-semibold text-red-600">
+                    <td className="whitespace-nowrap px-4 py-4 font-bold text-rose-600">
                       {money(balanceOf(item))}
                     </td>
 
                     <td className="px-4 py-4">
                       <span
-                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusClass(
-                          item.status
-                        )}`}
+                        className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${statusClass(item.status)}`}
                       >
-                        {item.status}
+                        {item.status || "—"}
                       </span>
                     </td>
 
@@ -927,7 +1004,7 @@ export default function CustomizedGifts() {
                           type="button"
                           onClick={() => openEdit(item)}
                           title="Edit order"
-                          className="rounded-lg border border-[#dce5f1] p-2 text-[#17477e] hover:bg-blue-50"
+                          className="rounded-lg border border-[#cfe5fb] bg-[#f1f9ff] p-2 text-[#2873b7] transition hover:bg-[#dcefff]"
                         >
                           <Pencil size={16} />
                         </button>
@@ -936,7 +1013,7 @@ export default function CustomizedGifts() {
                           type="button"
                           onClick={() => deleteGift(item.id)}
                           title="Delete order"
-                          className="rounded-lg border border-[#dce5f1] p-2 text-red-600 hover:bg-red-50"
+                          className="rounded-lg border border-red-100 bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -949,7 +1026,7 @@ export default function CustomizedGifts() {
                   <tr>
                     <td
                       colSpan={10}
-                      className="py-14 text-center text-slate-500"
+                      className="py-14 text-center text-[#7898b7]"
                     >
                       No gift orders found.
                     </td>
@@ -958,41 +1035,54 @@ export default function CustomizedGifts() {
               </tbody>
             </table>
           </div>
-        </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e1effc] bg-[#f8fcff] px-4 py-4 text-xs text-[#7898b7] sm:px-6">
+            <span>
+              Showing {filtered.length} of {gifts.length} gift orders
+            </span>
+            <span>Studio Raw Picturez ERP</span>
+          </div>
+        </section>
       </div>
 
-      {/* ADD / EDIT FORM */}
+      {/* ADD / EDIT MODAL */}
       {open &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#06152b]/75 p-2 sm:p-4"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) {
-                closeForm();
-              }
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0a2748]/65 p-2 backdrop-blur-[3px] sm:p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeForm();
             }}
           >
-            <div
+            <section
               role="dialog"
               aria-modal="true"
-              aria-label="Customized Gift Order Form"
-              className="flex max-h-[calc(100dvh-16px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-32px)]"
+              aria-labelledby="gift-modal-title"
+              className="flex max-h-[calc(100dvh-16px)] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-[#b9daf5] bg-white shadow-2xl sm:max-h-[calc(100dvh-32px)]"
             >
-              {/* DARK BLUE MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-3 bg-[#102f62] px-4 py-4 text-white sm:px-6 sm:py-5">
+              {/* MODAL HEADER */}
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#d8eafa] bg-gradient-to-r from-[#e8f5ff] to-[#cce7ff] px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="shrink-0 rounded-xl bg-white/15 p-2.5">
-                    <Gift size={20} />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#4a9cdd] to-[#2472b5] text-white shadow-sm">
+                    {editingId !== null ? (
+                      <Pencil size={20} />
+                    ) : (
+                      <Gift size={21} />
+                    )}
                   </div>
 
                   <div className="min-w-0">
-                    <h2 className="text-base font-bold sm:text-lg">
+                    <h2
+                      id="gift-modal-title"
+                      className="text-base font-extrabold text-[#164579] sm:text-xl"
+                    >
                       {editingId !== null
                         ? "Edit Gift Order"
                         : "Add Gift Order"}
                     </h2>
 
-                    <p className="mt-1 text-xs text-blue-100">
+                    <p className="mt-1 flex items-center gap-1 text-xs text-[#6d93b6]">
+                      <Sparkles size={12} />
                       Gift customization and delivery details
                     </p>
                   </div>
@@ -1001,10 +1091,10 @@ export default function CustomizedGifts() {
                 <button
                   type="button"
                   onClick={closeForm}
-                  title="Close"
-                  className="shrink-0 rounded-lg p-2 text-white hover:bg-white/15"
+                  aria-label="Close form"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/70 text-[#315f8c] transition hover:bg-white"
                 >
-                  <X size={21} />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -1012,7 +1102,7 @@ export default function CustomizedGifts() {
                 onSubmit={saveGift}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-white px-4 py-5 sm:px-6">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-[#fbfdff] px-4 py-5 sm:px-6">
                   {/* CUSTOMER */}
                   <section>
                     <SectionTitle
@@ -1036,13 +1126,13 @@ export default function CustomizedGifts() {
                         type="tel"
                         value={form.phone}
                         onChange={updateForm}
-                        placeholder="Enter phone number"
+                        placeholder="Enter 10-digit phone number"
                         required
                       />
                     </div>
                   </section>
 
-                  {/* GIFT */}
+                  {/* GIFT DETAILS */}
                   <section>
                     <SectionTitle
                       icon={Package}
@@ -1121,18 +1211,15 @@ export default function CustomizedGifts() {
                     </div>
 
                     <label className="mt-4 block space-y-2">
-                      <span className="text-xs font-semibold text-[#344767]">
+                      <span className="text-xs font-bold text-[#315b85]">
                         Customization Details
                       </span>
 
                       <textarea
                         rows={3}
                         value={form.customization}
-                        onChange={(e) =>
-                          updateForm(
-                            "customization",
-                            e.target.value
-                          )
+                        onChange={(event) =>
+                          updateForm("customization", event.target.value)
                         }
                         placeholder="Photo, name, text, color or design requirements..."
                         className={`${inputClass} resize-y`}
@@ -1169,12 +1256,13 @@ export default function CustomizedGifts() {
                       />
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dce7f6] bg-[#eef4fc] px-4 py-4">
-                      <span className="text-sm font-semibold text-[#234e81]">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#b9ddf9] bg-gradient-to-r from-[#eaf6ff] to-[#d5ebff] px-4 py-4">
+                      <div className="flex items-center gap-2 text-sm font-bold text-[#315f8c]">
+                        <Wallet size={17} />
                         Remaining Balance
-                      </span>
+                      </div>
 
-                      <span className="break-words text-lg font-bold text-[#102f62]">
+                      <span className="break-words text-xl font-extrabold text-[#164579]">
                         {money(
                           Math.max(
                             0,
@@ -1194,15 +1282,15 @@ export default function CustomizedGifts() {
                     />
 
                     <label className="block space-y-2">
-                      <span className="text-xs font-semibold text-[#344767]">
+                      <span className="text-xs font-bold text-[#315b85]">
                         Additional Notes
                       </span>
 
                       <textarea
                         rows={3}
                         value={form.notes}
-                        onChange={(e) =>
-                          updateForm("notes", e.target.value)
+                        onChange={(event) =>
+                          updateForm("notes", event.target.value)
                         }
                         placeholder="Enter additional requirements..."
                         className={`${inputClass} resize-y`}
@@ -1213,36 +1301,36 @@ export default function CustomizedGifts() {
                   {error && (
                     <div
                       role="alert"
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                      className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"
                     >
+                      <AlertCircle size={18} className="shrink-0" />
                       {error}
                     </div>
                   )}
                 </div>
 
                 {/* FOOTER */}
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[#e7edf5] bg-[#f8fafd] px-4 py-4 sm:px-6">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[#d8eafa] bg-[#f0f8ff] px-4 py-4 sm:px-6">
                   <button
                     type="button"
                     onClick={closeForm}
-                    className="flex-1 rounded-xl border border-[#dce5f1] bg-white px-5 py-3 text-sm font-semibold text-[#102f62] hover:bg-slate-50 sm:flex-none"
+                    className="flex-1 rounded-xl border border-[#c5def5] bg-white px-5 py-3 text-sm font-bold text-[#315f8c] transition hover:bg-[#e6f3ff] sm:flex-none"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white hover:bg-[#1c477e] sm:flex-none"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#368bd0] to-[#1c65a9] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:from-[#287fc5] hover:to-[#15558f] sm:flex-none"
                   >
                     <Save size={17} />
-
                     {editingId !== null
                       ? "Update Gift Order"
                       : "Save Gift Order"}
                   </button>
                 </div>
               </form>
-            </div>
+            </section>
           </div>,
           document.body
         )}

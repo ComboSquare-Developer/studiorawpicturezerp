@@ -129,7 +129,7 @@ const emptyForm = {
 };
 
 const inputClass =
-  "block h-11 w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-3.5 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
+  "block h-11 w-full min-w-0 rounded-xl border border-[#d4e4fa] bg-white px-3.5 text-sm text-[#173f74] outline-none transition placeholder:text-[#98aac0] focus:border-[#8fb9ee] focus:ring-2 focus:ring-[#e5f0ff]";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -225,6 +225,63 @@ function playSound(type = "click") {
   }
 }
 
+/* ==========================================
+   NEW: AUTOMATIC NUMBER COUNTING
+========================================== */
+
+function useCountUp(target, duration = 1400) {
+  const [count, setCount] = useState(0);
+  const currentValueRef = useRef(0);
+
+  useEffect(() => {
+    const start = currentValueRef.current;
+    const end = Number(target) || 0;
+
+    if (
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setCount(end);
+      currentValueRef.current = end;
+      return;
+    }
+
+    let frameId;
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (startTime === null) startTime = timestamp;
+
+      const progress = Math.min(
+        (timestamp - startTime) / duration,
+        1
+      );
+
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const nextValue = Math.round(
+        start + (end - start) * eased
+      );
+
+      setCount(nextValue);
+      currentValueRef.current = nextValue;
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(animate);
+      } else {
+        setCount(end);
+        currentValueRef.current = end;
+      }
+    };
+
+    frameId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [target, duration]);
+
+  return count;
+}
+
 function CustomDropdown({
   value,
   options,
@@ -308,7 +365,7 @@ function CustomDropdown({
         }}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce4ef] bg-white px-3.5 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#d4e4fa] bg-white px-3.5 text-left text-sm font-medium text-[#173f74] transition hover:border-[#8fb9ee] focus:outline-none focus:ring-2 focus:ring-[#e5f0ff]"
       >
         <span className="min-w-0 flex-1 truncate">
           {value || placeholder}
@@ -316,7 +373,7 @@ function CustomDropdown({
 
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-500 transition-transform ${
+          className={`shrink-0 text-[#6485ac] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -328,7 +385,7 @@ function CustomDropdown({
             ref={menuRef}
             role="listbox"
             style={menuStyle}
-            className="overflow-y-auto overscroll-contain rounded-xl border border-[#dce4ef] bg-white p-1 shadow-[0_15px_45px_rgba(16,38,77,0.2)]"
+            className="overflow-y-auto overscroll-contain rounded-xl border border-[#d4e4fa] bg-white p-1 shadow-[0_15px_45px_rgba(43,92,153,0.16)]"
           >
             {options.map((option) => (
               <button
@@ -343,8 +400,8 @@ function CustomDropdown({
                 }}
                 className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                   value === option
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
+                    ? "bg-[#e8f2ff] font-semibold text-[#285a99]"
+                    : "text-[#526781] hover:bg-[#f0f7ff]"
                 }`}
               >
                 <span className="min-w-0 flex-1 break-words">
@@ -361,20 +418,163 @@ function CustomDropdown({
   );
 }
 
-function StatCard({ title, value, icon: Icon, color, bg }) {
+/* ==========================================
+   PREMIUM COMPACT DOUBLE-SHADE STAT CARD
+========================================== */
+
+const statThemes = [
+  {
+    outer: "bg-[#deedff] border-[#bdd9fa]",
+    iconBg: "bg-[#c4ddff]",
+    iconColor: "text-[#285a99]",
+    line: "bg-[#80afe8]",
+  },
+  {
+    outer: "bg-[#d9eaff] border-[#b9d6f8]",
+    iconBg: "bg-[#bdd9ff]",
+    iconColor: "text-[#2f69aa]",
+    line: "bg-[#659bdc]",
+  },
+  {
+    outer: "bg-[#e7f2ff] border-[#cddff8]",
+    iconBg: "bg-[#d1e5ff]",
+    iconColor: "text-[#4175b1]",
+    line: "bg-[#9bc1f1]",
+  },
+  {
+    outer: "bg-[#d4e5fc] border-[#b4d0f3]",
+    iconBg: "bg-[#bdd8fa]",
+    iconColor: "text-[#285a99]",
+    line: "bg-[#548ccf]",
+  },
+];
+
+/* ==========================================
+   UPDATED STAT CARD - AUTO COUNT
+========================================== */
+
+function StatCard({ title, value, icon: Icon, index = 0 }) {
+  const theme = statThemes[index % statThemes.length];
+
+  const isMoney =
+    typeof value === "string" && value.includes("₹");
+
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : Number(String(value).replace(/[₹,]/g, "")) || 0;
+
+  const animatedValue = useCountUp(numericValue, 1400);
+
+  const displayValue = isMoney
+    ? money(animatedValue)
+    : animatedValue.toLocaleString("en-IN");
+
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-slate-500 sm:text-sm">
+    <div
+      style={{ "--float-delay": `${index * -0.7}s` }}
+      className={`wed-stat-float group relative flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[20px] border p-4 shadow-[0_7px_20px_rgba(43,92,153,0.05)] sm:p-5 ${theme.outer}`}
+    >
+      <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-white/30 blur-xl" />
+
+      <div className="relative z-10 min-w-0">
+        <p className="text-xs font-semibold text-[#5e7fa6] sm:text-sm">
           {title}
         </p>
-        <h3 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
-          {value}
+
+        <h3 className="mt-2 truncate whitespace-nowrap text-lg font-black tabular-nums text-[#173f74] sm:text-xl xl:text-2xl">
+          {displayValue}
         </h3>
       </div>
 
-      <div className={`shrink-0 rounded-xl p-3 ${bg}`}>
-        <Icon size={21} className={color} />
+      <div
+        className={`wed-stat-icon relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 shadow-sm ${theme.iconBg}`}
+      >
+        <Icon size={21} className={theme.iconColor} />
+      </div>
+
+      <div className={`absolute bottom-0 left-0 h-[3px] w-full ${theme.line}`} />
+    </div>
+  );
+}
+
+/* ==========================================
+   UPDATED PAYMENT CARD - AUTO COUNT
+========================================== */
+
+function PaymentCard({ title, value, icon: Icon, index = 0 }) {
+  const shades = [
+    "from-[#d5e7ff] via-[#e6f1ff] to-[#f5faff]",
+    "from-[#c5ddfb] via-[#deecff] to-[#f3f8ff]",
+    "from-[#dcecff] via-[#eaf4ff] to-[#f8fbff]",
+  ];
+
+  const isMoney =
+    typeof value === "string" && value.includes("₹");
+
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : Number(String(value).replace(/[₹,]/g, "")) || 0;
+
+  const animatedValue = useCountUp(numericValue, 1500);
+
+  const displayValue = isMoney
+    ? money(animatedValue)
+    : animatedValue.toLocaleString("en-IN");
+
+  return (
+    <div
+      className={`wed-hover-card relative min-w-0 overflow-hidden rounded-[20px] border border-[#cddff6] bg-gradient-to-br ${shades[index % shades.length]} p-4 shadow-[0_7px_20px_rgba(43,92,153,0.05)] sm:p-5`}
+    >
+      <div className="pointer-events-none absolute -right-6 -top-7 h-24 w-24 rounded-full border border-white/60" />
+
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-[#6485ac]">
+            {title}
+          </p>
+
+          <p className="mt-3 truncate whitespace-nowrap text-lg font-black tabular-nums text-[#173f74] sm:text-xl">
+            {displayValue}
+          </p>
+        </div>
+
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-[#b9d6fa] text-[#285a99]">
+          <Icon size={21} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================
+   PREMIUM DOUBLE-SHADE SECTION HEADER
+========================================== */
+
+function SectionHeader({ title, subtitle, icon: Icon }) {
+  return (
+    <div className="relative overflow-hidden border-b border-[#d4e4fa] bg-gradient-to-r from-[#c5ddfb] via-[#dceaff] to-[#f0f7ff] px-4 py-5 sm:px-6">
+      <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full border border-white/60" />
+
+      <div className="relative flex items-center gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-[#b5d3fa] text-[#285a99] shadow-sm">
+          <Icon size={23} />
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#6485ac]">
+            Studio Raw Picturez
+          </p>
+
+          <h2 className="mt-1 text-lg font-black text-[#173f74] sm:text-xl">
+            {title}
+          </h2>
+
+          <p className="mt-1 text-xs font-medium text-[#6485ac]">
+            {subtitle}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -382,7 +582,7 @@ function StatCard({ title, value, icon: Icon, color, bg }) {
 
 function StatusBadge({ status }) {
   const styles = {
-    Confirmed: "border-blue-100 bg-blue-50 text-blue-700",
+    Confirmed: "border-blue-200 bg-[#e5f0ff] text-[#285a99]",
     Pending: "border-amber-100 bg-amber-50 text-amber-700",
     Completed: "border-emerald-100 bg-emerald-50 text-emerald-700",
     Cancelled: "border-rose-100 bg-rose-50 text-rose-700",
@@ -403,7 +603,7 @@ function StatusBadge({ status }) {
 function FormField({ label, required = false, children }) {
   return (
     <div className="min-w-0">
-      <label className="mb-1.5 block text-xs font-semibold text-[#344767]">
+      <label className="mb-1.5 block text-xs font-semibold text-[#385b85]">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
@@ -414,20 +614,20 @@ function FormField({ label, required = false, children }) {
 
 function SectionTitle({ icon: Icon, title }) {
   return (
-    <div className="col-span-full flex items-center gap-2.5 border-b border-[#edf1f6] pb-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
+    <div className="col-span-full flex items-center gap-2.5 border-b border-[#dce8f8] pb-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dcecff] text-[#285a99]">
         <Icon size={17} />
       </div>
-      <h4 className="text-sm font-bold text-[#10264d]">{title}</h4>
+      <h4 className="text-sm font-bold text-[#173f74]">{title}</h4>
     </div>
   );
 }
 
 function MobileDetail({ label, value }) {
   return (
-    <div className="min-w-0">
-      <p className="text-[11px] font-medium text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
+    <div className="min-w-0 rounded-xl border border-[#dce9f8] bg-white/85 p-3">
+      <p className="text-[11px] font-medium text-[#8a9fba]">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-[#173f74]">
         {value === "" || value == null ? "—" : value}
       </p>
     </div>
@@ -443,9 +643,6 @@ export default function WeddingPhotography() {
   const [form, setForm] = useState({ ...emptyForm });
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [soundEnabled, setSoundEnabled] = useState(
-    () => localStorage.getItem(SOUND_KEY) === "true"
-  );
 
   const modalRef = useRef(null);
   const firstInputRef = useRef(null);
@@ -461,17 +658,6 @@ export default function WeddingPhotography() {
     const timer = setTimeout(() => setNotice(""), 3000);
     return () => clearTimeout(timer);
   }, [notice]);
-
-  useEffect(() => {
-    const syncSound = (event) => {
-      if (event.key === SOUND_KEY) {
-        setSoundEnabled(event.newValue === "true");
-      }
-    };
-
-    window.addEventListener("storage", syncSound);
-    return () => window.removeEventListener("storage", syncSound);
-  }, []);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -716,25 +902,85 @@ export default function WeddingPhotography() {
     playSound("select");
   };
 
-  const toggleSound = () => {
-    const next = !soundEnabled;
-
-    localStorage.setItem(SOUND_KEY, String(next));
-    setSoundEnabled(next);
-
-    if (next) playSound("save");
-  };
-
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:space-y-7 lg:px-8 lg:py-8">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f7f9fd] px-3 py-5 text-[#173f74] sm:px-6 lg:space-y-7 lg:px-8 lg:py-8">
+      <style>{`
+        @keyframes wedFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        @keyframes wedModalIn {
+          from {
+            opacity: 0;
+            transform: scale(.97);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .wed-stat-float {
+          animation: wedFloat 5s ease-in-out infinite;
+          animation-delay: var(--float-delay, 0s);
+          transition: box-shadow .3s ease;
+        }
+
+        .wed-stat-float:hover {
+          animation-play-state: paused;
+          box-shadow: 0 14px 28px rgba(43,92,153,.13);
+        }
+
+        .wed-stat-icon {
+          transition: transform .3s ease;
+        }
+
+        .wed-stat-float:hover .wed-stat-icon {
+          transform: rotate(-7deg) scale(1.08);
+        }
+
+        .wed-hover-card {
+          transition:
+            transform .3s ease,
+            box-shadow .3s ease,
+            border-color .3s ease;
+        }
+
+        .wed-hover-card:hover {
+          transform: translateY(-4px);
+          border-color: #a9caf3;
+          box-shadow: 0 13px 27px rgba(43,92,153,.12);
+        }
+
+        .wed-modal-enter {
+          animation: wedModalIn .22s ease-out both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .wed-stat-float,
+          .wed-modal-enter {
+            animation: none !important;
+          }
+
+          .wed-hover-card,
+          .wed-stat-icon {
+            transition: none !important;
+          }
+
+          .wed-hover-card:hover {
+            transform: none;
+          }
+        }
+      `}</style>
 
       {/* NOTIFICATION */}
       {notice &&
         createPortal(
-          <div className="fixed left-3 right-3 top-4 z-[11000] flex items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-medium text-[#10264d] shadow-xl sm:left-auto sm:right-6 sm:max-w-md">
+          <div className="fixed left-3 right-3 top-4 z-[11000] flex items-center gap-3 rounded-xl border border-[#d4e4fa] bg-white px-4 py-3 text-sm font-medium text-[#173f74] shadow-xl sm:left-auto sm:right-6 sm:max-w-md">
             <CheckCircle2
               size={19}
-              className="shrink-0 text-blue-600"
+              className="shrink-0 text-[#356cae]"
             />
 
             <span className="min-w-0 flex-1">{notice}</span>
@@ -742,7 +988,7 @@ export default function WeddingPhotography() {
             <button
               type="button"
               onClick={() => setNotice("")}
-              className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+              className="shrink-0 rounded-lg p-1 text-[#8a9fba] hover:bg-[#eaf3ff]"
               aria-label="Close notification"
             >
               <X size={16} />
@@ -753,30 +999,13 @@ export default function WeddingPhotography() {
 
       {/* HEADER */}
       <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
-            Studio Raw Picturez
-          </p> */}
-
-           {/* <h1 className="flex items-center gap-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
-            <Camera
-              className="shrink-0 text-[#315f9a]"
-              size={28}></Camera>
-            
-            <span>Wedding Photography</span>
-          </h1> */}
-
-          {/* <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
-            Manage wedding couples, event types, packages, dates,
-            venues and payments.
-          </p>  */}
-        </div>
+        <div className="min-w-0" />
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={openAdd}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#1b467e] sm:flex-none sm:text-sm"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#285a99] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#173f74] sm:flex-none sm:text-sm"
           >
             <Plus size={18} />
             Add Wedding
@@ -784,89 +1013,75 @@ export default function WeddingPhotography() {
         </div>
       </div>
 
-      {/* SUMMARY */}
+      {/* SUMMARY - AUTO COUNT */}
       <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           title="Total Weddings"
           value={weddings.length}
           icon={Heart}
-          color="text-blue-700"
-          bg="bg-blue-50"
+          index={0}
         />
 
         <StatCard
           title="Confirmed"
           value={confirmed}
           icon={CheckCircle2}
-          color="text-emerald-700"
-          bg="bg-emerald-50"
+          index={1}
         />
 
         <StatCard
           title="Pending"
           value={pending}
           icon={Clock3}
-          color="text-amber-700"
-          bg="bg-amber-50"
+          index={2}
         />
 
         <StatCard
           title="Package Value"
           value={money(totalAmount)}
           icon={IndianRupee}
-          color="text-indigo-700"
-          bg="bg-indigo-50"
+          index={3}
         />
       </div>
 
-      {/* PAYMENT SUMMARY */}
+      {/* PAYMENT SUMMARY - AUTO COUNT */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Total Advance Collected
-          </p>
-          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
-            {money(totalAdvance)}
-          </p>
-        </div>
+        <PaymentCard
+          title="Total Advance Collected"
+          value={money(totalAdvance)}
+          icon={Wallet}
+          index={0}
+        />
 
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Pending Balance
-          </p>
-          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
-            {money(totalDue)}
-          </p>
-        </div>
+        <PaymentCard
+          title="Pending Balance"
+          value={money(totalDue)}
+          icon={IndianRupee}
+          index={1}
+        />
 
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Completed Weddings
-          </p>
-          <p className="mt-2 text-xl font-extrabold text-[#10264d]">
-            {completed}
-          </p>
-        </div>
+        <PaymentCard
+          title="Completed Weddings"
+          value={completed}
+          icon={CheckCircle2}
+          index={2}
+        />
       </div>
 
       {/* DIRECTORY */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-[#10264d]">
-              Wedding Directory
-            </h2>
+      <section className="min-w-0 overflow-hidden rounded-[25px] border border-[#d4e4fa] bg-[#f8fbff] shadow-[0_8px_28px_rgba(43,92,153,0.06)]">
+        <SectionHeader
+          title="Wedding Directory"
+          subtitle={`${filtered.length} of ${weddings.length} wedding records`}
+          icon={Heart}
+        />
 
-            <p className="mt-1 text-xs text-slate-400">
-              {filtered.length} of {weddings.length} wedding records
-            </p>
-          </div>
-
+        <div className="flex flex-col gap-4 border-b border-[#dce8f8] bg-[#f4f9ff] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-end">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative w-full sm:w-[270px]">
               <Search
                 size={17}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="absolute left-3 top-3.5 text-[#8da5c2]"
               />
 
               <input
@@ -881,7 +1096,7 @@ export default function WeddingPhotography() {
             <div className="flex w-full items-center gap-2 sm:w-[175px]">
               <Filter
                 size={16}
-                className="shrink-0 text-slate-400 sm:hidden"
+                className="shrink-0 text-[#8da5c2] sm:hidden"
               />
 
               <CustomDropdown
@@ -899,9 +1114,9 @@ export default function WeddingPhotography() {
             <div className="col-span-full py-14 text-center">
               <Users
                 size={34}
-                className="mx-auto text-slate-300"
+                className="mx-auto text-[#9bb9dc]"
               />
-              <p className="mt-3 text-sm text-slate-400">
+              <p className="mt-3 text-sm text-[#8a9fba]">
                 No wedding records found.
               </p>
             </div>
@@ -909,20 +1124,20 @@ export default function WeddingPhotography() {
             filtered.map((item) => (
               <article
                 key={item.id}
-                className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm"
+                className="wed-hover-card min-w-0 overflow-hidden rounded-[20px] border border-[#d5e5fa] bg-gradient-to-br from-[#e8f2ff] via-[#f1f7ff] to-[#e2efff] shadow-sm"
               >
-                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] bg-[#f8fafd] p-4">
+                <div className="flex items-start justify-between gap-2 border-b border-[#d4e4fa] bg-[#dcecff]/65 p-4">
                   <div className="flex min-w-0 items-start gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#315f9a]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/70 bg-[#bdd9ff] text-[#285a99]">
                       <Heart size={19} />
                     </div>
 
                     <div className="min-w-0">
-                      <h3 className="break-words text-sm font-bold text-[#10264d]">
+                      <h3 className="break-words text-sm font-bold text-[#173f74]">
                         {item.bride} & {item.groom}
                       </h3>
 
-                      <p className="mt-1 text-[11px] text-slate-400">
+                      <p className="mt-1 text-[11px] text-[#8a9fba]">
                         {item.id}
                       </p>
 
@@ -936,7 +1151,7 @@ export default function WeddingPhotography() {
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
-                      className="rounded-lg bg-blue-50 p-2 text-blue-700"
+                      className="rounded-lg border border-[#d4e4fa] bg-white p-2 text-[#285a99]"
                       aria-label="Edit wedding"
                     >
                       <Pencil size={16} />
@@ -945,7 +1160,7 @@ export default function WeddingPhotography() {
                     <button
                       type="button"
                       onClick={() => deleteWedding(item)}
-                      className="rounded-lg bg-red-50 p-2 text-red-600"
+                      className="rounded-lg border border-red-100 bg-white p-2 text-red-600"
                       aria-label="Delete wedding"
                     >
                       <Trash2 size={16} />
@@ -953,7 +1168,7 @@ export default function WeddingPhotography() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 p-4">
+                <div className="grid grid-cols-2 gap-2.5 p-4">
                   <MobileDetail
                     label="Wedding Date"
                     value={formatDate(item.date)}
@@ -991,12 +1206,12 @@ export default function WeddingPhotography() {
                     value={money(item.advance)}
                   />
 
-                  <div className="col-span-2 rounded-xl bg-[#f1f5fb] p-3">
-                    <p className="text-xs font-medium text-slate-500">
+                  <div className="col-span-2 rounded-xl border border-[#cbdff8] bg-[#dcecff] p-3">
+                    <p className="text-xs font-medium text-[#6485ac]">
                       Pending Balance
                     </p>
 
-                    <p className="mt-1 text-base font-bold text-[#10264d]">
+                    <p className="mt-1 text-base font-black text-[#173f74]">
                       {money(
                         Math.max(
                           0,
@@ -1008,8 +1223,8 @@ export default function WeddingPhotography() {
                   </div>
                 </div>
 
-                <div className="border-t border-[#edf1f6] bg-[#fafcff] p-4">
-                  <p className="mb-2 text-xs font-semibold text-[#52627b]">
+                <div className="border-t border-[#d4e4fa] bg-[#edf5ff] p-4">
+                  <p className="mb-2 text-xs font-semibold text-[#55779e]">
                     Wedding Status
                   </p>
 
@@ -1029,8 +1244,8 @@ export default function WeddingPhotography() {
         {/* DESKTOP TABLE */}
         <div className="hidden w-full overflow-x-auto lg:block">
           <table className="w-full min-w-[1100px] border-collapse text-left">
-            <thead className="bg-[#f7f9fd]">
-              <tr className="text-[11px] font-bold uppercase tracking-wide text-[#8290a5]">
+            <thead className="bg-[#dcecff]">
+              <tr className="text-[11px] font-bold uppercase tracking-wide text-[#557ba9]">
                 <th className="px-4 py-4">Wedding Couple</th>
                 <th className="px-4 py-4">Wedding Date</th>
                 <th className="px-4 py-4">Venue</th>
@@ -1042,66 +1257,70 @@ export default function WeddingPhotography() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-[#edf1f6]">
+            <tbody className="divide-y divide-[#dce8f8]">
               {filtered.length === 0 ? (
                 <tr>
                   <td
                     colSpan={8}
-                    className="px-5 py-16 text-center text-sm text-slate-400"
+                    className="px-5 py-16 text-center text-sm text-[#8a9fba]"
                   >
                     No wedding records found.
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
+                filtered.map((item, index) => (
                   <tr
                     key={item.id}
-                    className="transition hover:bg-[#f8faff]"
+                    className={`transition hover:bg-[#dcecff] ${
+                      index % 2 === 0
+                        ? "bg-[#f8fbff]"
+                        : "bg-[#edf5ff]"
+                    }`}
                   >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a]">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dcecff] text-[#285a99]">
                           <Heart size={18} />
                         </div>
 
                         <div className="min-w-0">
-                          <p className="font-semibold text-[#10264d]">
+                          <p className="font-semibold text-[#173f74]">
                             {item.bride} & {item.groom}
                           </p>
 
-                          <p className="mt-1 text-xs text-slate-400">
+                          <p className="mt-1 text-xs text-[#8a9fba]">
                             {item.id}
                           </p>
 
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-[#6485ac]">
                             {item.phone}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="whitespace-nowrap px-4 py-4 text-sm text-[#52627b]">
+                    <td className="whitespace-nowrap px-4 py-4 text-sm text-[#526f92]">
                       {formatDate(item.date)}
                     </td>
 
-                    <td className="px-4 py-4 text-sm text-[#52627b]">
+                    <td className="px-4 py-4 text-sm text-[#526f92]">
                       {item.venue || "—"}
                     </td>
 
-                    <td className="min-w-[175px] px-4 py-4 text-sm font-medium text-[#52627b]">
+                    <td className="min-w-[175px] px-4 py-4 text-sm font-medium text-[#526f92]">
                       {item.eventType || "Traditional Photography"}
                     </td>
 
-                    <td className="px-4 py-4 text-sm font-medium text-[#52627b]">
+                    <td className="px-4 py-4 text-sm font-medium text-[#526f92]">
                       {item.package}
                     </td>
 
                     <td className="px-4 py-4">
-                      <p className="font-semibold text-[#10264d]">
+                      <p className="font-semibold text-[#173f74]">
                         {money(item.amount)}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-[#8a9fba]">
                         Due:{" "}
                         {money(
                           Math.max(
@@ -1132,7 +1351,7 @@ export default function WeddingPhotography() {
                         <button
                           type="button"
                           onClick={() => openEdit(item)}
-                          className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
+                          className="rounded-lg p-2 text-[#285a99] hover:bg-[#dcecff]"
                           aria-label="Edit wedding"
                         >
                           <Pencil size={17} />
@@ -1155,7 +1374,7 @@ export default function WeddingPhotography() {
           </table>
         </div>
 
-        <div className="border-t border-[#edf1f6] px-4 py-4 text-xs text-slate-400 sm:px-5">
+        <div className="border-t border-[#dce8f8] bg-[#eaf3ff] px-4 py-4 text-xs text-[#6485ac] sm:px-5">
           Showing {filtered.length} of {weddings.length} weddings
         </div>
       </section>
@@ -1164,7 +1383,7 @@ export default function WeddingPhotography() {
       {modalOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/70 p-2 backdrop-blur-[3px] sm:p-5"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/65 p-2 backdrop-blur-[3px] sm:p-5"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 closeModal();
@@ -1176,12 +1395,12 @@ export default function WeddingPhotography() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="wedding-modal-title"
-              className="flex max-h-[calc(100dvh-16px)] w-full max-w-[780px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-40px)]"
+              className="wed-modal-enter flex max-h-[calc(100dvh-16px)] w-full max-w-[780px] flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl sm:max-h-[calc(100dvh-40px)]"
             >
               {/* MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-3 bg-[#10264d] px-4 py-4 text-white sm:px-6 sm:py-5">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#d4e4fa] bg-gradient-to-r from-[#c5ddfb] via-[#deecff] to-[#f1f7ff] px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/70 bg-[#b5d3fa] text-[#285a99]">
                     {editing ? (
                       <Pencil size={19} />
                     ) : (
@@ -1192,14 +1411,14 @@ export default function WeddingPhotography() {
                   <div className="min-w-0">
                     <h2
                       id="wedding-modal-title"
-                      className="text-base font-bold sm:text-lg"
+                      className="text-base font-black text-[#173f74] sm:text-lg"
                     >
                       {editing
                         ? "Edit Wedding"
                         : "Add New Wedding"}
                     </h2>
 
-                    <p className="mt-1 text-[11px] text-blue-100">
+                    <p className="mt-1 text-[11px] text-[#6485ac]">
                       Wedding photography booking details
                     </p>
                   </div>
@@ -1208,7 +1427,7 @@ export default function WeddingPhotography() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg p-2 hover:bg-white/15"
+                  className="rounded-lg border border-[#d4e4fa] bg-white p-2 text-[#55779e] hover:bg-[#eaf3ff]"
                   aria-label="Close form"
                 >
                   <X size={20} />
@@ -1219,7 +1438,7 @@ export default function WeddingPhotography() {
                 onSubmit={saveWedding}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-[#f8fbff] px-4 py-5 sm:px-6">
 
                   {/* COUPLE DETAILS */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1371,12 +1590,12 @@ export default function WeddingPhotography() {
                       />
                     </FormField>
 
-                    <div className="col-span-full rounded-xl border border-[#dce4ef] bg-[#f4f7fc] p-4">
-                      <p className="text-xs font-semibold text-slate-500">
+                    <div className="col-span-full rounded-xl border border-[#cbdff8] bg-gradient-to-r from-[#d5e7ff] to-[#eaf3ff] p-4">
+                      <p className="text-xs font-semibold text-[#6485ac]">
                         Remaining Balance
                       </p>
 
-                      <p className="mt-1 text-xl font-extrabold text-[#10264d]">
+                      <p className="mt-1 text-xl font-black text-[#173f74]">
                         {money(
                           Math.max(
                             0,
@@ -1403,18 +1622,18 @@ export default function WeddingPhotography() {
                 </div>
 
                 {/* MODAL FOOTER */}
-                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#dce8f8] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="w-full rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] hover:bg-[#eef3f9] sm:w-auto"
+                    className="w-full rounded-xl border border-[#d4e4fa] bg-[#f4f9ff] px-6 py-3 text-sm font-semibold text-[#385b85] hover:bg-[#eaf3ff] sm:w-auto"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e] sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#285a99] px-6 py-3 text-sm font-semibold text-white hover:bg-[#173f74] sm:w-auto"
                   >
                     <Save size={17} />
                     {editing

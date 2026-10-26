@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -11,17 +10,13 @@ import {
   Save,
   CalendarDays,
   IndianRupee,
-  Clock3,
   CheckCircle2,
   Wallet,
-  MapPin,
-  Phone,
   UserRound,
   Film,
   ChevronDown,
   Check,
   AlertCircle,
-  Filter,
 } from "lucide-react";
 
 const KEY = "studioraw_wedding_videography";
@@ -35,7 +30,6 @@ const EVENT_TYPES = [
   "PreWedding VideoGraphy",
   "Post Wedding VideoGraphy",
   "Custom Package",
- 
 ];
 
 const PACKAGES = [
@@ -158,12 +152,15 @@ const dummyBookings = COUPLES.map((customer, index) => {
     date: dateString,
     venue: VENUES[index % (VENUES.length - 1)],
     packageName: PACKAGES[index % (PACKAGES.length - 1)],
-    videographer: VIDEOGRAPHERS[index % (VIDEOGRAPHERS.length - 1)],
+    videographer:
+      VIDEOGRAPHERS[index % (VIDEOGRAPHERS.length - 1)],
     amount,
     advance:
       index % 6 === 0
         ? amount
-        : Math.floor(amount * (0.25 + (index % 4) * 0.1) / 1000) * 1000,
+        : Math.floor(
+            (amount * (0.25 + (index % 4) * 0.1)) / 1000
+          ) * 1000,
     status: [
       "Upcoming",
       "Upcoming",
@@ -191,7 +188,7 @@ const emptyForm = {
 };
 
 const inputClass =
-  "block h-11 w-full min-w-0 rounded-xl border border-[#dce4ef] bg-white px-3.5 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100";
+  "block h-11 w-full min-w-0 rounded-xl border border-[#c9def8] bg-white px-3.5 text-sm text-[#173f74] outline-none transition placeholder:text-slate-400 focus:border-[#6ca4ed] focus:ring-2 focus:ring-blue-100";
 
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
@@ -199,7 +196,9 @@ const money = (value) =>
 const formatDate = (value) => {
   if (!value) return "—";
 
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  const date = new Date(
+    `${String(value).slice(0, 10)}T00:00:00`
+  );
 
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -209,6 +208,12 @@ const formatDate = (value) => {
     year: "numeric",
   });
 };
+
+const balanceOf = (item) =>
+  Math.max(
+    0,
+    Number(item.amount || 0) - Number(item.advance || 0)
+  );
 
 function loadBookings() {
   try {
@@ -268,29 +273,222 @@ function playSound(type = "click") {
       close: [440, 330],
     };
 
-    (sounds[type] || sounds.click).forEach((frequency, index) => {
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
+    (sounds[type] || sounds.click).forEach(
+      (frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const start =
+          audioContext.currentTime + index * 0.075;
 
-      const start = audioContext.currentTime + index * 0.075;
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          start
+        );
 
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(
+          0.025,
+          start + 0.015
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + 0.15
+        );
 
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.03, start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.15);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
 
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-
-      oscillator.start(start);
-      oscillator.stop(start + 0.16);
-    });
+        oscillator.start(start);
+        oscillator.stop(start + 0.16);
+      }
+    );
   } catch {
-    // Sound is optional.
+    // Optional click sound.
   }
 }
+
+/* =========================================
+   ANIMATED NUMBER
+========================================= */
+
+function useCountUp(target, duration = 1100) {
+  const [display, setDisplay] = useState(0);
+  const frameRef = useRef(null);
+  const previousRef = useRef(0);
+  const [replay, setReplay] = useState(0);
+
+  useEffect(() => {
+    const startValue =
+      replay > 0 ? 0 : previousRef.current;
+
+    const endValue = Number(target) || 0;
+
+    if (
+      typeof window === "undefined" ||
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches
+    ) {
+      setDisplay(endValue);
+      previousRef.current = endValue;
+      return;
+    }
+
+    let startTime = null;
+    let cancelled = false;
+
+    const animate = (timestamp) => {
+      if (cancelled) return;
+
+      if (startTime === null) {
+        startTime = timestamp;
+      }
+
+      const progress = Math.min(
+        (timestamp - startTime) / duration,
+        1
+      );
+
+      const eased =
+        1 - Math.pow(1 - progress, 3);
+
+      const current =
+        startValue +
+        (endValue - startValue) * eased;
+
+      setDisplay(Math.round(current));
+
+      if (progress < 1) {
+        frameRef.current =
+          requestAnimationFrame(animate);
+      } else {
+        setDisplay(endValue);
+        previousRef.current = endValue;
+      }
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameRef.current);
+    };
+  }, [target, duration, replay]);
+
+  const restart = () => {
+    previousRef.current = 0;
+    setDisplay(0);
+    setReplay((value) => value + 1);
+  };
+
+  return [display, restart];
+}
+
+/* =========================================
+   STAT CARD WITH CLICK ANIMATION
+========================================= */
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  isMoney = false,
+  index = 0,
+}) {
+  const [count, restart] = useCountUp(
+    value,
+    isMoney ? 1500 : 950
+  );
+
+  const [active, setActive] = useState(false);
+  const timerRef = useRef(null);
+
+  const trigger = () => {
+    restart();
+    playSound("click");
+
+    setActive(false);
+
+    requestAnimationFrame(() => {
+      setActive(true);
+    });
+
+    clearTimeout(timerRef.current);
+
+    timerRef.current = setTimeout(() => {
+      setActive(false);
+    }, 800);
+  };
+
+  useEffect(() => {
+    return () => clearTimeout(timerRef.current);
+  }, []);
+
+  const shades = [
+    {
+      outer: "from-[#c8e0ff] to-[#e9f3ff]",
+      icon: "bg-white/75 text-[#245c9c]",
+      line: "bg-[#478bd7]",
+    },
+    {
+      outer: "from-[#d5e7ff] to-[#f0f7ff]",
+      icon: "bg-white/75 text-[#356da9]",
+      line: "bg-[#69a2e8]",
+    },
+    {
+      outer: "from-[#c9e2ff] to-[#e9f3ff]",
+      icon: "bg-white/75 text-[#245c9c]",
+      line: "bg-[#478bd7]",
+    },
+    {
+      outer: "from-[#d9eaff] to-[#f1f7ff]",
+      icon: "bg-white/75 text-[#356da9]",
+      line: "bg-[#69a2e8]",
+    },
+  ];
+
+  const shade = shades[index % shades.length];
+
+  return (
+    <button
+      type="button"
+      onClick={trigger}
+      title="Click to replay counting animation"
+      className={`relative flex min-w-0 cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-2xl border border-[#bad6f8] bg-gradient-to-br ${shade.outer} p-4 text-left shadow-[0_5px_16px_rgba(66,121,191,0.09)] transition-shadow duration-300 hover:shadow-[0_10px_28px_rgba(65,128,205,0.18)] focus:outline-none focus:ring-2 focus:ring-[#6ca4ed] sm:p-5 ${
+        active
+          ? "vid-card-shake vid-card-glow"
+          : ""
+      }`}
+    >
+      <div className="relative z-10 min-w-0 flex-1">
+        <p className="text-xs font-semibold text-[#5477a1] sm:text-sm">
+          {title}
+        </p>
+
+        <h2 className="mt-2 truncate text-lg font-extrabold tabular-nums text-[#173f74] sm:text-xl xl:text-2xl">
+          {isMoney ? money(count) : count}
+        </h2>
+
+        <div
+          className={`mt-3 h-1 w-9 rounded-full ${shade.line}`}
+        />
+      </div>
+
+      <div
+        className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ${shade.icon}`}
+      >
+        <Icon size={21} />
+      </div>
+
+      <div className="pointer-events-none absolute -bottom-8 -right-7 h-24 w-24 rounded-full bg-white/25 blur-xl" />
+    </button>
+  );
+}
+
+/* =========================================
+   CUSTOM DROPDOWN
+========================================= */
 
 function CustomDropdown({
   value,
@@ -308,21 +506,35 @@ function CustomDropdown({
     if (!open) return;
 
     const updatePosition = () => {
-      const rect = buttonRef.current?.getBoundingClientRect();
+      const rect =
+        buttonRef.current?.getBoundingClientRect();
 
       if (!rect) return;
 
-      const desiredHeight = Math.min(options.length * 43 + 12, 230);
-      const spaceBelow = window.innerHeight - rect.bottom;
+      const desiredHeight = Math.min(
+        options.length * 43 + 12,
+        230
+      );
+
+      const spaceBelow =
+        window.innerHeight - rect.bottom;
+
       const showAbove =
-        spaceBelow < desiredHeight + 12 && rect.top > spaceBelow;
+        spaceBelow < desiredHeight + 12 &&
+        rect.top > spaceBelow;
 
       setMenuStyle({
         position: "fixed",
         left: Math.max(8, rect.left),
-        width: Math.min(rect.width, window.innerWidth - 16),
+        width: Math.min(
+          rect.width,
+          window.innerWidth - 16
+        ),
         top: showAbove
-          ? Math.max(8, rect.top - desiredHeight - 5)
+          ? Math.max(
+              8,
+              rect.top - desiredHeight - 5
+            )
           : rect.bottom + 5,
         maxHeight: Math.max(
           60,
@@ -330,7 +542,9 @@ function CustomDropdown({
             230,
             showAbove
               ? rect.top - 16
-              : window.innerHeight - rect.bottom - 16
+              : window.innerHeight -
+                  rect.bottom -
+                  16
           )
         ),
         zIndex: 10050,
@@ -347,23 +561,55 @@ function CustomDropdown({
     };
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
     };
 
     updatePosition();
 
-    document.addEventListener("pointerdown", handleOutside);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener(
+      "pointerdown",
+      handleOutside
+    );
 
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    window.addEventListener(
+      "resize",
+      updatePosition
+    );
+
+    window.addEventListener(
+      "scroll",
+      updatePosition,
+      true
+    );
 
     return () => {
-      document.removeEventListener("pointerdown", handleOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener(
+        "pointerdown",
+        handleOutside
+      );
 
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+
+      window.removeEventListener(
+        "resize",
+        updatePosition
+      );
+
+      window.removeEventListener(
+        "scroll",
+        updatePosition,
+        true
+      );
     };
   }, [open, options.length]);
 
@@ -378,7 +624,7 @@ function CustomDropdown({
         }}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce4ef] bg-white px-3.5 text-left text-sm font-medium text-[#10264d] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#c9def8] bg-white px-3.5 text-left text-sm font-medium text-[#173f74] transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
       >
         <span className="min-w-0 flex-1 truncate">
           {value || placeholder}
@@ -386,7 +632,7 @@ function CustomDropdown({
 
         <ChevronDown
           size={16}
-          className={`shrink-0 text-slate-500 transition-transform ${
+          className={`shrink-0 text-[#6083ae] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -398,7 +644,7 @@ function CustomDropdown({
             ref={menuRef}
             role="listbox"
             style={menuStyle}
-            className="overflow-y-auto overscroll-contain rounded-xl border border-[#dce4ef] bg-white p-1 shadow-[0_15px_45px_rgba(16,38,77,0.2)]"
+            className="overflow-y-auto overscroll-contain rounded-xl border border-[#c9def8] bg-white p-1 shadow-[0_15px_45px_rgba(16,38,77,0.2)]"
           >
             {options.map((option) => (
               <button
@@ -413,15 +659,17 @@ function CustomDropdown({
                 }}
                 className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                   value === option
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-slate-700 hover:bg-slate-50"
+                    ? "bg-[#e4f0ff] font-semibold text-[#245c9c]"
+                    : "text-slate-700 hover:bg-[#f0f7ff]"
                 }`}
               >
                 <span className="min-w-0 flex-1 break-words">
                   {option}
                 </span>
 
-                {value === option && <Check size={15} />}
+                {value === option && (
+                  <Check size={15} />
+                )}
               </button>
             ))}
           </div>,
@@ -431,59 +679,53 @@ function CustomDropdown({
   );
 }
 
-function FormField({ label, required = false, children }) {
+function FormField({
+  label,
+  required = false,
+  children,
+}) {
   return (
     <div className="min-w-0">
-      <label className="mb-1.5 block text-xs font-semibold text-[#344767]">
+      <label className="mb-1.5 block text-xs font-semibold text-[#45688e]">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500">
+            *
+          </span>
+        )}
       </label>
-
       {children}
     </div>
   );
 }
 
-function SectionTitle({ icon: Icon, title }) {
+function SectionTitle({
+  icon: Icon,
+  title,
+}) {
   return (
-    <div className="col-span-full flex items-center gap-2.5 border-b border-[#edf1f6] pb-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
+    <div className="col-span-full flex items-center gap-2.5 border-b border-[#d8e8fb] pb-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#dcecff] text-[#245c9c]">
         <Icon size={17} />
       </div>
 
-      <h3 className="text-sm font-bold text-[#10264d]">
+      <h3 className="text-sm font-bold text-[#173f74]">
         {title}
       </h3>
     </div>
   );
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-slate-500 sm:text-sm">
-          {title}
-        </p>
-
-        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
-          {value}
-        </h2>
-      </div>
-
-      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
-        <Icon size={21} />
-      </div>
-    </div>
-  );
-}
-
 function StatusBadge({ status }) {
   const styles = {
-    Upcoming: "border-blue-100 bg-blue-50 text-blue-700",
-    "In Progress": "border-amber-100 bg-amber-50 text-amber-700",
-    Completed: "border-emerald-100 bg-emerald-50 text-emerald-700",
-    Cancelled: "border-rose-100 bg-rose-50 text-rose-700",
+    Upcoming:
+      "border-[#bcd8fb] bg-[#e2efff] text-[#245c9c]",
+    "In Progress":
+      "border-amber-100 bg-amber-50 text-amber-700",
+    Completed:
+      "border-emerald-100 bg-emerald-50 text-emerald-700",
+    Cancelled:
+      "border-rose-100 bg-rose-50 text-rose-700",
   };
 
   return (
@@ -498,73 +740,82 @@ function StatusBadge({ status }) {
   );
 }
 
-function MobileDetail({ label, value }) {
+function MobileDetail({
+  label,
+  value,
+}) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-medium text-slate-400">
+      <p className="text-[11px] font-medium text-[#7893b3]">
         {label}
       </p>
 
-      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
-        {value === "" || value == null ? "—" : value}
+      <p className="mt-1 break-words text-sm font-semibold text-[#173f74]">
+        {value === "" || value == null
+          ? "—"
+          : value}
       </p>
     </div>
   );
 }
 
+/* =========================================
+   MAIN COMPONENT
+========================================= */
+
 export default function WeddingVideography() {
-  const [bookings, setBookings] = useState(loadBookings);
+  const [bookings, setBookings] =
+    useState(loadBookings);
 
   const [search, setSearch] = useState("");
-  const [eventFilter, setEventFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [eventFilter, setEventFilter] =
+    useState("All");
+  const [statusFilter, setStatusFilter] =
+    useState("All");
 
   const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [editingId, setEditingId] =
+    useState(null);
+  const [form, setForm] = useState({
+    ...emptyForm,
+  });
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-
-  const [soundEnabled, setSoundEnabled] = useState(
-    () => localStorage.getItem(SOUND_KEY) === "true"
-  );
 
   const modalRef = useRef(null);
   const firstInputRef = useRef(null);
   const previousFocusRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(bookings));
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(bookings)
+    );
   }, [bookings]);
 
   useEffect(() => {
     if (!notice) return;
 
-    const timer = setTimeout(() => setNotice(""), 3000);
+    const timer = setTimeout(
+      () => setNotice(""),
+      3000
+    );
 
     return () => clearTimeout(timer);
   }, [notice]);
 
   useEffect(() => {
-    const syncSound = (event) => {
-      if (event.key === SOUND_KEY) {
-        setSoundEnabled(event.newValue === "true");
-      }
-    };
-
-    window.addEventListener("storage", syncSound);
-
-    return () => window.removeEventListener("storage", syncSound);
-  }, []);
-
-  useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow =
+      document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
-    requestAnimationFrame(() => firstInputRef.current?.focus());
+    requestAnimationFrame(() => {
+      firstInputRef.current?.focus();
+    });
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -574,33 +825,57 @@ export default function WeddingVideography() {
         return;
       }
 
-      if (event.key !== "Tab" || !modalRef.current) return;
+      if (
+        event.key !== "Tab" ||
+        !modalRef.current
+      ) {
+        return;
+      }
 
       const focusable = Array.from(
         modalRef.current.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
         )
-      ).filter((element) => element.getClientRects().length > 0);
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0
+      );
 
       if (!focusable.length) return;
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const last =
+        focusable[focusable.length - 1];
 
-      if (event.shiftKey && document.activeElement === first) {
+      if (
+        event.shiftKey &&
+        document.activeElement === first
+      ) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (
+        !event.shiftKey &&
+        document.activeElement === last
+      ) {
         event.preventDefault();
         first.focus();
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow =
+        previousOverflow;
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+
       previousFocusRef.current?.focus?.();
     };
   }, [open]);
@@ -620,36 +895,46 @@ export default function WeddingVideography() {
         item.notes,
         item.id,
       ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
+        String(value || "")
+          .toLowerCase()
+          .includes(query)
       );
 
       const matchesEvent =
-        eventFilter === "All" || item.event === eventFilter;
+        eventFilter === "All" ||
+        item.event === eventFilter;
 
       const matchesStatus =
-        statusFilter === "All" || item.status === statusFilter;
+        statusFilter === "All" ||
+        item.status === statusFilter;
 
-      return matchesSearch && matchesEvent && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesEvent &&
+        matchesStatus
+      );
     });
-  }, [bookings, search, eventFilter, statusFilter]);
+  }, [
+    bookings,
+    search,
+    eventFilter,
+    statusFilter,
+  ]);
 
   const totalAmount = bookings.reduce(
-    (sum, item) => sum + Number(item.amount || 0),
+    (sum, item) =>
+      sum + Number(item.amount || 0),
     0
   );
 
   const totalAdvance = bookings.reduce(
-    (sum, item) => sum + Number(item.advance || 0),
+    (sum, item) =>
+      sum + Number(item.advance || 0),
     0
   );
 
   const totalPending = bookings.reduce(
-    (sum, item) =>
-      sum +
-      Math.max(
-        0,
-        Number(item.amount || 0) - Number(item.advance || 0)
-      ),
+    (sum, item) => sum + balanceOf(item),
     0
   );
 
@@ -658,7 +943,6 @@ export default function WeddingVideography() {
       title: "Total Bookings",
       value: bookings.length,
       icon: Video,
-      color: "bg-blue-50 text-blue-700",
     },
     {
       title: "Upcoming Shoots",
@@ -666,7 +950,6 @@ export default function WeddingVideography() {
         (item) => item.status === "Upcoming"
       ).length,
       icon: CalendarDays,
-      color: "bg-indigo-50 text-indigo-700",
     },
     {
       title: "Completed Shoots",
@@ -674,13 +957,12 @@ export default function WeddingVideography() {
         (item) => item.status === "Completed"
       ).length,
       icon: CheckCircle2,
-      color: "bg-emerald-50 text-emerald-700",
     },
     {
       title: "Pending Payments",
-      value: money(totalPending),
+      value: totalPending,
       icon: Wallet,
-      color: "bg-amber-50 text-amber-700",
+      isMoney: true,
     },
   ];
 
@@ -694,7 +976,8 @@ export default function WeddingVideography() {
   };
 
   const openAdd = () => {
-    previousFocusRef.current = document.activeElement;
+    previousFocusRef.current =
+      document.activeElement;
 
     setEditingId(null);
     setForm({ ...emptyForm });
@@ -705,10 +988,15 @@ export default function WeddingVideography() {
   };
 
   const openEdit = (item) => {
-    previousFocusRef.current = document.activeElement;
+    previousFocusRef.current =
+      document.activeElement;
 
     setEditingId(item.id);
-    setForm({ ...emptyForm, ...item });
+    setForm({
+      ...emptyForm,
+      ...item,
+    });
+
     setError("");
     setOpen(true);
 
@@ -727,17 +1015,32 @@ export default function WeddingVideography() {
   const saveBooking = (event) => {
     event.preventDefault();
 
-    const customer = String(form.customer || "").trim();
-    const phone = String(form.phone || "").trim();
+    const customer = String(
+      form.customer || ""
+    ).trim();
+
+    const phone = String(
+      form.phone || ""
+    ).trim();
 
     if (!customer) {
-      setError("Please enter customer / couple name.");
+      setError(
+        "Please enter customer / couple name."
+      );
       playSound("error");
       return;
     }
 
     if (!/^\d{10}$/.test(phone)) {
-      setError("Please enter a valid 10-digit phone number.");
+      setError(
+        "Please enter a valid 10-digit phone number."
+      );
+      playSound("error");
+      return;
+    }
+
+    if (!form.event || !EVENT_TYPES.includes(form.event)) {
+      setError("Please select event type.");
       playSound("error");
       return;
     }
@@ -758,35 +1061,55 @@ export default function WeddingVideography() {
       advance < 0 ||
       advance > amount
     ) {
-      setError("Advance amount cannot exceed total amount.");
+      setError(
+        "Advance amount cannot exceed total amount."
+      );
       playSound("error");
       return;
     }
 
     const record = {
       ...form,
-      id: editingId ?? `VID-${Date.now()}`,
+      id:
+        editingId ??
+        `VID-${Date.now()}`,
       customer,
       phone,
       amount,
       advance,
-      venue: String(form.venue || "").trim(),
-      videographer: String(form.videographer || "").trim(),
-      notes: String(form.notes || "").trim(),
+      venue: String(
+        form.venue || ""
+      ).trim(),
+      videographer: String(
+        form.videographer || ""
+      ).trim(),
+      notes: String(
+        form.notes || ""
+      ).trim(),
+      status: form.status || "Upcoming",
     };
 
     if (editingId !== null) {
       setBookings((previous) =>
         previous.map((item) =>
-          item.id === editingId ? record : item
+          item.id === editingId
+            ? record
+            : item
         )
       );
 
-      setNotice("Videography booking updated successfully.");
+      setNotice(
+        "Videography booking updated successfully."
+      );
     } else {
-      setBookings((previous) => [record, ...previous]);
+      setBookings((previous) => [
+        record,
+        ...previous,
+      ]);
 
-      setNotice("Videography booking added successfully.");
+      setNotice(
+        "Videography booking added successfully."
+      );
     }
 
     playSound("save");
@@ -806,44 +1129,94 @@ export default function WeddingVideography() {
     }
 
     setBookings((previous) =>
-      previous.filter((booking) => booking.id !== item.id)
+      previous.filter(
+        (booking) =>
+          booking.id !== item.id
+      )
     );
 
-    setNotice("Videography booking deleted successfully.");
+    setNotice(
+      "Videography booking deleted successfully."
+    );
+
     playSound("delete");
   };
 
   const changeStatus = (id, status) => {
     setBookings((previous) =>
       previous.map((item) =>
-        item.id === id ? { ...item, status } : item
+        item.id === id
+          ? { ...item, status }
+          : item
       )
     );
 
     playSound("select");
   };
 
-  const toggleSound = () => {
-    const next = !soundEnabled;
-
-    localStorage.setItem(SOUND_KEY, String(next));
-    setSoundEnabled(next);
-
-    if (next) playSound("save");
-  };
-
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f7fb] px-3 py-5 text-slate-800 sm:px-6 lg:space-y-7 lg:px-8 lg:py-8">
+    <div className="min-h-screen w-full min-w-0 max-w-full space-y-6 overflow-x-hidden bg-[#f5f9ff] px-3 py-5 text-slate-800 sm:px-6 lg:space-y-7 lg:px-8 lg:py-8">
+
+      {/* ANIMATION STYLES */}
+      <style>{`
+        @keyframes vidCardShake {
+          0%, 100% {
+            transform: translateX(0) scale(1);
+          }
+          20% {
+            transform: translateX(-2px) scale(1.015);
+          }
+          40% {
+            transform: translateX(2px) scale(1.02);
+          }
+          60% {
+            transform: translateX(-1px) scale(1.015);
+          }
+          80% {
+            transform: translateX(1px) scale(1.005);
+          }
+        }
+
+        @keyframes vidCardGlow {
+          0%, 100% {
+            box-shadow:
+              0 5px 16px rgba(66,121,191,.09);
+          }
+          50% {
+            box-shadow:
+              0 0 0 4px rgba(96,165,250,.18),
+              0 12px 30px rgba(65,128,205,.26);
+          }
+        }
+
+        .vid-card-shake {
+          animation: vidCardShake .65s ease-in-out;
+        }
+
+        .vid-card-glow {
+          animation: vidCardGlow .8s ease-in-out;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .vid-card-shake,
+          .vid-card-glow {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
       {/* NOTIFICATION */}
       {notice &&
         createPortal(
-          <div className="fixed left-3 right-3 top-4 z-[11000] flex items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-medium text-[#10264d] shadow-xl sm:left-auto sm:right-6 sm:max-w-md">
+          <div className="fixed left-3 right-3 top-4 z-[11000] flex items-center gap-3 rounded-xl border border-[#bfd8f7] bg-white px-4 py-3 text-sm font-medium text-[#173f74] shadow-xl sm:left-auto sm:right-6 sm:max-w-md">
             <CheckCircle2
               size={19}
-              className="shrink-0 text-blue-600"
+              className="shrink-0 text-[#478bd7]"
             />
 
-            <span className="min-w-0 flex-1">{notice}</span>
+            <span className="min-w-0 flex-1">
+              {notice}
+            </span>
 
             <button
               type="button"
@@ -859,29 +1232,13 @@ export default function WeddingVideography() {
 
       {/* HEADER */}
       <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
-            Studio Raw Picturez
-          </p> */}
-
-          {/* <h1 className="flex items-center gap-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
-            <Video
-              size={28}
-              className="shrink-0 text-[#315f9a]"
-            />
-            <span>Wedding Videography</span>
-          </h1> */}
-
-          {/* <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">
-            Manage videography bookings, shoots, packages and payments.
-          </p> */}
-        </div>
+        <div className="min-w-0" />
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={openAdd}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#1b467e] sm:flex-none sm:text-sm"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#478bd7] px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3579c5] sm:flex-none sm:text-sm"
           >
             <Plus size={18} />
             Add Booking
@@ -889,53 +1246,63 @@ export default function WeddingVideography() {
         </div>
       </div>
 
-      {/* STATISTICS */}
+      {/* ANIMATED STATISTICS */}
       <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
+        {stats.map((stat, index) => (
+          <StatCard
+            key={stat.title}
+            {...stat}
+            index={index}
+          />
         ))}
       </div>
 
       {/* PAYMENT SUMMARY */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Total Package Value
-          </p>
-          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
-            {money(totalAmount)}
-          </p>
-        </div>
+        {[
+          {
+            title: "Total Package Value",
+            value: totalAmount,
+          },
+          {
+            title: "Total Advance Collected",
+            value: totalAdvance,
+          },
+          {
+            title: "Remaining Balance",
+            value: totalPending,
+          },
+        ].map((item, index) => (
+          <div
+            key={item.title}
+            className={`rounded-2xl border border-[#c8dffb] bg-gradient-to-br p-4 shadow-sm ${
+              index % 2 === 0
+                ? "from-[#d9eaff] to-[#f0f7ff]"
+                : "from-[#cde3ff] to-[#eaf4ff]"
+            }`}
+          >
+            <p className="text-xs font-semibold text-[#5477a1]">
+              {item.title}
+            </p>
 
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Total Advance Collected
-          </p>
-          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
-            {money(totalAdvance)}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[#e5ebf3] bg-white p-4">
-          <p className="text-xs font-semibold text-slate-500">
-            Remaining Balance
-          </p>
-          <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl">
-            {money(totalPending)}
-          </p>
-        </div>
+            <p className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#173f74] sm:text-xl">
+              {money(item.value)}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* BOOKINGS DIRECTORY */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#c8dffb] bg-[#eaf4ff] shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-[#c5ddfb] bg-gradient-to-r from-[#c5ddfb] to-[#e3f0ff] p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#10264d]">
+            <h2 className="text-lg font-bold text-[#173f74]">
               Videography Bookings
             </h2>
 
-            <p className="mt-1 text-xs text-slate-400">
-              {filteredBookings.length} of {bookings.length} bookings
+            <p className="mt-1 text-xs text-[#6083ae]">
+              {filteredBookings.length} of{" "}
+              {bookings.length} bookings
             </p>
           </div>
 
@@ -943,7 +1310,7 @@ export default function WeddingVideography() {
             <div className="relative w-full sm:w-[240px]">
               <Search
                 size={17}
-                className="absolute left-3 top-3.5 text-slate-400"
+                className="absolute left-3 top-3.5 text-[#7893b3]"
               />
 
               <input
@@ -964,10 +1331,15 @@ export default function WeddingVideography() {
                     ? "All Events"
                     : eventFilter
                 }
-                options={["All Events", ...EVENT_TYPES]}
+                options={[
+                  "All Events",
+                  ...EVENT_TYPES,
+                ]}
                 onChange={(value) =>
                   setEventFilter(
-                    value === "All Events" ? "All" : value
+                    value === "All Events"
+                      ? "All"
+                      : value
                   )
                 }
               />
@@ -980,10 +1352,15 @@ export default function WeddingVideography() {
                     ? "All Status"
                     : statusFilter
                 }
-                options={["All Status", ...STATUSES]}
+                options={[
+                  "All Status",
+                  ...STATUSES,
+                ]}
                 onChange={(value) =>
                   setStatusFilter(
-                    value === "All Status" ? "All" : value
+                    value === "All Status"
+                      ? "All"
+                      : value
                   )
                 }
               />
@@ -997,10 +1374,10 @@ export default function WeddingVideography() {
             <div className="col-span-full py-14 text-center">
               <Video
                 size={34}
-                className="mx-auto text-slate-300"
+                className="mx-auto text-[#9abce5]"
               />
 
-              <p className="mt-3 text-sm text-slate-400">
+              <p className="mt-3 text-sm text-[#7893b3]">
                 No videography bookings found.
               </p>
             </div>
@@ -1008,25 +1385,27 @@ export default function WeddingVideography() {
             filteredBookings.map((item) => (
               <article
                 key={item.id}
-                className="min-w-0 overflow-hidden rounded-2xl border border-[#e5ebf3] bg-white shadow-sm"
+                className="min-w-0 overflow-hidden rounded-2xl border border-[#c8dffb] bg-[#e8f2ff] shadow-sm"
               >
-                <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] bg-[#f8fafd] p-4">
+                <div className="flex items-start justify-between gap-2 border-b border-[#c8dffb] bg-gradient-to-r from-[#c8e0ff] to-[#e3f0ff] p-4">
                   <div className="flex min-w-0 items-start gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#315f9a]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-[#245c9c]">
                       <Film size={19} />
                     </div>
 
                     <div className="min-w-0">
-                      <h3 className="break-words text-sm font-bold text-[#10264d]">
+                      <h3 className="break-words text-sm font-bold text-[#173f74]">
                         {item.customer}
                       </h3>
 
-                      <p className="mt-1 break-all text-[11px] text-slate-400">
+                      <p className="mt-1 break-all text-[11px] text-[#7893b3]">
                         {item.id}
                       </p>
 
                       <div className="mt-2">
-                        <StatusBadge status={item.status} />
+                        <StatusBadge
+                          status={item.status}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1035,7 +1414,7 @@ export default function WeddingVideography() {
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
-                      className="rounded-lg bg-blue-50 p-2 text-blue-700"
+                      className="rounded-lg bg-white/85 p-2 text-blue-700"
                       aria-label="Edit booking"
                     >
                       <Pencil size={16} />
@@ -1043,7 +1422,9 @@ export default function WeddingVideography() {
 
                     <button
                       type="button"
-                      onClick={() => deleteBooking(item)}
+                      onClick={() =>
+                        deleteBooking(item)
+                      }
                       className="rounded-lg bg-red-50 p-2 text-red-600"
                       aria-label="Delete booking"
                     >
@@ -1052,65 +1433,56 @@ export default function WeddingVideography() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 p-4">
-                  <MobileDetail
-                    label="Event Type"
-                    value={item.event}
-                  />
+                <div className="grid grid-cols-2 gap-3 p-4">
+                  {[
+                    ["Event Type", item.event],
+                    [
+                      "Event Date",
+                      formatDate(item.date),
+                    ],
+                    ["Phone", item.phone],
+                    ["Venue", item.venue],
+                    [
+                      "Package",
+                      item.packageName,
+                    ],
+                    [
+                      "Videographer",
+                      item.videographer ||
+                        "Not Assigned",
+                    ],
+                    [
+                      "Total Amount",
+                      money(item.amount),
+                    ],
+                    [
+                      "Advance",
+                      money(item.advance),
+                    ],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="min-w-0 rounded-xl bg-white/85 p-3"
+                    >
+                      <MobileDetail
+                        label={label}
+                        value={value}
+                      />
+                    </div>
+                  ))}
 
-                  <MobileDetail
-                    label="Event Date"
-                    value={formatDate(item.date)}
-                  />
-
-                  <MobileDetail
-                    label="Phone"
-                    value={item.phone}
-                  />
-
-                  <MobileDetail
-                    label="Venue"
-                    value={item.venue}
-                  />
-
-                  <MobileDetail
-                    label="Package"
-                    value={item.packageName}
-                  />
-
-                  <MobileDetail
-                    label="Videographer"
-                    value={item.videographer || "Not Assigned"}
-                  />
-
-                  <MobileDetail
-                    label="Total Amount"
-                    value={money(item.amount)}
-                  />
-
-                  <MobileDetail
-                    label="Advance"
-                    value={money(item.advance)}
-                  />
-
-                  <div className="col-span-2 rounded-xl bg-[#f1f5fb] p-3">
-                    <p className="text-xs font-medium text-slate-500">
+                  <div className="col-span-2 rounded-xl border border-[#bcd8fb] bg-[#d5e7ff] p-3">
+                    <p className="text-xs font-medium text-[#5477a1]">
                       Remaining Balance
                     </p>
 
-                    <p className="mt-1 text-base font-bold text-[#10264d]">
-                      {money(
-                        Math.max(
-                          0,
-                          Number(item.amount || 0) -
-                            Number(item.advance || 0)
-                        )
-                      )}
+                    <p className="mt-1 text-base font-bold text-[#173f74]">
+                      {money(balanceOf(item))}
                     </p>
                   </div>
 
                   {item.notes && (
-                    <div className="col-span-2">
+                    <div className="col-span-2 rounded-xl bg-white/85 p-3">
                       <MobileDetail
                         label="Additional Notes"
                         value={item.notes}
@@ -1119,16 +1491,21 @@ export default function WeddingVideography() {
                   )}
                 </div>
 
-                <div className="border-t border-[#edf1f6] bg-[#fafcff] p-4">
-                  <p className="mb-2 text-xs font-semibold text-[#52627b]">
+                <div className="border-t border-[#c8dffb] bg-[#deedff] p-4">
+                  <p className="mb-2 text-xs font-semibold text-[#45688e]">
                     Booking Status
                   </p>
 
                   <CustomDropdown
-                    value={item.status || "Upcoming"}
+                    value={
+                      item.status || "Upcoming"
+                    }
                     options={STATUSES}
                     onChange={(status) =>
-                      changeStatus(item.id, status)
+                      changeStatus(
+                        item.id,
+                        status
+                      )
                     }
                   />
                 </div>
@@ -1140,132 +1517,166 @@ export default function WeddingVideography() {
         {/* DESKTOP TABLE */}
         <div className="hidden w-full overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] border-collapse text-left">
-            <thead className="bg-[#f7f9fd]">
-              <tr className="text-[11px] font-bold uppercase tracking-wide text-[#8290a5]">
-                <th className="px-3 py-4">Customer</th>
-                <th className="px-3 py-4">Event Type</th>
-                <th className="px-3 py-4">Event Date</th>
-                <th className="px-3 py-4">Venue</th>
-                <th className="px-3 py-4">Package</th>
-                <th className="px-3 py-4">Total</th>
-                <th className="px-3 py-4">Balance</th>
-                <th className="px-3 py-4">Status</th>
-                <th className="px-3 py-4 text-center">Actions</th>
+            <thead className="bg-[#c5ddfb]">
+              <tr className="text-[11px] font-bold uppercase tracking-wide text-[#45688e]">
+                <th className="px-3 py-4">
+                  Customer
+                </th>
+                <th className="px-3 py-4">
+                  Event Type
+                </th>
+                <th className="px-3 py-4">
+                  Event Date
+                </th>
+                <th className="px-3 py-4">
+                  Venue
+                </th>
+                <th className="px-3 py-4">
+                  Package
+                </th>
+                <th className="px-3 py-4">
+                  Total
+                </th>
+                <th className="px-3 py-4">
+                  Balance
+                </th>
+                <th className="px-3 py-4">
+                  Status
+                </th>
+                <th className="px-3 py-4 text-center">
+                  Actions
+                </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-[#edf1f6]">
+            <tbody className="divide-y divide-[#d1e4fb]">
               {filteredBookings.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-5 py-16 text-center text-sm text-slate-400"
+                    className="px-5 py-16 text-center text-sm text-[#7893b3]"
                   >
                     No videography bookings found.
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="transition hover:bg-[#f8faff]"
-                  >
-                    <td className="px-3 py-4">
-                      <p className="font-semibold text-[#10264d]">
-                        {item.customer}
-                      </p>
+                filteredBookings.map(
+                  (item, index) => (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors hover:bg-[#d6e9ff] ${
+                        index % 2 === 0
+                          ? "bg-[#eaf4ff]"
+                          : "bg-[#deedff]"
+                      }`}
+                    >
+                      <td className="px-3 py-4">
+                        <p className="font-semibold text-[#173f74]">
+                          {item.customer}
+                        </p>
 
-                      <p className="mt-1 text-xs text-slate-400">
-                        {item.phone}
-                      </p>
-                    </td>
+                        <p className="mt-1 text-xs text-[#7893b3]">
+                          {item.phone}
+                        </p>
+                      </td>
 
-                    <td className="px-3 py-4">
-                      <span className="inline-block max-w-[130px] break-words rounded-lg bg-[#edf3fc] px-2 py-1.5 text-xs font-medium text-[#315f9a]">
-                        {item.event}
-                      </span>
-                    </td>
+                      <td className="px-3 py-4">
+                        <span className="inline-block max-w-[130px] break-words rounded-lg bg-white/80 px-2 py-1.5 text-xs font-medium text-[#245c9c]">
+                          {item.event}
+                        </span>
+                      </td>
 
-                    <td className="whitespace-nowrap px-3 py-4 text-xs text-[#52627b]">
-                      {formatDate(item.date)}
-                    </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-xs text-[#45688e]">
+                        {formatDate(item.date)}
+                      </td>
 
-                    <td className="px-3 py-4 text-sm text-[#52627b]">
-                      {item.venue || "—"}
-                    </td>
+                      <td className="px-3 py-4 text-sm text-[#45688e]">
+                        {item.venue || "—"}
+                      </td>
 
-                    <td className="px-3 py-4 text-xs text-[#52627b]">
-                      {item.packageName}
-                    </td>
+                      <td className="px-3 py-4 text-xs text-[#45688e]">
+                        {item.packageName}
+                      </td>
 
-                    <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#10264d]">
-                      {money(item.amount)}
-                    </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#173f74]">
+                        {money(item.amount)}
+                      </td>
 
-                    <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#10264d]">
-                      {money(
-                        Math.max(
-                          0,
-                          Number(item.amount || 0) -
-                            Number(item.advance || 0)
-                        )
-                      )}
-                    </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#173f74]">
+                        {money(balanceOf(item))}
+                      </td>
 
-                    <td className="min-w-[145px] px-3 py-4">
-                      <div className="mb-2">
-                        <StatusBadge status={item.status} />
-                      </div>
+                      <td className="min-w-[145px] px-3 py-4">
+                        <div className="mb-2">
+                          <StatusBadge
+                            status={item.status}
+                          />
+                        </div>
 
-                      <CustomDropdown
-                        value={item.status || "Upcoming"}
-                        options={STATUSES}
-                        onChange={(status) =>
-                          changeStatus(item.id, status)
-                        }
-                      />
-                    </td>
+                        <CustomDropdown
+                          value={
+                            item.status ||
+                            "Upcoming"
+                          }
+                          options={STATUSES}
+                          onChange={(status) =>
+                            changeStatus(
+                              item.id,
+                              status
+                            )
+                          }
+                        />
+                      </td>
 
-                    <td className="px-3 py-4">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
-                          aria-label="Edit booking"
-                        >
-                          <Pencil size={17} />
-                        </button>
+                      <td className="px-3 py-4">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openEdit(item)
+                            }
+                            className="rounded-lg p-2 text-blue-700 hover:bg-white/80"
+                            aria-label="Edit booking"
+                          >
+                            <Pencil size={17} />
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => deleteBooking(item)}
-                          className="rounded-lg p-2 text-red-500 hover:bg-red-50"
-                          aria-label="Delete booking"
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteBooking(item)
+                            }
+                            className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                            aria-label="Delete booking"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="border-t border-[#edf1f6] px-4 py-4 text-xs text-slate-400 sm:px-5">
-          Showing {filteredBookings.length} of {bookings.length} bookings
+        <div className="border-t border-[#c8dffb] bg-[#e3f0ff] px-4 py-4 text-xs text-[#6083ae] sm:px-5">
+          Showing {filteredBookings.length} of{" "}
+          {bookings.length} bookings
         </div>
       </section>
 
-      {/* ADD / EDIT FORM MODAL */}
+      {/* ADD / EDIT MODAL */}
       {open &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-[#07172d]/70 p-2 backdrop-blur-[3px] sm:p-5"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
                 closeForm();
               }
             }}
@@ -1277,10 +1688,9 @@ export default function WeddingVideography() {
               aria-labelledby="videography-modal-title"
               className="flex max-h-[calc(100dvh-16px)] w-full max-w-[800px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-40px)]"
             >
-              {/* MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-3 bg-[#10264d] px-4 py-4 text-white sm:px-6 sm:py-5">
+              <div className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-r from-[#478bd7] to-[#82b5ef] px-4 py-4 text-white sm:px-6 sm:py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
                     <Film size={20} />
                   </div>
 
@@ -1294,7 +1704,7 @@ export default function WeddingVideography() {
                         : "Add Videography Booking"}
                     </h2>
 
-                    <p className="mt-1 text-[11px] text-blue-100">
+                    <p className="mt-1 text-[11px] text-white/85">
                       Enter event and video shoot details
                     </p>
                   </div>
@@ -1314,7 +1724,8 @@ export default function WeddingVideography() {
                 onSubmit={saveBooking}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-[#f5f9ff] px-4 py-5 sm:px-6">
+
                   {/* CUSTOMER DETAILS */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <SectionTitle
@@ -1334,12 +1745,18 @@ export default function WeddingVideography() {
                         placeholder="Enter customer / couple name"
                         value={form.customer}
                         onChange={(event) =>
-                          updateForm("customer", event.target.value)
+                          updateForm(
+                            "customer",
+                            event.target.value
+                          )
                         }
                       />
                     </FormField>
 
-                    <FormField label="Phone Number" required>
+                    <FormField
+                      label="Phone Number"
+                      required
+                    >
                       <input
                         type="tel"
                         inputMode="numeric"
@@ -1351,7 +1768,10 @@ export default function WeddingVideography() {
                         onChange={(event) =>
                           updateForm(
                             "phone",
-                            event.target.value.replace(/\D/g, "")
+                            event.target.value.replace(
+                              /\D/g,
+                              ""
+                            )
                           )
                         }
                       />
@@ -1365,28 +1785,45 @@ export default function WeddingVideography() {
                       title="Event & Shoot Details"
                     />
 
-                    <FormField label="Event Type" required>
+                    <FormField
+                      label="Event Type"
+                      required
+                    >
                       <CustomDropdown
                         value={form.event}
                         options={
-                          EVENT_TYPES.includes(form.event)
+                          EVENT_TYPES.includes(
+                            form.event
+                          ) || !form.event
                             ? EVENT_TYPES
-                            : [form.event, ...EVENT_TYPES]
+                            : [
+                                form.event,
+                                ...EVENT_TYPES,
+                              ]
                         }
                         onChange={(value) =>
-                          updateForm("event", value)
+                          updateForm(
+                            "event",
+                            value
+                          )
                         }
                       />
                     </FormField>
 
-                    <FormField label="Event Date" required>
+                    <FormField
+                      label="Event Date"
+                      required
+                    >
                       <input
                         type="date"
                         required
                         className={inputClass}
                         value={form.date}
                         onChange={(event) =>
-                          updateForm("date", event.target.value)
+                          updateForm(
+                            "date",
+                            event.target.value
+                          )
                         }
                       />
                     </FormField>
@@ -1395,26 +1832,20 @@ export default function WeddingVideography() {
                       <CustomDropdown
                         value={form.venue}
                         options={
-                          VENUES.includes(form.venue)
+                          VENUES.includes(
+                            form.venue
+                          )
                             ? VENUES
-                            : [form.venue, ...VENUES]
+                            : [
+                                form.venue,
+                                ...VENUES,
+                              ]
                         }
                         onChange={(value) =>
-                          updateForm("venue", value)
-                        }
-                      />
-                    </FormField>
-
-                    <FormField label="Videography Package">
-                      <CustomDropdown
-                        value={form.packageName}
-                        options={
-                          PACKAGES.includes(form.packageName)
-                            ? PACKAGES
-                            : [form.packageName, ...PACKAGES]
-                        }
-                        onChange={(value) =>
-                          updateForm("packageName", value)
+                          updateForm(
+                            "venue",
+                            value
+                          )
                         }
                       />
                     </FormField>
@@ -1423,12 +1854,20 @@ export default function WeddingVideography() {
                       <CustomDropdown
                         value={form.videographer}
                         options={
-                          VIDEOGRAPHERS.includes(form.videographer)
+                          VIDEOGRAPHERS.includes(
+                            form.videographer
+                          ) || !form.videographer
                             ? VIDEOGRAPHERS
-                            : [form.videographer, ...VIDEOGRAPHERS]
+                            : [
+                                form.videographer,
+                                ...VIDEOGRAPHERS,
+                              ]
                         }
                         onChange={(value) =>
-                          updateForm("videographer", value)
+                          updateForm(
+                            "videographer",
+                            value
+                          )
                         }
                       />
                     </FormField>
@@ -1438,7 +1877,10 @@ export default function WeddingVideography() {
                         value={form.status}
                         options={STATUSES}
                         onChange={(value) =>
-                          updateForm("status", value)
+                          updateForm(
+                            "status",
+                            value
+                          )
                         }
                       />
                     </FormField>
@@ -1451,7 +1893,10 @@ export default function WeddingVideography() {
                       title="Payment Details"
                     />
 
-                    <FormField label="Total Amount (₹)" required>
+                    <FormField
+                      label="Total Amount (₹)"
+                      required
+                    >
                       <input
                         type="number"
                         min="0"
@@ -1461,12 +1906,18 @@ export default function WeddingVideography() {
                         placeholder="Enter total amount"
                         value={form.amount}
                         onChange={(event) =>
-                          updateForm("amount", event.target.value)
+                          updateForm(
+                            "amount",
+                            event.target.value
+                          )
                         }
                       />
                     </FormField>
 
-                    <FormField label="Advance Paid (₹)" required>
+                    <FormField
+                      label="Advance Paid (₹)"
+                      required
+                    >
                       <input
                         type="number"
                         min="0"
@@ -1476,22 +1927,29 @@ export default function WeddingVideography() {
                         placeholder="Enter advance amount"
                         value={form.advance}
                         onChange={(event) =>
-                          updateForm("advance", event.target.value)
+                          updateForm(
+                            "advance",
+                            event.target.value
+                          )
                         }
                       />
                     </FormField>
 
-                    <div className="col-span-full rounded-xl border border-[#dce4ef] bg-[#f4f7fc] p-4">
-                      <p className="text-xs font-semibold text-slate-500">
+                    <div className="col-span-full rounded-xl border border-[#c8dffb] bg-[#dcecff] p-4">
+                      <p className="text-xs font-semibold text-[#5477a1]">
                         Remaining Balance
                       </p>
 
-                      <p className="mt-1 text-xl font-extrabold text-[#10264d]">
+                      <p className="mt-1 text-xl font-extrabold text-[#173f74]">
                         {money(
                           Math.max(
                             0,
-                            Number(form.amount || 0) -
-                              Number(form.advance || 0)
+                            Number(
+                              form.amount || 0
+                            ) -
+                              Number(
+                                form.advance || 0
+                              )
                           )
                         )}
                       </p>
@@ -1510,10 +1968,13 @@ export default function WeddingVideography() {
                         rows={3}
                         value={form.notes}
                         onChange={(event) =>
-                          updateForm("notes", event.target.value)
+                          updateForm(
+                            "notes",
+                            event.target.value
+                          )
                         }
                         placeholder="Enter shoot requirements, equipment, delivery notes..."
-                        className="block w-full min-w-0 resize-y rounded-xl border border-[#dce4ef] bg-white px-3.5 py-3 text-sm text-[#10264d] outline-none focus:border-[#4676b6] focus:ring-2 focus:ring-blue-100"
+                        className="block w-full min-w-0 resize-y rounded-xl border border-[#c9def8] bg-white px-3.5 py-3 text-sm text-[#173f74] outline-none focus:border-[#6ca4ed] focus:ring-2 focus:ring-blue-100"
                       />
                     </FormField>
                   </div>
@@ -1527,25 +1988,24 @@ export default function WeddingVideography() {
                         size={18}
                         className="mt-0.5 shrink-0"
                       />
-
                       {error}
                     </div>
                   )}
                 </div>
 
                 {/* MODAL FOOTER */}
-                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#d8e8fb] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
                   <button
                     type="button"
                     onClick={closeForm}
-                    className="w-full rounded-xl border border-[#dce4ef] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] hover:bg-[#eef3f9] sm:w-auto"
+                    className="w-full rounded-xl border border-[#c8dffb] bg-[#eef6ff] px-6 py-3 text-sm font-semibold text-[#45688e] hover:bg-[#deedff] sm:w-auto"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1b467e] sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#478bd7] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#3579c5] sm:w-auto"
                   >
                     <Save size={17} />
 

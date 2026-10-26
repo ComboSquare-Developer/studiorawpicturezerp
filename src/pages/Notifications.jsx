@@ -2,42 +2,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bell,
-  BellRing,
-  Plus,
-  Search,
-  X,
-  Pencil,
-  Trash2,
-  Clock3,
-  CalendarDays,
-  CheckCircle2,
-  AlertTriangle,
-  Filter,
-  RefreshCw,
-  Eye,
-  ChevronDown,
-  Check,
-  Save,
-  UserRound,
-  MessageSquare,
-  ClipboardList,
-  Volume2,
-  VolumeX,
-  Camera,
-  Video,
-  PackageCheck,
-  Users,
-  BookOpen,
-  Send,
+  Bell, BellRing, Plus, Search, X, Pencil, Trash2,
+  Clock3, CalendarDays, CheckCircle2, AlertTriangle,
+  Filter, RefreshCw, Eye, ChevronDown, Check, Save,
+  UserRound, MessageSquare, ClipboardList, Camera,
+  Video, PackageCheck, Users, BookOpen, Send,
+  Sparkles, ArrowUpRight, ShieldCheck, Zap,
 } from "lucide-react";
 
 /* ==========================================
-   STORAGE
+   STORAGE & OPTIONS
 ========================================== */
 
 const STORAGE_KEY = "studioraw_notifications";
 const SOUND_KEY = "studioraw_notification_sounds";
+const UPDATE_EVENT = "studioraw:data-updated";
 
 const MODULES = [
   "Enquiries",
@@ -253,48 +232,23 @@ const MODULE_CONFIG = [
 ];
 
 const CUSTOMERS = [
-  "Arun Kumar",
-  "Priya Sharma",
-  "Vijay Raj",
-  "Divya R",
-  "Karthik S",
-  "Meena Devi",
-  "Rahul Kumar",
-  "Anitha S",
-  "Sanjay R",
-  "Deepa R",
-  "Manoj R",
-  "Keerthana R",
-  "Ajith & Kavya",
-  "Harini P",
-  "Praveen Kumar",
-  "Swetha S",
-  "Anu Joseph",
-  "Sathish P",
-  "Nithya Kumar",
-  "Lakshmi N",
+  "Arun Kumar", "Priya Sharma", "Vijay Raj", "Divya R",
+  "Karthik S", "Meena Devi", "Rahul Kumar", "Anitha S",
+  "Sanjay R", "Deepa R", "Manoj R", "Keerthana R",
+  "Ajith & Kavya", "Harini P", "Praveen Kumar", "Swetha S",
+  "Anu Joseph", "Sathish P", "Nithya Kumar", "Lakshmi N",
 ];
 
 const DEMO_STATUSES = [
-  "Pending",
-  "In Progress",
-  "Pending",
-  "Sent",
-  "Completed",
+  "Pending", "In Progress", "Pending", "Sent", "Completed",
 ];
-
 const DEMO_PRIORITIES = [
-  "High",
-  "Medium",
-  "Urgent",
-  "Low",
-  "Medium",
+  "High", "Medium", "Urgent", "Low", "Medium",
 ];
-
 const DEMO_CHANNELS = ["WhatsApp", "SMS", "Email", "In-App"];
 
 /* ==========================================
-   DATE HELPERS
+   HELPERS
 ========================================== */
 
 function localDate(date) {
@@ -309,31 +263,20 @@ const today = () => localDate(new Date());
 
 function formatDate(value) {
   if (!value) return "No date";
-
-  const date = new Date(
-    `${String(value).slice(0, 10)}T00:00:00`
-  );
-
+  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(date.getTime())) return String(value);
-
   return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+    day: "2-digit", month: "short", year: "numeric",
   });
 }
 
 function isOverdue(item) {
   return Boolean(
     item.dueDate &&
-      String(item.dueDate).slice(0, 10) < today() &&
-      !["Completed", "Sent"].includes(item.status)
+    String(item.dueDate).slice(0, 10) < today() &&
+    !["Completed", "Sent"].includes(item.status)
   );
 }
-
-/* ==========================================
-   GENERATE 135 DUMMY NOTIFICATIONS
-========================================== */
 
 function makeDemoData() {
   const base = new Date();
@@ -342,29 +285,18 @@ function makeDemoData() {
   return MODULE_CONFIG.flatMap((group, moduleIndex) =>
     group.titles.map((title, index) => {
       const due = new Date(base);
-
-      due.setDate(
-        due.getDate() + ((index + moduleIndex * 2) % 17) - 5
-      );
+      due.setDate(due.getDate() + ((index + moduleIndex * 2) % 17) - 5);
 
       const created = new Date(base);
-
-      created.setDate(
-        created.getDate() - (index % 8) - 1
-      );
+      created.setDate(created.getDate() - (index % 8) - 1);
 
       let type = group.type;
-
       if (group.module === "Deliveries") {
-        if (title.toLowerCase().includes("video")) {
-          type = "Video Delivery";
-        } else if (
-          title.toLowerCase().includes("selection")
-        ) {
-          type = "Photo Selection";
-        } else {
-          type = "Album Delivery";
-        }
+        type = title.toLowerCase().includes("video")
+          ? "Video Delivery"
+          : title.toLowerCase().includes("selection")
+          ? "Photo Selection"
+          : "Album Delivery";
       }
 
       if (
@@ -380,25 +312,13 @@ function makeDemoData() {
         message: `${title}. Contact the customer or responsible studio team, confirm the required details and update the reminder status.`,
         module: group.module,
         type,
-        channel:
-          DEMO_CHANNELS[
-            (index + moduleIndex) % DEMO_CHANNELS.length
-          ],
-        status:
-          DEMO_STATUSES[
-            (index + moduleIndex) % DEMO_STATUSES.length
-          ],
-        priority:
-          DEMO_PRIORITIES[
-            (index + moduleIndex) % DEMO_PRIORITIES.length
-          ],
+        channel: DEMO_CHANNELS[(index + moduleIndex) % DEMO_CHANNELS.length],
+        status: DEMO_STATUSES[(index + moduleIndex) % DEMO_STATUSES.length],
+        priority: DEMO_PRIORITIES[(index + moduleIndex) % DEMO_PRIORITIES.length],
         customer:
           group.module === "Internal"
             ? "Studio Team"
-            : CUSTOMERS[
-                (index * 3 + moduleIndex) %
-                  CUSTOMERS.length
-              ],
+            : CUSTOMERS[(index * 3 + moduleIndex) % CUSTOMERS.length],
         dueDate: localDate(due),
         createdAt: localDate(created),
         demo: true,
@@ -407,64 +327,40 @@ function makeDemoData() {
   );
 }
 
-/* ==========================================
-   MODULE DETECTION FOR OLD RECORDS
-========================================== */
-
 function detectModule(item) {
-  if (MODULES.includes(item.module)) {
-    return item.module;
-  }
+  if (MODULES.includes(item.module)) return item.module;
 
   const text = [
-    item.title,
-    item.message,
-    item.type,
-    item.category,
-    item.source,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    item.title, item.message, item.type, item.category, item.source,
+  ].filter(Boolean).join(" ").toLowerCase();
 
   if (
     text.includes("wedding videography") ||
     text.includes("wedding video enquiry") ||
     text.includes("drone enquiry")
-  ) {
-    return "Wedding Videography";
-  }
+  ) return "Wedding Videography";
 
   if (
     text.includes("wedding photography") ||
     text.includes("photoshoot") ||
     text.includes("photo shoot")
-  ) {
-    return "Wedding Photography";
-  }
+  ) return "Wedding Photography";
 
   if (
     text.includes("delivery") ||
     text.includes("album") ||
     text.includes("courier") ||
     text.includes("photo selection")
-  ) {
-    return "Deliveries";
-  }
+  ) return "Deliveries";
 
   if (
     text.includes("editing") ||
     text.includes("videography") ||
     text.includes("cinematic") ||
     text.includes("video")
-  ) {
-    return "Videography";
-  }
+  ) return "Videography";
 
-  if (
-    text.includes("booking") ||
-    text.includes("appointment")
-  ) {
+  if (text.includes("booking") || text.includes("appointment")) {
     return "Bookings";
   }
 
@@ -472,23 +368,14 @@ function detectModule(item) {
     text.includes("customer") ||
     text.includes("payment") ||
     text.includes("balance")
-  ) {
-    return "Customers";
-  }
+  ) return "Customers";
 
-  if (
-    text.includes("maintenance") ||
-    text.includes("internal")
-  ) {
+  if (text.includes("maintenance") || text.includes("internal")) {
     return "Internal";
   }
 
   return "Enquiries";
 }
-
-/* ==========================================
-   FIX OLD LOCALSTORAGE + MERGE DEMO
-========================================== */
 
 function loadData() {
   const demoRecords = makeDemoData();
@@ -498,24 +385,20 @@ function loadData() {
 
     if (saved !== null) {
       const parsed = JSON.parse(saved);
-
       if (Array.isArray(parsed)) {
-        const existingRecords = parsed.map((item) => ({
+        const existing = parsed.map((item) => ({
           ...item,
           module: detectModule(item),
         }));
 
-        const existingIds = new Set(
-          existingRecords.map((item) => String(item.id))
-        );
-
-        const missingDemoRecords = demoRecords.filter(
-          (item) => !existingIds.has(String(item.id))
+        const ids = new Set(existing.map((item) => String(item.id)));
+        const missing = demoRecords.filter(
+          (item) => !ids.has(String(item.id))
         );
 
         return {
-          data: [...existingRecords, ...missingDemoRecords],
-          demo: missingDemoRecords.length > 0,
+          data: [...existing, ...missing],
+          demo: missing.length > 0,
         };
       }
     }
@@ -523,46 +406,36 @@ function loadData() {
     console.error("Could not load notifications:", error);
   }
 
-  return {
-    data: demoRecords,
-    demo: true,
-  };
+  return { data: demoRecords, demo: true };
 }
-
-/* ==========================================
-   OTHER HELPERS
-========================================== */
 
 const makeId = () =>
   globalThis.crypto?.randomUUID?.() ||
-  `NOT-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 7)}`;
+  `NOT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 const blankForm = () => ({
   title: "",
   message: "",
-  module: "Enquiries",
-  type: "New Enquiry",
-  channel: "WhatsApp",
-  status: "Pending",
-  priority: "Medium",
+  module: "",
+  type: "",
+  channel: "",
+  status: "",
+  priority: "",
   customer: "",
   dueDate: today(),
 });
 
 const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#d9e3f2] bg-white px-3.5 py-3 text-sm font-medium text-[#10264d] outline-none transition placeholder:text-slate-500 focus:border-[#315b99] focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-2xl border border-[#d8e5f5] bg-white px-4 py-3 text-sm font-medium text-[#10264d] outline-none transition-all duration-300 placeholder:text-[#9aacc2] hover:border-[#b8cfe9] focus:border-[#3974b7] focus:ring-4 focus:ring-[#e6f1ff]";
 
 const labelClass =
-  "mb-2 block text-xs font-bold uppercase tracking-wide text-[#29416a]";
+  "mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#526f91]";
 
 const statusClasses = {
   Pending: "border-amber-200 bg-amber-50 text-amber-800",
   "In Progress": "border-blue-200 bg-blue-50 text-blue-800",
   Sent: "border-violet-200 bg-violet-50 text-violet-800",
-  Completed:
-    "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Completed: "border-emerald-200 bg-emerald-50 text-emerald-800",
 };
 
 const priorityClasses = {
@@ -583,89 +456,110 @@ const moduleIcons = {
   Internal: Bell,
 };
 
+const moduleColors = {
+  Enquiries: "from-[#e8f2ff] to-[#d9eaff] text-[#2563a3]",
+  "Wedding Photography": "from-[#f0eaff] to-[#e4dcff] text-[#7051b0]",
+  "Wedding Videography": "from-[#e5f5ff] to-[#d4efff] text-[#197ea5]",
+  Bookings: "from-[#e7f8f0] to-[#d7f2e6] text-[#188265]",
+  Customers: "from-[#fff1e6] to-[#ffe5d1] text-[#b66c2e]",
+  Videography: "from-[#e9edff] to-[#dce4ff] text-[#536ab2]",
+  Deliveries: "from-[#e5f8f6] to-[#d3f0eb] text-[#168b7a]",
+  Internal: "from-[#f0f3fa] to-[#e4eaf5] text-[#526b92]",
+};
+
 /* ==========================================
-   LIGHT THEME CSS
+   PREMIUM STYLES & ANIMATIONS
 ========================================== */
 
-const LIGHT_CSS = `
-  .studio-notifications-light {
+const PAGE_CSS = `
+  .studio-notifications-premium {
     color-scheme: light;
-    background-color: #f4f7fc;
+    background: #f5f8fd;
     color: #10264d;
   }
 
-  .studio-notifications-light input,
-  .studio-notifications-light textarea,
-  .studio-notifications-light select {
+  .studio-notifications-premium input,
+  .studio-notifications-premium textarea,
+  .studio-notifications-premium select {
     color-scheme: light;
-    background-color: #ffffff;
-    color: #10264d;
   }
 
-  .studio-notifications-light input::placeholder,
-  .studio-notifications-light textarea::placeholder {
-    color: #64748b;
+  .studio-notifications-premium input::placeholder,
+  .studio-notifications-premium textarea::placeholder {
+    color: #98aac0;
   }
 
-  .studio-notifications-light option {
+  .studio-notifications-premium option {
     background: white;
     color: #10264d;
   }
 
-  @keyframes notificationFadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  @keyframes snFadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  .notification-animate {
-    animation: notificationFadeUp 0.35s ease both;
+  @keyframes snScaleIn {
+    from { opacity: 0; transform: scale(.96) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  @keyframes snProgress {
+    from { width: 0; }
+  }
+
+  .sn-fade-up {
+    animation: snFadeUp .55s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .sn-scale-in {
+    animation: snScaleIn .3s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .sn-progress {
+    animation: snProgress 1.2s ease-out both;
+  }
+
+  .sn-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .sn-scroll::-webkit-scrollbar-thumb {
+    background: #c8d9ee;
+    border-radius: 99px;
+  }
+
+  .sn-scroll::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .notification-animate {
-      animation: none;
+    .sn-fade-up, .sn-scale-in, .sn-progress {
+      animation: none !important;
     }
   }
 `;
 
 /* ==========================================
-   SOUND
+   CLICK SOUND ONLY
 ========================================== */
 
 function useNotificationSounds() {
   const audioRef = useRef(null);
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
+  const soundEnabled = useMemo(() => {
     try {
       return localStorage.getItem(SOUND_KEY) !== "false";
     } catch {
       return true;
     }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        SOUND_KEY,
-        String(soundEnabled)
-      );
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [soundEnabled]);
+  }, []);
 
   useEffect(() => {
     return () => {
-      const context = audioRef.current;
-
-      if (context && context.state !== "closed") {
-        context.close().catch(() => {});
+      if (audioRef.current?.state !== "closed") {
+        audioRef.current?.close().catch(() => {});
       }
     };
   }, []);
@@ -676,41 +570,27 @@ function useNotificationSounds() {
     try {
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
-
       if (!AudioContextClass) return;
 
-      if (
-        !audioRef.current ||
-        audioRef.current.state === "closed"
-      ) {
+      if (!audioRef.current || audioRef.current.state === "closed") {
         audioRef.current = new AudioContextClass();
       }
 
       const context = audioRef.current;
-
       if (context.state === "suspended") {
         context.resume().catch(() => {});
       }
 
       const patterns = {
         click: [[580, 0, 0.055]],
-        open: [
-          [520, 0, 0.07],
-          [720, 0.075, 0.08],
-        ],
+        open: [[520, 0, 0.07], [720, 0.075, 0.08]],
         success: [
           [520, 0, 0.09],
           [660, 0.1, 0.09],
           [880, 0.2, 0.13],
         ],
-        delete: [
-          [440, 0, 0.09],
-          [290, 0.1, 0.12],
-        ],
-        error: [
-          [250, 0, 0.1],
-          [200, 0.11, 0.13],
-        ],
+        delete: [[440, 0, 0.09], [290, 0.1, 0.12]],
+        error: [[250, 0, 0.1], [200, 0.11, 0.13]],
       };
 
       (patterns[type] || patterns.click).forEach(
@@ -720,44 +600,73 @@ function useNotificationSounds() {
           const start = context.currentTime + delay;
 
           oscillator.type = "sine";
-          oscillator.frequency.setValueAtTime(
-            frequency,
-            start
-          );
+          oscillator.frequency.setValueAtTime(frequency, start);
 
           gain.gain.setValueAtTime(0.0001, start);
-
-          gain.gain.exponentialRampToValueAtTime(
-            0.045,
-            start + 0.012
-          );
-
-          gain.gain.exponentialRampToValueAtTime(
-            0.0001,
-            start + duration
-          );
+          gain.gain.exponentialRampToValueAtTime(0.035, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
           oscillator.connect(gain);
           gain.connect(context.destination);
-
           oscillator.start(start);
           oscillator.stop(start + duration + 0.01);
         }
       );
     } catch {
-      // Sound should not interrupt actions.
+      // Sound never interrupts an action.
     }
   };
 
-  return {
-    soundEnabled,
-    setSoundEnabled,
-    playSound,
-  };
+  return { playSound };
 }
 
 /* ==========================================
-   DROPDOWN
+   ANIMATED COUNTER
+========================================== */
+
+function useCountUp(target, duration = 1100) {
+  const [value, setValue] = useState(0);
+  const previous = useRef(0);
+
+  useEffect(() => {
+    const end = Number(target) || 0;
+    const start = previous.current;
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+      previous.current = end;
+      setValue(end);
+      return;
+    }
+
+    let frame;
+    let started;
+
+    const animate = (time) => {
+      if (started === undefined) started = time;
+      const progress = Math.min((time - started) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = start + (end - start) * eased;
+
+      previous.current = next;
+      setValue(next);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        previous.current = end;
+        setValue(end);
+      }
+    };
+
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [target, duration]);
+
+  return Math.round(value);
+}
+
+/* ==========================================
+   CUSTOM DROPDOWN
 ========================================== */
 
 function CustomDropdown({
@@ -769,212 +678,182 @@ function CustomDropdown({
   direction = "down",
 }) {
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [position, setPosition] = useState(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const updatePosition = () => {
+    if (!buttonRef.current) return;
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const desiredHeight = Math.min(options.length * 43 + 12, 250);
+    const below = window.innerHeight - rect.bottom;
+    const above = rect.top;
+
+    const openAbove =
+      direction === "up"
+        ? above > 100
+        : below < desiredHeight + 12 && above > below;
+
+    const space = openAbove ? above : below;
+    const height = Math.min(desiredHeight, Math.max(70, space - 12));
+    const width = Math.min(rect.width, window.innerWidth - 16);
+
+    setPosition({
+      position: "fixed",
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      width,
+      top: openAbove
+        ? Math.max(8, rect.top - height - 6)
+        : rect.bottom + 6,
+      maxHeight: height,
+      zIndex: 10050,
+    });
+  };
 
   useEffect(() => {
-    const closeOutside = (event) => {
+    if (!open) return;
+
+    updatePosition();
+
+    const handleOutside = (event) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
+        !buttonRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
       ) {
         setOpen(false);
       }
     };
 
-    const closeEscape = (event) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setOpen(false);
     };
 
-    document.addEventListener(
-      "pointerdown",
-      closeOutside
-    );
+    const handleScroll = (event) => {
+      if (!menuRef.current?.contains(event.target)) setOpen(false);
+    };
 
-    document.addEventListener(
-      "keydown",
-      closeEscape
-    );
+    const handleResize = () => setOpen(false);
+
+    document.addEventListener("pointerdown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      document.removeEventListener(
-        "pointerdown",
-        closeOutside
-      );
-
-      document.removeEventListener(
-        "keydown",
-        closeEscape
-      );
+      document.removeEventListener("pointerdown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [open, options.length, direction]);
 
   return (
-    <div
-      ref={dropdownRef}
-      className="relative w-full min-w-0"
-    >
+    <>
       <button
+        ref={buttonRef}
         type="button"
         aria-expanded={open}
+        aria-haspopup="listbox"
         onClick={() => {
           playSound?.("click");
+          if (!open) updatePosition();
           setOpen((prev) => !prev);
         }}
-        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-[#d9e3f2] bg-white text-left text-sm font-semibold text-[#10264d] outline-none transition hover:border-[#315b99] focus:ring-2 focus:ring-blue-100 ${
-          compact
-            ? "px-3 py-2.5"
-            : "px-3.5 py-3"
+        className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-2xl border border-[#d8e5f5] bg-white text-left text-sm font-semibold text-[#10264d] outline-none transition-all duration-300 hover:border-[#8cb5e2] focus:ring-4 focus:ring-[#e6f1ff] ${
+          compact ? "px-3 py-2.5" : "px-4 py-3"
         }`}
       >
-        <span className="min-w-0 flex-1 truncate">
-          {value || "Select"}
-        </span>
-
+        <span className="min-w-0 flex-1 truncate">{value || "Select"}</span>
         <ChevronDown
           size={16}
-          className={`shrink-0 transition-transform ${
+          className={`shrink-0 text-[#7392b4] transition-transform duration-300 ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {open && (
+      {open && position && createPortal(
         <div
-          className={`absolute left-0 right-0 z-[150] max-h-52 overflow-y-auto rounded-xl border border-[#d9e3f2] bg-white p-1 shadow-xl ${
-            direction === "up"
-              ? "bottom-full mb-1"
-              : "top-full mt-1"
-          }`}
+          ref={menuRef}
+          role="listbox"
+          style={position}
+          className="sn-scroll sn-scale-in overflow-y-auto overscroll-contain rounded-2xl border border-[#d7e5f6] bg-white p-1.5 shadow-[0_20px_55px_rgba(16,38,77,.2)]"
         >
           {options.map((option) => (
             <button
               key={option}
               type="button"
+              role="option"
+              aria-selected={value === option}
               onClick={() => {
                 onChange(option);
                 playSound?.("click");
                 setOpen(false);
               }}
-              className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+              className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${
                 value === option
-                  ? "bg-[#eaf1fc] font-bold text-[#10264d]"
-                  : "text-[#425673] hover:bg-[#f4f7fc]"
+                  ? "bg-[#eaf3ff] font-bold text-[#194c87]"
+                  : "text-[#526b89] hover:bg-[#f2f7ff]"
               }`}
             >
-              <span className="min-w-0 break-words">
-                {option}
-              </span>
-
-              {value === option && (
-                <Check
-                  size={15}
-                  className="shrink-0"
-                />
-              )}
+              <span className="break-words">{option}</span>
+              {value === option && <Check size={15} className="shrink-0" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
 /* ==========================================
-   BADGE
+   REUSABLE UI
 ========================================== */
 
-function StatusBadge({
-  value,
-  priority = false,
-}) {
-  const classes = priority
-    ? priorityClasses
-    : statusClasses;
+function StatusBadge({ value, priority = false }) {
+  const classes = priority ? priorityClasses : statusClasses;
 
   return (
-    <span
-      className={`inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${
-        classes[value] ||
-        "border-slate-200 bg-slate-50 text-slate-700"
-      }`}
-    >
+    <span className={`inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-extrabold ${
+      classes[value] || "border-slate-200 bg-slate-50 text-slate-700"
+    }`}>
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
-
-      <span className="truncate">
-        {value || "Pending"}
-      </span>
+      <span className="truncate">{value || "Pending"}</span>
     </span>
   );
 }
 
-/* ==========================================
-   FORM FIELD
-========================================== */
-
-function FormField({
-  label,
-  required = false,
-  children,
-}) {
+function FormField({ label, required = false, children }) {
   return (
     <div className="min-w-0">
       <label className={labelClass}>
         {label}
-
-        {required && (
-          <span className="ml-1 text-red-600">
-            *
-          </span>
-        )}
+        {required && <span className="ml-1 text-rose-500">*</span>}
       </label>
-
       {children}
     </div>
   );
 }
 
-/* ==========================================
-   INFO BOX
-========================================== */
-
-function InfoBox({
-  label,
-  value,
-  icon: Icon,
-}) {
+function InfoBox({ label, value, icon: Icon }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#e5ebf4] bg-[#f7f9fd] p-3">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-[#526581]">
-        {Icon && (
-          <Icon
-            size={13}
-            className="shrink-0 text-[#315b99]"
-          />
-        )}
-
+    <div className="min-w-0 rounded-2xl border border-[#e0ebf8] bg-gradient-to-br from-[#f8fbff] to-[#edf5ff] p-3.5">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#7892ae]">
+        {Icon && <Icon size={13} className="shrink-0 text-[#3e7bb9]" />}
         <span>{label}</span>
       </div>
-
-      <p className="break-words text-xs font-bold leading-relaxed text-[#10264d]">
+      <p className="break-words text-xs font-extrabold leading-relaxed text-[#10264d]">
         {value || "—"}
       </p>
     </div>
   );
 }
 
-/* ==========================================
-   MODAL
-========================================== */
-
 function ModalShell({
-  title,
-  subtitle,
-  onClose,
-  children,
-  maxWidth = "max-w-2xl",
-  footer,
+  title, subtitle, onClose, children,
+  maxWidth = "max-w-2xl", footer,
 }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -984,32 +863,23 @@ function ModalShell({
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        closeRef.current();
-      }
+      if (event.key === "Escape") closeRef.current();
     };
 
-    document.addEventListener(
-      "keydown",
-      handleEscape
-    );
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.body.style.overflow = previous;
-
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
+      document.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
   return createPortal(
-    <div className="studio-notifications-light fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-5">
-      <style>{LIGHT_CSS}</style>
+    <div className="studio-notifications-premium fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-5">
+      <style>{PAGE_CSS}</style>
 
       <div
-        className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-[3px]"
+        className="absolute inset-0 bg-[#07152b]/65 backdrop-blur-[4px]"
         onClick={onClose}
       />
 
@@ -1017,20 +887,18 @@ function ModalShell({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex h-[min(95dvh,850px)] w-full min-w-0 ${maxWidth} flex-col overflow-hidden rounded-2xl border border-[#d9e3f2] bg-[#f4f7fc] shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl`}
+        className={`sn-scale-in relative flex h-[min(95dvh,850px)] w-full min-w-0 ${maxWidth} flex-col overflow-hidden rounded-[24px] border border-[#d9e7f7] bg-[#f5f9ff] shadow-[0_30px_90px_rgba(5,25,55,.3)] sm:h-auto sm:max-h-[92dvh] sm:rounded-[28px]`}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e0e7f1] bg-white px-4 py-4 sm:px-7 sm:py-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e0ebf8] bg-gradient-to-r from-white to-[#edf5ff] px-5 py-5 sm:px-7">
           <div className="min-w-0">
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#315b99]">
+            <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[.18em] text-[#4a83be]">
               Studio Raw / Notifications
             </p>
-
-            <h2 className="text-xl font-extrabold text-[#10264d] sm:text-2xl">
+            <h2 className="text-xl font-black tracking-tight text-[#10264d] sm:text-2xl">
               {title}
             </h2>
-
             {subtitle && (
-              <p className="mt-1 text-xs text-[#526581] sm:text-sm">
+              <p className="mt-1.5 text-xs text-[#8299b3] sm:text-sm">
                 {subtitle}
               </p>
             )}
@@ -1039,18 +907,19 @@ function ModalShell({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-xl border border-[#d9e3f2] bg-white p-2.5 text-[#10264d] hover:bg-[#eaf1fc]"
+            aria-label="Close modal"
+            className="shrink-0 rounded-xl border border-[#d9e7f7] bg-white p-2.5 text-[#45688d] transition-all duration-300 hover:rotate-90 hover:bg-[#eaf3ff]"
           >
             <X size={19} />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6">
+        <div className="sn-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
           {children}
         </div>
 
         {footer && (
-          <div className="shrink-0 border-t border-[#e0e7f1] bg-white px-4 py-3 sm:px-7 sm:py-4">
+          <div className="shrink-0 border-t border-[#e0ebf8] bg-white px-5 py-4 sm:px-7">
             {footer}
           </div>
         )}
@@ -1060,23 +929,15 @@ function ModalShell({
   );
 }
 
-/* ==========================================
-   ACTION BUTTONS
-========================================== */
-
-function NotificationActions({
-  item,
-  onView,
-  onEdit,
-  onDelete,
-}) {
+function NotificationActions({ item, onView, onEdit, onDelete }) {
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <div className="flex shrink-0 items-center gap-1.5">
       <button
         type="button"
         title="View"
+        aria-label="View notification"
         onClick={() => onView(item)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eaf1fc] text-[#173d77] hover:bg-[#dce9fb]"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f5ef] text-[#168365] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#d2eee2]"
       >
         <Eye size={16} />
       </button>
@@ -1084,8 +945,9 @@ function NotificationActions({
       <button
         type="button"
         title="Edit"
+        aria-label="Edit notification"
         onClick={() => onEdit(item)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e8f2ff] text-[#2764a5] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#d4e7ff]"
       >
         <Pencil size={16} />
       </button>
@@ -1093,8 +955,9 @@ function NotificationActions({
       <button
         type="button"
         title="Delete"
+        aria-label="Delete notification"
         onClick={() => onDelete(item.id)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffedf1] text-[#d44b65] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#ffdae3]"
       >
         <Trash2 size={16} />
       </button>
@@ -1102,51 +965,64 @@ function NotificationActions({
   );
 }
 
-/* ==========================================
-   EMPTY STATE
-========================================== */
-
-function EmptyState({
-  hasRecords,
-  onCreate,
-  onClear,
-}) {
+function EmptyState({ hasRecords, onCreate, onClear }) {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="mb-4 rounded-2xl bg-[#eaf1fc] p-5">
-        <Bell
-          size={34}
-          className="text-[#315b99]"
-        />
+      <div className="mb-4 rounded-[24px] bg-[#eaf3ff] p-5 text-[#326da9]">
+        <Bell size={34} />
       </div>
-
-      <h3 className="font-bold text-[#10264d]">
+      <h3 className="text-base font-black text-[#10264d]">
         No notifications found
       </h3>
-
-      <p className="mt-2 max-w-sm text-sm text-[#526581]">
+      <p className="mt-2 max-w-sm text-sm text-[#8299b3]">
         {hasRecords
           ? "Try changing your search or filters."
           : "Create your first notification to get started."}
       </p>
-
       <button
         type="button"
-        onClick={
-          hasRecords ? onClear : onCreate
-        }
-        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#10264d] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#193b73]"
+        onClick={hasRecords ? onClear : onCreate}
+        className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#10264d] px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#244d82] hover:shadow-lg"
       >
-        {hasRecords ? (
-          <RefreshCw size={16} />
-        ) : (
-          <Plus size={16} />
-        )}
-
-        {hasRecords
-          ? "Clear Filters"
-          : "Create Notification"}
+        {hasRecords ? <RefreshCw size={16} /> : <Plus size={16} />}
+        {hasRecords ? "Clear Filters" : "Create Notification"}
       </button>
+    </div>
+  );
+}
+
+function StatCard({ stat, index }) {
+  const Icon = stat.icon;
+  const animatedValue = useCountUp(stat.value);
+
+  return (
+    <div
+      className="sn-fade-up group relative min-w-0 overflow-hidden rounded-[24px] border border-[#dbe8f7] bg-gradient-to-br from-white via-[#f8fbff] to-[#edf5ff] p-4 shadow-[0_8px_28px_rgba(16,55,110,.05)] transition-all duration-500 hover:-translate-y-1.5 hover:border-[#b5d1ef] hover:shadow-[0_18px_40px_rgba(16,55,110,.13)] sm:p-5"
+      style={{ animationDelay: `${index * 90}ms` }}
+    >
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${stat.accent}`} />
+
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-[#7089a5] sm:text-sm">
+            {stat.title}
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-[#10264d] sm:text-3xl">
+            {animatedValue.toLocaleString("en-IN")}
+          </h2>
+        </div>
+
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white shadow-sm transition-transform duration-500 group-hover:scale-110 ${stat.bg}`}>
+          <Icon size={23} className={stat.color} />
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-2 border-t border-[#e2edf9] pt-3">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#7eb0e0]" />
+        <p className="text-[11px] font-medium text-[#8ba0b9]">
+          {stat.note}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1156,290 +1032,154 @@ function EmptyState({
 ========================================== */
 
 export default function Notifications() {
-  const initial = useMemo(
-    () => loadData(),
-    []
-  );
+  const initial = useMemo(() => loadData(), []);
 
-  const [notifications, setNotifications] =
-    useState(initial.data);
-
-  const [isDemo, setIsDemo] =
-    useState(initial.demo);
-
+  const [notifications, setNotifications] = useState(initial.data);
   const [search, setSearch] = useState("");
-  const [moduleFilter, setModuleFilter] =
-    useState("All");
-  const [statusFilter, setStatusFilter] =
-    useState("All");
-  const [priorityFilter, setPriorityFilter] =
-    useState("All");
+  const [moduleFilter, setModuleFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
 
-  const [modalOpen, setModalOpen] =
-    useState(false);
-  const [editingId, setEditingId] =
-    useState(null);
-  const [viewingId, setViewingId] =
-    useState(null);
-  const [deleteId, setDeleteId] =
-    useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [viewingId, setViewingId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
-  const [form, setForm] =
-    useState(blankForm);
-
-  const [error, setError] =
-    useState("");
-
-  const [toast, setToast] =
-    useState("");
-
+  const [form, setForm] = useState(blankForm);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
   const toastTimerRef = useRef(null);
 
-  const {
-    soundEnabled,
-    setSoundEnabled,
-    playSound,
-  } = useNotificationSounds();
-
-  /* ========================================
-     SAVE DATA
-  ======================================== */
+  const { playSound } = useNotificationSounds();
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(notifications)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+      window.dispatchEvent(
+        new CustomEvent(UPDATE_EVENT, { detail: { key: STORAGE_KEY } })
       );
     } catch (error) {
-      console.error(
-        "Could not save notifications:",
-        error
-      );
+      console.error("Could not save notifications:", error);
     }
   }, [notifications]);
 
   useEffect(() => {
     return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
-  /* ========================================
-     TOAST
-  ======================================== */
-
   const showToast = (message) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast(message);
-
-    toastTimerRef.current = setTimeout(() => {
-      setToast("");
-    }, 2800);
+    toastTimerRef.current = setTimeout(() => setToast(""), 2800);
   };
-
-  /* ========================================
-     FORM
-  ======================================== */
 
   const updateForm = (key, value) => {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
-
+    setForm((previous) => ({ ...previous, [key]: value }));
     if (error) setError("");
   };
-
-  /* ========================================
-     FILTERS
-  ======================================== */
 
   const clearFilters = () => {
     setSearch("");
     setModuleFilter("All");
     setStatusFilter("All");
     setPriorityFilter("All");
-
     playSound("click");
   };
 
-  /* ========================================
-     STATISTICS
-  ======================================== */
-
-  const stats = useMemo(
-    () => ({
-      total: notifications.length,
-
-      pending: notifications.filter(
-        (item) =>
-          item.status === "Pending"
-      ).length,
-
-      progress: notifications.filter(
-        (item) =>
-          item.status === "In Progress"
-      ).length,
-
-      completed: notifications.filter(
-        (item) =>
-          ["Sent", "Completed"].includes(
-            item.status
-          )
-      ).length,
-
-      overdue:
-        notifications.filter(isOverdue)
-          .length,
-    }),
-    [notifications]
-  );
-
-  /* ========================================
-     FILTERED RECORDS
-  ======================================== */
+  const stats = useMemo(() => ({
+    total: notifications.length,
+    pending: notifications.filter((item) => item.status === "Pending").length,
+    progress: notifications.filter((item) => item.status === "In Progress").length,
+    completed: notifications.filter((item) =>
+      ["Sent", "Completed"].includes(item.status)
+    ).length,
+    overdue: notifications.filter(isOverdue).length,
+  }), [notifications]);
 
   const filtered = useMemo(() => {
-    const query = search
-      .trim()
-      .toLowerCase();
+    const query = search.trim().toLowerCase();
 
     return notifications
       .filter((item) => {
         const matchesSearch =
           !query ||
           [
-            item.title,
-            item.message,
-            item.customer,
-            item.module,
-            item.type,
-            item.channel,
-            item.priority,
-            item.status,
+            item.title, item.message, item.customer,
+            item.module, item.type, item.channel,
+            item.priority, item.status,
           ].some((value) =>
-            String(value || "")
-              .toLowerCase()
-              .includes(query)
+            String(value || "").toLowerCase().includes(query)
           );
 
         return (
           matchesSearch &&
-          (moduleFilter === "All" ||
-            item.module === moduleFilter) &&
-          (statusFilter === "All" ||
-            item.status === statusFilter) &&
-          (priorityFilter === "All" ||
-            item.priority === priorityFilter)
+          (moduleFilter === "All" || item.module === moduleFilter) &&
+          (statusFilter === "All" || item.status === statusFilter) &&
+          (priorityFilter === "All" || item.priority === priorityFilter)
         );
       })
       .sort((a, b) => {
-        const priorityOrder = {
-          Urgent: 4,
-          High: 3,
-          Medium: 2,
-          Low: 1,
-        };
+        const order = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+        const aOverdue = isOverdue(a) ? 1 : 0;
+        const bOverdue = isOverdue(b) ? 1 : 0;
 
-        const aOverdue = isOverdue(a)
-          ? 1
-          : 0;
-
-        const bOverdue = isOverdue(b)
-          ? 1
-          : 0;
-
-        if (aOverdue !== bOverdue) {
-          return bOverdue - aOverdue;
-        }
-
-        return (
-          (priorityOrder[b.priority] || 0) -
-          (priorityOrder[a.priority] || 0)
-        );
+        if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+        return (order[b.priority] || 0) - (order[a.priority] || 0);
       });
-  }, [
-    notifications,
-    search,
-    moduleFilter,
-    statusFilter,
-    priorityFilter,
-  ]);
+  }, [notifications, search, moduleFilter, statusFilter, priorityFilter]);
 
-  /* ========================================
-     MODULE COUNTS - FIXED
-  ======================================== */
-
-  const moduleSummary = useMemo(() => {
-    return MODULES.map((module) => ({
+  const moduleSummary = useMemo(() =>
+    MODULES.map((module) => ({
       module,
-
       count: notifications.filter(
-        (item) =>
-          String(item.module || "")
-            .trim()
-            .toLowerCase() ===
-          module.toLowerCase()
+        (item) => String(item.module || "").trim().toLowerCase() === module.toLowerCase()
       ).length,
-    }));
-  }, [notifications]);
+    })),
+  [notifications]);
 
   const statCards = [
     {
       title: "Total Notifications",
       value: stats.total,
-      icon: Bell,
-      note: "All reminders",
-      color: "text-[#173d77]",
-      bg: "bg-[#eaf1fc]",
-      accent:
-        "from-[#10264d] to-[#315b99]",
+      icon: BellRing,
+      note: "All studio reminders",
+      color: "text-[#245c9b]",
+      bg: "bg-[#e1efff]",
+      accent: "from-[#173d77] to-[#79b3ed]",
     },
     {
       title: "Pending",
       value: stats.pending,
       icon: Clock3,
       note: "Awaiting action",
-      color: "text-amber-700",
-      bg: "bg-amber-50",
-      accent:
-        "from-amber-400 to-orange-500",
+      color: "text-[#bf7827]",
+      bg: "bg-[#fff0d9]",
+      accent: "from-[#e7a143] to-[#ffd18b]",
     },
     {
       title: "In Progress",
       value: stats.progress,
       icon: RefreshCw,
-      note: "Being handled",
-      color: "text-blue-700",
-      bg: "bg-blue-50",
-      accent:
-        "from-blue-500 to-[#10264d]",
+      note: "Currently being handled",
+      color: "text-[#1685a8]",
+      bg: "bg-[#ddf4ff]",
+      accent: "from-[#2188b4] to-[#89d7f0]",
     },
     {
       title: "Completed / Sent",
       value: stats.completed,
       icon: CheckCircle2,
       note: "Finished reminders",
-      color: "text-emerald-700",
-      bg: "bg-emerald-50",
-      accent:
-        "from-emerald-400 to-green-600",
+      color: "text-[#158268]",
+      bg: "bg-[#dcf6ed]",
+      accent: "from-[#159a7b] to-[#8be0c7]",
     },
   ];
 
-  /* ========================================
-     CREATE
-  ======================================== */
-
   const openCreate = () => {
     playSound("open");
-
     setEditingId(null);
     setForm(blankForm());
     setError("");
@@ -1447,41 +1187,24 @@ export default function Notifications() {
     setModalOpen(true);
   };
 
-  /* ========================================
-     EDIT
-  ======================================== */
-
   const openEdit = (item) => {
     playSound("open");
-
     setEditingId(item.id);
-
     setForm({
       title: item.title || "",
       message: item.message || "",
-      module:
-        item.module || "Enquiries",
+      module: item.module || "Enquiries",
       type: item.type || "Other",
-      channel:
-        item.channel || "WhatsApp",
-      status:
-        item.status || "Pending",
-      priority:
-        item.priority || "Medium",
-      customer:
-        item.customer || "",
-      dueDate:
-        item.dueDate || today(),
+      channel: item.channel || "WhatsApp",
+      status: item.status || "Pending",
+      priority: item.priority || "Medium",
+      customer: item.customer || "",
+      dueDate: item.dueDate || today(),
     });
-
     setError("");
     setViewingId(null);
     setModalOpen(true);
   };
-
-  /* ========================================
-     VIEW
-  ======================================== */
 
   const openView = (item) => {
     playSound("open");
@@ -1500,27 +1223,17 @@ export default function Notifications() {
     setError("");
   };
 
-  /* ========================================
-     SAVE
-  ======================================== */
-
   const saveNotification = (event) => {
     event.preventDefault();
 
     if (!form.title.trim()) {
-      setError(
-        "Please enter notification title."
-      );
-
+      setError("Please enter notification title.");
       playSound("error");
       return;
     }
 
     if (!form.message.trim()) {
-      setError(
-        "Please enter notification message."
-      );
-
+      setError("Please enter notification message.");
       playSound("error");
       return;
     }
@@ -1536,70 +1249,37 @@ export default function Notifications() {
       setNotifications((current) =>
         current.map((item) =>
           item.id === editingId
-            ? {
-                ...item,
-                ...data,
-                updatedAt: today(),
-              }
+            ? { ...item, ...data, updatedAt: today() }
             : item
         )
       );
-
-      showToast(
-        "Notification updated successfully."
-      );
+      showToast("Notification updated successfully.");
     } else {
       setNotifications((current) => [
-        {
-          ...data,
-          id: makeId(),
-          createdAt: today(),
-        },
+        { ...data, id: makeId(), createdAt: today() },
         ...current,
       ]);
-
-      showToast(
-        "Notification created successfully."
-      );
+      showToast("Notification created successfully.");
     }
 
-    setIsDemo(false);
     playSound("success");
-
     setModalOpen(false);
     setEditingId(null);
     setForm(blankForm());
     setError("");
   };
 
-  /* ========================================
-     UPDATE STATUS
-  ======================================== */
-
   const updateStatus = (id, status) => {
     setNotifications((current) =>
       current.map((item) =>
         item.id === id
-          ? {
-              ...item,
-              status,
-              updatedAt: today(),
-            }
+          ? { ...item, status, updatedAt: today() }
           : item
       )
     );
-
-    setIsDemo(false);
     playSound("success");
-
-    showToast(
-      `Status updated to ${status}.`
-    );
+    showToast(`Status updated to ${status}.`);
   };
-
-  /* ========================================
-     DELETE
-  ======================================== */
 
   const openDelete = (id) => {
     playSound("click");
@@ -1608,20 +1288,12 @@ export default function Notifications() {
 
   const confirmDelete = () => {
     setNotifications((current) =>
-      current.filter(
-        (item) => item.id !== deleteId
-      )
+      current.filter((item) => item.id !== deleteId)
     );
-
-    setIsDemo(false);
     setDeleteId(null);
     setViewingId(null);
-
     playSound("delete");
-
-    showToast(
-      "Notification deleted successfully."
-    );
+    showToast("Notification deleted successfully.");
   };
 
   const closeDelete = () => {
@@ -1629,219 +1301,108 @@ export default function Notifications() {
     setDeleteId(null);
   };
 
-  /* ========================================
-     RESET DEMO
-  ======================================== */
-
-  const resetDemo = () => {
-    playSound("click");
-
-    const demoRecords = makeDemoData();
-
-    if (
-      !window.confirm(
-        `Restore all ${demoRecords.length} sample notifications? This will replace your currently saved notifications.`
-      )
-    ) {
-      return;
-    }
-
-    setNotifications(demoRecords);
-    setIsDemo(true);
-
-    setSearch("");
-    setModuleFilter("All");
-    setStatusFilter("All");
-    setPriorityFilter("All");
-
-    setModalOpen(false);
-    setEditingId(null);
-    setViewingId(null);
-    setDeleteId(null);
-    setError("");
-
-    playSound("success");
-
-    showToast(
-      `${demoRecords.length} sample notifications restored.`
-    );
-  };
-
-  const currentView =
-    notifications.find(
-      (item) =>
-        item.id === viewingId
-    );
-
-  /* ========================================
-     UI
-  ======================================== */
+  const currentView = notifications.find((item) => item.id === viewingId);
 
   return (
-    <div className="studio-notifications-light min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f4f7fc] px-3 py-4 text-[#10264d] sm:px-5 sm:py-6 lg:px-7 lg:py-8">
-      <style>{LIGHT_CSS}</style>
+    <div className="studio-notifications-premium min-h-screen w-full min-w-0 overflow-x-hidden px-3 py-5 sm:px-5 sm:py-7 lg:px-8 lg:py-8">
+      <style>{PAGE_CSS}</style>
 
       {/* HEADER */}
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="sn-fade-up mb-7 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#315b99]">
-            {/* <span className="h-2 w-2 rounded-full bg-[#173d77]" />
-            Studio Raw / Communication */}
-          </div>
+          {/* <div className="inline-flex items-center gap-2 rounded-full border border-[#dbe9f8] bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.15em] text-[#4a80b8]">
+            <Sparkles size={13} />
+            Studio Communication Center
+          </div> */}
 
-          {/* <h1 className="text-2xl font-extrabold tracking-tight text-[#10264d] sm:text-3xl">
+          {/* <h1 className="mt-3 text-2xl font-black tracking-tight text-[#10264d] sm:text-3xl">
             Notifications
           </h1> */}
 
-          {/* <p className="mt-2 max-w-xl text-sm leading-6 text-[#526581]">
-            Track enquiries, wedding photography,
-            wedding videography, bookings,
-            customers, videography and deliveries
-            in one place.
+          {/* <p className="mt-2 text-xs leading-6 text-[#8299b3] sm:text-sm">
+            Manage reminders, customer updates and studio activities.
           </p> */}
-
-          {isDemo && (
-            <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#d9e3f2] bg-[#eaf1fc] px-3 py-1 text-xs font-bold text-[#173d77]">
-              <Bell size={13} />
-              Sample Notifications Available
-            </span>
-          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* <button
-            type="button"
-            onClick={() => {
-              setSoundEnabled(
-                (value) => !value
-              );
-            }}
-            title={
-              soundEnabled
-                ? "Mute Sounds"
-                : "Enable Sounds"
-            }
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d9e3f2] bg-white text-[#10264d] shadow-sm hover:bg-[#eaf1fc]"
-          > */}
-            {/* {soundEnabled ? (
-              <Volume2 size={19} />
-            ) : (
-              <VolumeX size={19} />
-            )}
-          </button> */}
-
-          {/* <button
-            type="button"
-            onClick={resetDemo}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#d9e3f2] bg-white px-4 text-sm font-bold text-[#10264d] shadow-sm hover:bg-[#eaf1fc]"
-          >
-            <RefreshCw size={17} />
-            Reset Demo
-          </button> */}
-
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#10264d] px-4 text-sm font-bold text-white shadow-lg hover:bg-[#193b73]"
-          >
-            <Plus size={18} />
-            Create Notification
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={openCreate}
+          className="group inline-flex min-h-12 items-center justify-center gap-2 self-start rounded-2xl bg-gradient-to-r from-[#10264d] to-[#2b5c9b] px-5 py-3 text-sm font-extrabold text-white shadow-[0_9px_24px_rgba(16,38,77,.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(16,38,77,.28)]"
+        >
+          <Plus size={19} className="transition-transform duration-300 group-hover:rotate-90" />
+          Create Notification
+        </button>
       </div>
 
-      {/* STATISTICS */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-
-          return (
-            <div
-              key={stat.title}
-              className="notification-animate group relative min-w-0 overflow-hidden rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-5"
-            >
-              <div
-                className={`absolute left-0 top-0 h-1 w-full bg-gradient-to-r ${stat.accent}`}
-              />
-
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[#526581] sm:text-sm">
-                    {stat.title}
-                  </p>
-
-                  <h2 className="mt-3 text-2xl font-extrabold text-[#10264d] sm:text-3xl">
-                    {stat.value}
-                  </h2>
-                </div>
-
-                <div
-                  className={`shrink-0 rounded-xl p-3 ${stat.bg}`}
-                >
-                  <Icon
-                    size={22}
-                    className={stat.color}
-                  />
-                </div>
-              </div>
-
-              <p className="mt-4 text-xs font-medium text-[#526581]">
-                {stat.note}
-              </p>
-            </div>
-          );
-        })}
+      {/* STAT CARDS */}
+      <div className="mb-7 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        {statCards.map((stat, index) => (
+          <StatCard key={stat.title} stat={stat} index={index} />
+        ))}
       </div>
 
-      {/* MODULE NOTIFICATIONS */}
-      <section className="mb-6 rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <ClipboardList
-            size={19}
-            className="text-[#173d77]"
-          />
-
-          <h2 className="text-base font-extrabold text-[#10264d]">
-            Module Notifications
-          </h2>
+      {/* MODULE OVERVIEW */}
+      <section className="sn-fade-up mb-7 overflow-hidden rounded-[26px] border border-[#dce8f7] bg-white p-4 shadow-[0_8px_30px_rgba(16,55,110,.05)] sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-black text-[#10264d] sm:text-lg">
+              <ClipboardList size={20} className="text-[#3677b9]" />
+              Module Notifications
+            </h2>
+            <p className="mt-1 text-xs text-[#8ba1bb]">
+              Notification distribution across studio modules
+            </p>
+          </div>
+          <span className="rounded-xl border border-[#d9e9fa] bg-[#edf5ff] px-3 py-2 text-xs font-extrabold text-[#3b76b3]">
+            {MODULES.length} Modules
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-          {moduleSummary.map((item) => {
-            const Icon =
-              moduleIcons[item.module] ||
-              Bell;
+          {moduleSummary.map((item, index) => {
+            const Icon = moduleIcons[item.module] || Bell;
+            const selected = moduleFilter === item.module;
+            const percentage = stats.total
+              ? (item.count / stats.total) * 100
+              : 0;
 
             return (
               <button
                 key={item.module}
                 type="button"
                 onClick={() => {
-                  setModuleFilter(
-                    item.module
-                  );
-
+                  setModuleFilter(selected ? "All" : item.module);
                   playSound("click");
                 }}
-                className={`rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
-                  moduleFilter === item.module
-                    ? "border-[#315b99] bg-[#eaf1fc]"
-                    : "border-[#e0e7f1] bg-[#f8faff]"
+                className={`sn-fade-up group min-w-0 rounded-[20px] border p-3.5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_26px_rgba(16,55,110,.11)] ${
+                  selected
+                    ? "border-[#6397cf] bg-[#eaf3ff] shadow-md"
+                    : "border-[#e0eaf6] bg-gradient-to-br from-[#fbfdff] to-[#f1f7ff] hover:border-[#b7d3f0]"
                 }`}
+                style={{ animationDelay: `${index * 55}ms` }}
               >
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#173d77] shadow-sm">
-                  <Icon size={18} />
+                <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br shadow-sm transition-transform duration-300 group-hover:scale-110 ${
+                  moduleColors[item.module]
+                }`}>
+                  <Icon size={20} />
                 </div>
 
-                <p className="min-h-[32px] text-xs font-bold leading-4 text-[#29416a]">
+                <p className="min-h-[36px] break-words text-[11px] font-extrabold leading-4 text-[#385678]">
                   {item.module}
                 </p>
 
-                <p className="mt-2 text-2xl font-extrabold text-[#10264d]">
+                <p className="mt-2 text-2xl font-black text-[#10264d]">
                   {item.count}
                 </p>
 
-                <p className="mt-1 text-[10px] font-medium text-[#526581]">
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#dfeaf7]">
+                  <div
+                    className="sn-progress h-full rounded-full bg-gradient-to-r from-[#295b99] to-[#86b9ee]"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+
+                <p className="mt-2 text-[10px] font-semibold text-[#94a9c0]">
                   Notifications
                 </p>
               </button>
@@ -1852,487 +1413,320 @@ export default function Notifications() {
 
       {/* OVERDUE ALERT */}
       {stats.overdue > 0 && (
-        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <div className="shrink-0 rounded-xl bg-amber-100 p-2 text-amber-800">
-            <AlertTriangle size={20} />
+        <div className="sn-fade-up mb-7 flex items-start gap-3 rounded-[22px] border border-[#f5dba8] bg-gradient-to-r from-[#fffaf0] to-[#fff2db] p-4 sm:p-5">
+          <div className="shrink-0 rounded-2xl bg-[#ffebc6] p-3 text-[#b77922]">
+            <AlertTriangle size={21} />
           </div>
-
-          <div>
-            <h3 className="text-sm font-bold text-amber-950">
-              {stats.overdue} Overdue Reminder
-              {stats.overdue !== 1
-                ? "s"
-                : ""}
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-[#9b651b]">
+              {stats.overdue} Overdue Reminder{stats.overdue !== 1 ? "s" : ""}
             </h3>
-
-            <p className="mt-1 text-xs leading-6 text-amber-900 sm:text-sm">
-              Some reminders have passed their
-              due dates. Review them and update
-              their status.
+            <p className="mt-1 text-xs leading-6 text-[#ad844a] sm:text-sm">
+              Some reminders have passed their due dates. Review and update their status.
             </p>
           </div>
         </div>
       )}
 
       {/* FILTERS */}
-      <section className="mb-6 rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Filter
-            size={19}
-            className="text-[#173d77]"
-          />
+      <section className="mb-7 rounded-[25px] border border-[#dce8f7] bg-white p-4 shadow-[0_8px_28px_rgba(16,55,110,.04)] sm:p-6">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-black text-[#10264d]">
+              <Filter size={19} className="text-[#3477b9]" />
+              Search & Filters
+            </h2>
+            <p className="mt-1 text-xs text-[#8ba1bb]">
+              Find notifications quickly
+            </p>
+          </div>
 
-          <h2 className="text-base font-bold text-[#10264d]">
-            Search & Filters
-          </h2>
+          {(search || moduleFilter !== "All" ||
+            statusFilter !== "All" || priorityFilter !== "All") && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-[#326eae] hover:underline"
+            >
+              <RefreshCw size={14} />
+              Clear
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="relative min-w-0">
             <Search
-              size={17}
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#526581]"
+              size={18}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8aa3be]"
             />
-
             <input
               type="search"
               value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search notifications..."
-              className={`${inputClass} pl-10`}
+              className={`${inputClass} pl-11`}
             />
           </div>
 
           <CustomDropdown
             value={moduleFilter}
-            options={[
-              "All",
-              ...MODULES,
-            ]}
-            onChange={
-              setModuleFilter
-            }
+            options={["All", ...MODULES]}
+            onChange={setModuleFilter}
             playSound={playSound}
           />
-
           <CustomDropdown
             value={statusFilter}
-            options={[
-              "All",
-              ...STATUSES,
-            ]}
-            onChange={
-              setStatusFilter
-            }
+            options={["All", ...STATUSES]}
+            onChange={setStatusFilter}
             playSound={playSound}
           />
-
           <CustomDropdown
             value={priorityFilter}
-            options={[
-              "All",
-              ...PRIORITIES,
-            ]}
-            onChange={
-              setPriorityFilter
-            }
+            options={["All", ...PRIORITIES]}
+            onChange={setPriorityFilter}
             playSound={playSound}
           />
         </div>
       </section>
 
       {/* RECORDS */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#e0e7f1] bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-[#e0e7f1] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-lg font-extrabold text-[#10264d]">
-              <ClipboardList size={20} />
+      <section className="min-w-0 overflow-hidden rounded-[26px] border border-[#dce8f7] bg-white shadow-[0_8px_30px_rgba(16,55,110,.05)]">
+        <div className="flex flex-col gap-3 border-b border-[#e3edf9] bg-gradient-to-r from-white to-[#f1f7ff] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-black text-[#10264d]">
+              <ClipboardList size={20} className="text-[#3477b9]" />
               Notification Records
             </h2>
-
-            <p className="mt-1 text-xs font-medium text-[#526581]">
-              Showing {filtered.length} of{" "}
-              {notifications.length} notifications
+            <p className="mt-1 text-xs font-medium text-[#8ba1bb]">
+              Showing {filtered.length} of {notifications.length} notifications
             </p>
           </div>
 
-          {(search ||
-            moduleFilter !== "All" ||
-            statusFilter !== "All" ||
-            priorityFilter !== "All") && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="self-start text-sm font-bold text-[#173d77] hover:underline"
-            >
-              Clear Filters
-            </button>
-          )}
+          <div className="flex items-center gap-2 self-start rounded-full border border-[#dbe9f8] bg-white px-3 py-1.5 text-xs font-bold text-[#4c7eaf]">
+            <span className="h-2 w-2 rounded-full bg-[#4c9bdf]" />
+            Studio Activity
+          </div>
         </div>
 
         {filtered.length === 0 ? (
           <EmptyState
-            hasRecords={
-              notifications.length > 0
-            }
+            hasRecords={notifications.length > 0}
             onCreate={openCreate}
             onClear={clearFilters}
           />
         ) : (
           <>
             {/* DESKTOP TABLE */}
-            <div className="hidden overflow-x-auto lg:block">
+            <div className="sn-scroll hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[1100px] text-left">
-                <thead className="border-b border-[#e0e7f1] bg-[#f7f9fd]">
-                  <tr className="text-[11px] font-bold uppercase tracking-wider text-[#425673]">
-                    <th className="px-5 py-4">
-                      Notification
-                    </th>
-                    <th className="px-5 py-4">
-                      Module
-                    </th>
-                    <th className="px-5 py-4">
-                      Customer
-                    </th>
-                    <th className="px-5 py-4">
-                      Priority
-                    </th>
-                    <th className="px-5 py-4">
-                      Due Date
-                    </th>
-                    <th className="px-5 py-4">
-                      Status
-                    </th>
-                    <th className="px-5 py-4 text-right">
-                      Actions
-                    </th>
+                <thead className="border-b border-[#e2edf9] bg-[#f5f9ff]">
+                  <tr className="text-[11px] font-extrabold uppercase tracking-[.09em] text-[#6885a5]">
+                    <th className="px-5 py-4">Notification</th>
+                    <th className="px-5 py-4">Module</th>
+                    <th className="px-5 py-4">Customer</th>
+                    <th className="px-5 py-4">Priority</th>
+                    <th className="px-5 py-4">Due Date</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#edf1f7]">
-                  {filtered.map(
-                    (item) => (
+                <tbody className="divide-y divide-[#edf2f9]">
+                  {filtered.map((item) => {
+                    const Icon = moduleIcons[item.module] || Bell;
+
+                    return (
                       <tr
                         key={item.id}
-                        className="transition hover:bg-[#f7f9fd]"
+                        className="group transition-colors duration-300 hover:bg-[#f5f9ff]"
                       >
-                        <td className="max-w-[280px] px-5 py-4 align-top">
+                        <td className="max-w-[290px] px-5 py-4 align-top">
                           <button
                             type="button"
-                            onClick={() =>
-                              openView(item)
-                            }
+                            onClick={() => openView(item)}
                             className="text-left"
                           >
-                            <p className="text-sm font-bold text-[#10264d] hover:text-[#315b99]">
+                            <p className="text-sm font-extrabold text-[#10264d] transition-colors group-hover:text-[#2865a7]">
                               {item.title}
                             </p>
-
-                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#526581]">
+                            <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-[#8299b3]">
                               {item.message}
                             </p>
                           </button>
 
-                          {isOverdue(
-                            item
-                          ) && (
-                            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-rose-700">
-                              <AlertTriangle
-                                size={12}
-                              />
+                          {isOverdue(item) && (
+                            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-rose-600">
+                              <AlertTriangle size={12} />
                               Overdue
                             </span>
                           )}
                         </td>
 
                         <td className="px-5 py-4 align-top">
-                          <p className="text-sm font-bold text-[#29416a]">
-                            {item.module ||
-                              "General"}
-                          </p>
-
-                          <p className="mt-1 text-xs text-[#526581]">
-                            {item.type}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${
+                              moduleColors[item.module] || moduleColors.Internal
+                            }`}>
+                              <Icon size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-extrabold text-[#345476]">
+                                {item.module || "General"}
+                              </p>
+                              <p className="mt-1 text-[11px] text-[#91a4ba]">
+                                {item.type}
+                              </p>
+                            </div>
+                          </div>
                         </td>
 
-                        <td className="px-5 py-4 align-top text-sm font-semibold text-[#29416a]">
-                          {item.customer ||
-                            "—"}
-                        </td>
-
-                        <td className="px-5 py-4 align-top">
-                          <StatusBadge
-                            value={
-                              item.priority
-                            }
-                            priority
-                          />
+                        <td className="px-5 py-4 align-top text-sm font-semibold text-[#496786]">
+                          {item.customer || "—"}
                         </td>
 
                         <td className="px-5 py-4 align-top">
-                          <div
-                            className={`flex items-center gap-1.5 text-xs font-bold ${
-                              isOverdue(
-                                item
-                              )
-                                ? "text-rose-700"
-                                : "text-[#425673]"
-                            }`}
-                          >
-                            <CalendarDays
-                              size={14}
-                            />
+                          <StatusBadge value={item.priority} priority />
+                        </td>
 
-                            {formatDate(
-                              item.dueDate
-                            )}
+                        <td className="px-5 py-4 align-top">
+                          <div className={`flex items-center gap-1.5 text-xs font-bold ${
+                            isOverdue(item) ? "text-rose-600" : "text-[#63809f]"
+                          }`}>
+                            <CalendarDays size={14} />
+                            {formatDate(item.dueDate)}
                           </div>
                         </td>
 
                         <td className="px-5 py-4 align-top">
                           <select
-                            value={
-                              item.status
+                            value={item.status}
+                            onChange={(event) =>
+                              updateStatus(item.id, event.target.value)
                             }
-                            onChange={(
-                              event
-                            ) =>
-                              updateStatus(
-                                item.id,
-                                event.target.value
-                              )
-                            }
-                            className="max-w-[145px] rounded-xl border border-[#d9e3f2] bg-white px-2 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#315b99]"
+                            className="max-w-[145px] rounded-xl border border-[#d9e7f7] bg-white px-2.5 py-2 text-xs font-bold text-[#10264d] outline-none transition focus:border-[#3477b9] focus:ring-2 focus:ring-[#e6f1ff]"
                           >
-                            {STATUSES.map(
-                              (
-                                status
-                              ) => (
-                                <option
-                                  key={
-                                    status
-                                  }
-                                  value={
-                                    status
-                                  }
-                                >
-                                  {
-                                    status
-                                  }
-                                </option>
-                              )
-                            )}
+                            {STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
                           </select>
                         </td>
 
                         <td className="px-5 py-4 align-top">
                           <div className="flex justify-end">
                             <NotificationActions
-                              item={
-                                item
-                              }
-                              onView={
-                                openView
-                              }
-                              onEdit={
-                                openEdit
-                              }
-                              onDelete={
-                                openDelete
-                              }
+                              item={item}
+                              onView={openView}
+                              onEdit={openEdit}
+                              onDelete={openDelete}
                             />
                           </div>
                         </td>
                       </tr>
-                    )
-                  )}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* MOBILE CARDS */}
-            <div className="grid min-w-0 grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
-              {filtered.map(
-                (item) => {
-                  const Icon =
-                    moduleIcons[
-                      item.module
-                    ] || Bell;
+            <div className="grid min-w-0 grid-cols-1 gap-3 bg-[#f7faff] p-3 sm:grid-cols-2 sm:p-5 lg:hidden">
+              {filtered.map((item) => {
+                const Icon = moduleIcons[item.module] || Bell;
 
-                  return (
-                    <article
-                      key={
-                        item.id
-                      }
-                      className="notification-animate flex min-w-0 flex-col rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2 border-b border-[#edf1f7] pb-3">
-                        <div className="flex min-w-0 flex-1 items-start gap-2">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#173d77]">
-                            <Icon
-                              size={
-                                19
-                              }
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-                            <h3 className="break-words text-sm font-bold text-[#10264d]">
-                              {
-                                item.title
-                              }
-                            </h3>
-
-                            <p className="mt-1 text-xs font-semibold text-[#315b99]">
-                              {
-                                item.module
-                              }
-                            </p>
-                          </div>
+                return (
+                  <article
+                    key={item.id}
+                    className="sn-fade-up flex min-w-0 flex-col rounded-[22px] border border-[#dce8f7] bg-white p-4 shadow-sm transition-all duration-300 hover:border-[#bdd6f0] hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b border-[#e9f0f9] pb-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-2">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${
+                          moduleColors[item.module] || moduleColors.Internal
+                        }`}>
+                          <Icon size={19} />
                         </div>
 
-                        <NotificationActions
-                          item={
-                            item
-                          }
-                          onView={
-                            openView
-                          }
-                          onEdit={
-                            openEdit
-                          }
-                          onDelete={
-                            openDelete
-                          }
-                        />
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-extrabold text-[#10264d]">
+                            {item.title}
+                          </h3>
+                          <p className="mt-1 text-xs font-bold text-[#4782be]">
+                            {item.module}
+                          </p>
+                        </div>
                       </div>
 
-                      <p className="mt-3 line-clamp-3 text-xs leading-6 text-[#526581]">
-                        {
-                          item.message
-                        }
+                      <NotificationActions
+                        item={item}
+                        onView={openView}
+                        onEdit={openEdit}
+                        onDelete={openDelete}
+                      />
+                    </div>
+
+                    <p className="mt-3 line-clamp-3 text-xs leading-6 text-[#7e95af]">
+                      {item.message}
+                    </p>
+
+                    {isOverdue(item) && (
+                      <p className="mt-3 flex items-center gap-1 text-xs font-bold text-rose-600">
+                        <AlertTriangle size={14} />
+                        Overdue Reminder
                       </p>
+                    )}
 
-                      {isOverdue(
-                        item
-                      ) && (
-                        <p className="mt-3 flex items-center gap-1 text-xs font-bold text-rose-700">
-                          <AlertTriangle
-                            size={
-                              14
-                            }
-                          />
-                          Overdue Reminder
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <InfoBox label="Customer" value={item.customer} icon={UserRound} />
+                      <InfoBox label="Channel" value={item.channel} icon={MessageSquare} />
+                      <InfoBox
+                        label="Due Date"
+                        value={formatDate(item.dueDate)}
+                        icon={CalendarDays}
+                      />
+
+                      <div className="rounded-2xl border border-[#e0ebf8] bg-[#f5f9ff] p-3">
+                        <p className="mb-2 text-[11px] font-semibold text-[#7892ae]">
+                          Priority
                         </p>
-                      )}
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <InfoBox
-                          label="Customer"
-                          value={
-                            item.customer
-                          }
-                          icon={
-                            UserRound
-                          }
-                        />
-
-                        <InfoBox
-                          label="Channel"
-                          value={
-                            item.channel
-                          }
-                          icon={
-                            MessageSquare
-                          }
-                        />
-
-                        <InfoBox
-                          label="Due Date"
-                          value={formatDate(
-                            item.dueDate
-                          )}
-                          icon={
-                            CalendarDays
-                          }
-                        />
-
-                        <div className="rounded-xl border border-[#e5ebf4] bg-[#f7f9fd] p-3">
-                          <p className="mb-2 text-xs font-medium text-[#526581]">
-                            Priority
-                          </p>
-
-                          <StatusBadge
-                            value={
-                              item.priority
-                            }
-                            priority
-                          />
-                        </div>
+                        <StatusBadge value={item.priority} priority />
                       </div>
+                    </div>
 
-                      <div className="mt-auto pt-4">
-                        <div className="border-t border-[#edf1f7] pt-3">
-                          <p className="mb-2 text-xs font-bold text-[#29416a]">
-                            Update Status
-                          </p>
-
-                          <CustomDropdown
-                            compact
-                            value={
-                              item.status
-                            }
-                            options={
-                              STATUSES
-                            }
-                            onChange={(
-                              status
-                            ) =>
-                              updateStatus(
-                                item.id,
-                                status
-                              )
-                            }
-                            playSound={
-                              playSound
-                            }
-                            direction="up"
-                          />
-                        </div>
+                    <div className="mt-auto pt-4">
+                      <div className="border-t border-[#e9f0f9] pt-3">
+                        <p className="mb-2 text-xs font-bold text-[#456586]">
+                          Update Status
+                        </p>
+                        <CustomDropdown
+                          compact
+                          value={item.status}
+                          options={STATUSES}
+                          onChange={(status) => updateStatus(item.id, status)}
+                          playSound={playSound}
+                          direction="up"
+                        />
                       </div>
-                    </article>
-                  );
-                }
-              )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </>
         )}
 
-        <div className="flex items-center justify-between gap-3 border-t border-[#edf1f7] px-4 py-4 text-xs font-semibold text-[#526581] sm:px-6">
-          <span>
-            Showing {filtered.length} of{" "}
-            {notifications.length} records
-          </span>
-
-          <span>
-            Studio Raw ERP
-          </span>
+        <div className="flex items-center justify-between gap-3 border-t border-[#e9f0f9] bg-white px-4 py-4 text-xs font-semibold text-[#8ba1bb] sm:px-6">
+          <span>Showing {filtered.length} of {notifications.length} records</span>
+          <span>Studio Raw ERP</span>
         </div>
       </section>
 
       {/* CREATE / EDIT MODAL */}
       {modalOpen && (
         <ModalShell
-          title={
-            editingId !== null
-              ? "Edit Notification"
-              : "Create Notification"
-          }
+          title={editingId !== null ? "Edit Notification" : "Create Notification"}
           subtitle="Enter notification and reminder details."
           onClose={closeForm}
           maxWidth="max-w-[760px]"
@@ -2341,21 +1735,17 @@ export default function Notifications() {
               <button
                 type="button"
                 onClick={closeForm}
-                className="rounded-xl border border-[#d9e3f2] bg-white px-6 py-3 text-sm font-bold text-[#10264d] hover:bg-[#eaf1fc]"
+                className="rounded-2xl border border-[#d9e7f7] bg-white px-6 py-3 text-sm font-bold text-[#52718f] transition hover:bg-[#f0f6ff]"
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
                 form="notification-form"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-7 py-3 text-sm font-bold text-white hover:bg-[#193b73]"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#10264d] to-[#2b5c9b] px-7 py-3 text-sm font-bold text-white transition-all duration-300 hover:shadow-lg"
               >
                 <Save size={17} />
-
-                {editingId !== null
-                  ? "Update Notification"
-                  : "Save Notification"}
+                {editingId !== null ? "Update Notification" : "Save Notification"}
               </button>
             </div>
           }
@@ -2365,28 +1755,20 @@ export default function Notifications() {
             onSubmit={saveNotification}
             className="space-y-4 sm:space-y-5"
           >
-            <div className="rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm sm:p-5">
-              <h3 className="mb-5 flex items-center gap-2 border-b border-[#edf1f7] pb-4 text-sm font-extrabold text-[#10264d]">
-                <BellRing size={18} />
+            <div className="rounded-[22px] border border-[#dce8f7] bg-white p-4 shadow-sm sm:p-5">
+              <h3 className="mb-5 flex items-center gap-2 border-b border-[#e9f0f9] pb-4 text-sm font-black text-[#10264d]">
+                <BellRing size={18} className="text-[#3477b9]" />
                 Notification Information
               </h3>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <FormField
-                    label="Notification Title"
-                    required
-                  >
+                  <FormField label="Notification Title" required>
                     <input
                       type="text"
                       required
                       value={form.title}
-                      onChange={(event) =>
-                        updateForm(
-                          "title",
-                          event.target.value
-                        )
-                      }
+                      onChange={(event) => updateForm("title", event.target.value)}
                       placeholder="Enter notification title"
                       className={inputClass}
                     />
@@ -2394,20 +1776,12 @@ export default function Notifications() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <FormField
-                    label="Message"
-                    required
-                  >
+                  <FormField label="Message" required>
                     <textarea
                       required
                       rows={3}
                       value={form.message}
-                      onChange={(event) =>
-                        updateForm(
-                          "message",
-                          event.target.value
-                        )
-                      }
+                      onChange={(event) => updateForm("message", event.target.value)}
                       placeholder="Write notification message..."
                       className={`${inputClass} resize-none`}
                     />
@@ -2418,12 +1792,7 @@ export default function Notifications() {
                   <input
                     type="text"
                     value={form.customer}
-                    onChange={(event) =>
-                      updateForm(
-                        "customer",
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => updateForm("customer", event.target.value)}
                     placeholder="Enter customer name"
                     className={inputClass}
                   />
@@ -2433,12 +1802,7 @@ export default function Notifications() {
                   <CustomDropdown
                     value={form.module}
                     options={MODULES}
-                    onChange={(value) =>
-                      updateForm(
-                        "module",
-                        value
-                      )
-                    }
+                    onChange={(value) => updateForm("module", value)}
                     playSound={playSound}
                   />
                 </FormField>
@@ -2447,12 +1811,7 @@ export default function Notifications() {
                   <CustomDropdown
                     value={form.type}
                     options={TYPES}
-                    onChange={(value) =>
-                      updateForm(
-                        "type",
-                        value
-                      )
-                    }
+                    onChange={(value) => updateForm("type", value)}
                     playSound={playSound}
                   />
                 </FormField>
@@ -2461,12 +1820,7 @@ export default function Notifications() {
                   <CustomDropdown
                     value={form.channel}
                     options={CHANNELS}
-                    onChange={(value) =>
-                      updateForm(
-                        "channel",
-                        value
-                      )
-                    }
+                    onChange={(value) => updateForm("channel", value)}
                     playSound={playSound}
                   />
                 </FormField>
@@ -2475,21 +1829,16 @@ export default function Notifications() {
                   <CustomDropdown
                     value={form.priority}
                     options={PRIORITIES}
-                    onChange={(value) =>
-                      updateForm(
-                        "priority",
-                        value
-                      )
-                    }
+                    onChange={(value) => updateForm("priority", value)}
                     playSound={playSound}
                   />
                 </FormField>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#e0e7f1] bg-white p-4 shadow-sm sm:p-5">
-              <h3 className="mb-5 flex items-center gap-2 border-b border-[#edf1f7] pb-4 text-sm font-extrabold text-[#10264d]">
-                <CalendarDays size={18} />
+            <div className="rounded-[22px] border border-[#dce8f7] bg-white p-4 shadow-sm sm:p-5">
+              <h3 className="mb-5 flex items-center gap-2 border-b border-[#e9f0f9] pb-4 text-sm font-black text-[#10264d]">
+                <CalendarDays size={18} className="text-[#3477b9]" />
                 Schedule & Status
               </h3>
 
@@ -2498,12 +1847,7 @@ export default function Notifications() {
                   <CustomDropdown
                     value={form.status}
                     options={STATUSES}
-                    onChange={(value) =>
-                      updateForm(
-                        "status",
-                        value
-                      )
-                    }
+                    onChange={(value) => updateForm("status", value)}
                     playSound={playSound}
                   />
                 </FormField>
@@ -2512,12 +1856,7 @@ export default function Notifications() {
                   <input
                     type="date"
                     value={form.dueDate}
-                    onChange={(event) =>
-                      updateForm(
-                        "dueDate",
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => updateForm("dueDate", event.target.value)}
                     className={inputClass}
                   />
                 </FormField>
@@ -2525,12 +1864,8 @@ export default function Notifications() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
-                <AlertTriangle
-                  size={18}
-                  className="shrink-0"
-                />
-
+              <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+                <AlertTriangle size={18} className="shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -2550,17 +1885,14 @@ export default function Notifications() {
               <button
                 type="button"
                 onClick={closeView}
-                className="rounded-xl border border-[#d9e3f2] bg-white px-6 py-3 text-sm font-bold text-[#10264d] hover:bg-[#eaf1fc]"
+                className="rounded-2xl border border-[#d9e7f7] bg-white px-6 py-3 text-sm font-bold text-[#52718f] transition hover:bg-[#f0f6ff]"
               >
                 Close
               </button>
-
               <button
                 type="button"
-                onClick={() =>
-                  openEdit(currentView)
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white hover:bg-[#193b73]"
+                onClick={() => openEdit(currentView)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#254f88]"
               >
                 <Pencil size={16} />
                 Edit Notification
@@ -2569,122 +1901,50 @@ export default function Notifications() {
           }
         >
           <div className="space-y-4">
-            <div className="rounded-2xl border border-[#e0e7f1] bg-white p-4 sm:p-5">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <StatusBadge
-                  value={
-                    currentView.status
-                  }
-                />
-
-                <StatusBadge
-                  value={
-                    currentView.priority
-                  }
-                  priority
-                />
-
-                {isOverdue(
-                  currentView
-                ) && (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-700">
-                    <AlertTriangle
-                      size={13}
-                    />
+            <div className="rounded-[22px] border border-[#dce8f7] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <StatusBadge value={currentView.status} />
+                <StatusBadge value={currentView.priority} priority />
+                {isOverdue(currentView) && (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600">
+                    <AlertTriangle size={13} />
                     Overdue
                   </span>
                 )}
               </div>
 
-              <h3 className="break-words text-xl font-extrabold text-[#10264d]">
-                {
-                  currentView.title
-                }
+              <h3 className="break-words text-xl font-black text-[#10264d]">
+                {currentView.title}
               </h3>
-
-              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#425673]">
-                {
-                  currentView.message
-                }
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#607c9a]">
+                {currentView.message}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <InfoBox
-                label="Customer"
-                value={
-                  currentView.customer
-                }
-                icon={UserRound}
-              />
-
-              <InfoBox
-                label="Module"
-                value={
-                  currentView.module
-                }
-                icon={
-                  ClipboardList
-                }
-              />
-
-              <InfoBox
-                label="Type"
-                value={
-                  currentView.type
-                }
-                icon={Bell}
-              />
-
-              <InfoBox
-                label="Channel"
-                value={
-                  currentView.channel
-                }
-                icon={Send}
-              />
-
+              <InfoBox label="Customer" value={currentView.customer} icon={UserRound} />
+              <InfoBox label="Module" value={currentView.module} icon={ClipboardList} />
+              <InfoBox label="Type" value={currentView.type} icon={Bell} />
+              <InfoBox label="Channel" value={currentView.channel} icon={Send} />
               <InfoBox
                 label="Due Date"
-                value={formatDate(
-                  currentView.dueDate
-                )}
-                icon={
-                  CalendarDays
-                }
+                value={formatDate(currentView.dueDate)}
+                icon={CalendarDays}
               />
-
               <InfoBox
                 label="Created Date"
-                value={formatDate(
-                  currentView.createdAt
-                )}
-                icon={
-                  CalendarDays
-                }
+                value={formatDate(currentView.createdAt)}
+                icon={CalendarDays}
               />
             </div>
 
-            <div className="rounded-2xl border border-[#e0e7f1] bg-white p-4">
+            <div className="rounded-[22px] border border-[#dce8f7] bg-white p-4">
               <FormField label="Update Status">
                 <CustomDropdown
-                  value={
-                    currentView.status
-                  }
-                  options={
-                    STATUSES
-                  }
-                  onChange={(
-                    status
-                  ) =>
-                    updateStatus(
-                      currentView.id,
-                      status
-                    )
-                  }
-                  playSound={
-                    playSound
-                  }
+                  value={currentView.status}
+                  options={STATUSES}
+                  onChange={(status) => updateStatus(currentView.id, status)}
+                  playSound={playSound}
                   direction="up"
                 />
               </FormField>
@@ -2692,12 +1952,8 @@ export default function Notifications() {
 
             <button
               type="button"
-              onClick={() =>
-                openDelete(
-                  currentView.id
-                )
-              }
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 hover:bg-rose-100"
+              onClick={() => openDelete(currentView.id)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
             >
               <Trash2 size={16} />
               Delete Notification
@@ -2718,15 +1974,14 @@ export default function Notifications() {
               <button
                 type="button"
                 onClick={closeDelete}
-                className="flex-1 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm font-bold text-[#10264d] hover:bg-[#eaf1fc]"
+                className="flex-1 rounded-2xl border border-[#d9e7f7] bg-white px-4 py-3 text-sm font-bold text-[#10264d] transition hover:bg-[#f0f6ff]"
               >
                 Cancel
               </button>
-
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white hover:bg-rose-700"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700"
               >
                 <Trash2 size={16} />
                 Delete
@@ -2735,48 +1990,36 @@ export default function Notifications() {
           }
         >
           <div className="py-5 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-rose-50 text-rose-600">
               <Trash2 size={28} />
             </div>
-
-            <h3 className="mt-4 text-base font-bold text-[#10264d]">
+            <h3 className="mt-4 text-base font-black text-[#10264d]">
               Remove this notification?
             </h3>
-
-            <p className="mt-2 text-sm leading-6 text-[#526581]">
-              This notification will be
-              permanently removed from your
-              saved records.
+            <p className="mt-2 text-sm leading-6 text-[#8299b3]">
+              This notification will be permanently removed from your saved records.
             </p>
           </div>
         </ModalShell>
       )}
 
       {/* TOAST */}
-      {toast &&
-        createPortal(
-          <div className="studio-notifications-light fixed bottom-4 left-4 right-4 z-[10000] flex items-center gap-3 rounded-xl border border-[#d9e3f2] bg-white px-4 py-3 text-sm font-bold text-[#10264d] shadow-xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm">
-            <CheckCircle2
-              size={18}
-              className="shrink-0 text-emerald-700"
-            />
-
-            <span className="min-w-0 flex-1">
-              {toast}
-            </span>
-
-            <button
-              type="button"
-              onClick={() =>
-                setToast("")
-              }
-              className="rounded-lg p-1 text-[#10264d] hover:bg-[#eaf1fc]"
-            >
-              <X size={16} />
-            </button>
-          </div>,
-          document.body
-        )}
+      {toast && createPortal(
+        <div className="studio-notifications-premium sn-scale-in fixed bottom-4 left-4 right-4 z-[10000] flex items-center gap-3 rounded-2xl border border-[#d9e7f7] bg-white px-4 py-3 text-sm font-bold text-[#10264d] shadow-[0_16px_45px_rgba(16,38,77,.18)] sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm">
+          <div className="rounded-xl bg-[#e2f7ed] p-2 text-[#168365]">
+            <CheckCircle2 size={18} />
+          </div>
+          <span className="min-w-0 flex-1">{toast}</span>
+          <button
+            type="button"
+            onClick={() => setToast("")}
+            className="rounded-lg p-1 text-[#6f89a5] hover:bg-[#edf5ff]"
+          >
+            <X size={16} />
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

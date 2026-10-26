@@ -12,19 +12,20 @@ import {
   PartyPopper,
   Users,
   CheckCircle2,
-  Clock3,
   IndianRupee,
   ChevronDown,
-  MapPin,
-  Phone,
   UserRound,
   Wallet,
   Check,
   CalendarCheck2,
-  BriefcaseBusiness,
   FileText,
-  Filter,
+  BriefcaseBusiness,
+  RotateCcw,
 } from "lucide-react";
+
+/* =========================================
+   STORAGE
+========================================= */
 
 const STORAGE_KEY = "studioraw_functions_we_arrange";
 const SOUND_KEY = "studioraw_functions_sounds";
@@ -104,8 +105,26 @@ const DEMO_VENUES = [
 ];
 
 const DEMO_EVENTS = [
- 
-
+  "Puberty Ceremony",
+  "Engagement Ceremony",
+  "Birthday Celebrations",
+  "Inauguration Ceremony",
+  "Mehndi Ceremony",
+  "Bachelor Party",
+  "Arabic Night Celebrations",
+  "Corporate Events",
+  "Maternity Photoshoots",
+  "Custom Package",
+  "Engagement Ceremony",
+  "Birthday Celebrations",
+  "Puberty Ceremony",
+  "Mehndi Ceremony",
+  "Corporate Events",
+  "Inauguration Ceremony",
+  "Maternity Photoshoots",
+  "Bachelor Party",
+  "Arabic Night Celebrations",
+  "Custom Package",
 ];
 
 const DEMO_SERVICES = [
@@ -131,6 +150,10 @@ const DEMO_SERVICES = [
   ["Photography", "Videography", "Decoration"],
 ];
 
+/* =========================================
+   HELPERS
+========================================= */
+
 const dateOffset = (days) => {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
@@ -145,8 +168,14 @@ const dateOffset = (days) => {
 
 const DEMO_DATA = DEMO_NAMES.map((customer, index) => {
   const amount = 20000 + (index % 8) * 15000;
+
   const advance = Math.round(
-    amount * (index % 4 === 0 ? 1 : index % 3 === 0 ? 0.5 : 0.3)
+    amount *
+      (index % 4 === 0
+        ? 1
+        : index % 3 === 0
+        ? 0.5
+        : 0.3)
   );
 
   return {
@@ -154,7 +183,9 @@ const DEMO_DATA = DEMO_NAMES.map((customer, index) => {
     customer,
     phone: `98765${String(10000 + index).slice(-5)}`,
     eventType: DEMO_EVENTS[index],
-    eventDate: dateOffset(index < 6 ? -(20 - index * 3) : index * 4),
+    eventDate: dateOffset(
+      index < 6 ? -(20 - index * 3) : index * 4
+    ),
     venue: DEMO_VENUES[index % DEMO_VENUES.length],
     guests: 80 + (index % 8) * 75,
     services: DEMO_SERVICES[index],
@@ -189,6 +220,12 @@ const emptyForm = {
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
+const balanceOf = (item) =>
+  Math.max(
+    0,
+    Number(item.amount || 0) - Number(item.advance || 0)
+  );
+
 const formatDate = (value) => {
   if (!value) return "—";
 
@@ -204,17 +241,91 @@ const formatDate = (value) => {
 };
 
 const inputStyle =
-  "block w-full min-w-0 rounded-xl border border-[#dce5f1] bg-white px-3.5 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#376ca9] focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#cbdff6] bg-[#f8fbff] px-3.5 py-3 text-sm text-[#12355d] outline-none transition placeholder:text-[#91a7c0] focus:border-[#5b9be1] focus:bg-white focus:ring-2 focus:ring-[#d9ecff]";
 
 const statusColors = {
-  Upcoming: "border-blue-100 bg-blue-50 text-blue-700",
-  "In Progress": "border-amber-100 bg-amber-50 text-amber-700",
-  Completed: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-rose-100 bg-rose-50 text-rose-700",
+  Upcoming: "border-[#c8ddff] bg-[#edf5ff] text-[#2867b2]",
+  "In Progress": "border-[#f8e1b0] bg-[#fff7e6] text-[#a87318]",
+  Completed: "border-[#bfe9d7] bg-[#e9faf2] text-[#18825d]",
+  Cancelled: "border-[#ffd0d6] bg-[#fff0f2] text-[#c94e63]",
 };
 
+/* =========================================
+   AUTOMATIC COUNT-UP ANIMATION
+========================================= */
+
+function useCountUp(target, duration = 1450) {
+  const endValue = Math.max(0, Number(target) || 0);
+
+  const [display, setDisplay] = useState(0);
+  const currentRef = useRef(0);
+  const frameRef = useRef(null);
+  const [replayKey, setReplayKey] = useState(0);
+
+  const replay = () => {
+    currentRef.current = 0;
+    setDisplay(0);
+    setReplayKey((previous) => previous + 1);
+  };
+
+  useEffect(() => {
+    const startValue = currentRef.current;
+
+    if (
+      typeof window === "undefined" ||
+      window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)"
+      )?.matches
+    ) {
+      currentRef.current = endValue;
+      setDisplay(endValue);
+      return;
+    }
+
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (startTime === null) startTime = timestamp;
+
+      const progress = Math.min(
+        (timestamp - startTime) / duration,
+        1
+      );
+
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      const next =
+        startValue + (endValue - startValue) * eased;
+
+      currentRef.current = next;
+      setDisplay(Math.round(next));
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        currentRef.current = endValue;
+        setDisplay(endValue);
+      }
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [endValue, duration, replayKey]);
+
+  return { display, replay };
+}
+
+/* =========================================
+   CLICK SOUND ONLY
+========================================= */
+
 function useSound() {
-  const [enabled, setEnabled] = useState(() => {
+  const [enabled] = useState(() => {
     try {
       return localStorage.getItem(SOUND_KEY) !== "false";
     } catch {
@@ -223,14 +334,6 @@ function useSound() {
   });
 
   const audioRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SOUND_KEY, String(enabled));
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [enabled]);
 
   useEffect(() => {
     return () => {
@@ -276,8 +379,14 @@ function useSound() {
         oscillator.frequency.setValueAtTime(frequency, start);
 
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.055, start + 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.12);
+        gain.gain.exponentialRampToValueAtTime(
+          0.045,
+          start + 0.012
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + 0.12
+        );
 
         oscillator.connect(gain);
         gain.connect(context.destination);
@@ -286,12 +395,16 @@ function useSound() {
         oscillator.stop(start + 0.13);
       });
     } catch {
-      // Audio may be unavailable in some browsers.
+      // Audio unavailable.
     }
   };
 
-  return { enabled, setEnabled, play };
+  return { play };
 }
+
+/* =========================================
+   DROPDOWN
+========================================= */
 
 function CustomDropdown({
   value,
@@ -304,22 +417,22 @@ function CustomDropdown({
   const ref = useRef(null);
 
   useEffect(() => {
-    const closeOutside = (event) => {
+    const outside = (event) => {
       if (ref.current && !ref.current.contains(event.target)) {
         setOpen(false);
       }
     };
 
-    const closeEscape = (event) => {
+    const escape = (event) => {
       if (event.key === "Escape") setOpen(false);
     };
 
-    document.addEventListener("pointerdown", closeOutside);
-    document.addEventListener("keydown", closeEscape);
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
 
     return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      document.removeEventListener("keydown", closeEscape);
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
     };
   }, []);
 
@@ -339,7 +452,7 @@ function CustomDropdown({
 
         <ChevronDown
           size={17}
-          className={`shrink-0 text-[#607b9f] transition-transform ${
+          className={`shrink-0 text-[#6a92bf] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -348,7 +461,7 @@ function CustomDropdown({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-52 overflow-y-auto rounded-xl border border-[#dce5f1] bg-white p-1 shadow-[0_15px_35px_rgba(16,38,77,0.18)]"
+          className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-52 overflow-y-auto rounded-xl border border-[#cbdff6] bg-white p-1 shadow-[0_15px_35px_rgba(35,90,155,0.16)]"
         >
           {options.map((option) => (
             <button
@@ -362,11 +475,14 @@ function CustomDropdown({
               }}
               className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                 value === option
-                  ? "bg-[#eaf1fc] font-semibold text-[#123a70]"
-                  : "text-[#52627b] hover:bg-[#f5f8fd]"
+                  ? "bg-[#e4f1ff] font-semibold text-[#225b9c]"
+                  : "text-[#5a7290] hover:bg-[#f0f7ff]"
               }`}
             >
-              <span className="min-w-0 break-words">{option}</span>
+              <span className="min-w-0 break-words">
+                {option}
+              </span>
+
               {value === option && (
                 <Check size={16} className="shrink-0" />
               )}
@@ -377,6 +493,10 @@ function CustomDropdown({
     </div>
   );
 }
+
+/* =========================================
+   SERVICES DROPDOWN
+========================================= */
 
 function ServicesDropdown({ value = [], onChange }) {
   const [open, setOpen] = useState(false);
@@ -428,23 +548,23 @@ function ServicesDropdown({ value = [], onChange }) {
 
         <ChevronDown
           size={17}
-          className={`shrink-0 transition-transform ${
+          className={`shrink-0 text-[#6a92bf] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-60 overflow-y-auto rounded-xl border border-[#dce5f1] bg-white p-2 shadow-[0_15px_35px_rgba(16,38,77,0.18)]">
-          <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-            <span className="text-xs font-semibold text-[#10264d]">
+        <div className="absolute left-0 right-0 top-full z-[120] mt-1 max-h-60 overflow-y-auto rounded-xl border border-[#cbdff6] bg-white p-2 shadow-xl">
+          <div className="flex items-center justify-between border-b border-[#e6f0fc] px-2 pb-2">
+            <span className="text-xs font-semibold text-[#174574]">
               Choose Services
             </span>
 
             <button
               type="button"
               onClick={() => onChange([])}
-              className="text-xs font-semibold text-blue-700 hover:underline"
+              className="text-xs font-semibold text-[#367ac3] hover:underline"
             >
               Clear
             </button>
@@ -460,21 +580,23 @@ function ServicesDropdown({ value = [], onChange }) {
                 onClick={() => toggle(service)}
                 className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
                   checked
-                    ? "bg-blue-50 text-[#102f62]"
-                    : "text-slate-600 hover:bg-slate-50"
+                    ? "bg-[#eaf4ff] text-[#225b9c]"
+                    : "text-slate-600 hover:bg-[#f4f9ff]"
                 }`}
               >
                 <span
                   className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                     checked
-                      ? "border-[#102f62] bg-[#102f62] text-white"
+                      ? "border-[#397dc2] bg-[#397dc2] text-white"
                       : "border-slate-300"
                   }`}
                 >
                   {checked && <Check size={12} />}
                 </span>
 
-                <span className="min-w-0 break-words">{service}</span>
+                <span className="min-w-0 break-words">
+                  {service}
+                </span>
               </button>
             );
           })}
@@ -486,9 +608,10 @@ function ServicesDropdown({ value = [], onChange }) {
           {selected.map((service) => (
             <span
               key={service}
-              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-800"
+              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-[#cfe3fb] bg-[#edf6ff] px-2 py-1 text-[11px] font-medium text-[#2867a9]"
             >
               <span className="truncate">{service}</span>
+
               <button
                 type="button"
                 aria-label={`Remove ${service}`}
@@ -505,6 +628,10 @@ function ServicesDropdown({ value = [], onChange }) {
   );
 }
 
+/* =========================================
+   FIELD
+========================================= */
+
 function Field({
   label,
   name,
@@ -517,9 +644,11 @@ function Field({
 }) {
   return (
     <div className="min-w-0 space-y-1.5">
-      <label className="block text-xs font-semibold text-[#344767]">
+      <label className="block text-xs font-semibold text-[#416184]">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500">*</span>
+        )}
       </label>
 
       {options ? (
@@ -553,16 +682,27 @@ function Field({
   );
 }
 
+/* =========================================
+   SECTION TITLE
+========================================= */
+
 function SectionTitle({ icon: Icon, title }) {
   return (
-    <div className="mb-4 flex items-center gap-2.5 border-b border-[#edf1f6] pb-3">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#eaf1fc] text-[#17477e]">
+    <div className="mb-4 flex items-center gap-2.5 border-b border-[#e5f0fc] pb-3">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e3f1ff] text-[#397bc0]">
         <Icon size={17} />
       </span>
-      <h3 className="text-sm font-bold text-[#10264d]">{title}</h3>
+
+      <h3 className="text-sm font-bold text-[#174574]">
+        {title}
+      </h3>
     </div>
   );
 }
+
+/* =========================================
+   STATUS BADGE
+========================================= */
 
 function StatusBadge({ status }) {
   return (
@@ -577,37 +717,84 @@ function StatusBadge({ status }) {
   );
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
+/* =========================================
+   PREMIUM ANIMATED STAT CARD
+========================================= */
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+  onReplaySound,
+}) {
+  const { display, replay } = useCountUp(value, 1450);
+
+  const isMoney = title === "Pending Balance";
+
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-[0_4px_18px_rgba(16,38,77,0.04)] transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-[#8290a5] sm:text-sm">
+    <button
+      type="button"
+      onClick={() => {
+        replay();
+        onReplaySound?.();
+      }}
+      title="Click to replay number animation"
+      className="group relative flex min-w-0 w-full items-center justify-between gap-3 overflow-hidden rounded-[22px] border border-[#cfe2f8] bg-gradient-to-br from-[#ffffff] via-[#f0f7ff] to-[#deeeff] p-4 text-left shadow-[0_8px_25px_rgba(49,113,182,0.09)] transition duration-300 hover:-translate-y-1 hover:border-[#a8cef7] hover:shadow-[0_15px_32px_rgba(49,113,182,0.16)] sm:p-5"
+    >
+      <div className="pointer-events-none absolute -right-9 -top-9 h-28 w-28 rounded-full bg-white/40" />
+
+      <div className="relative z-10 min-w-0">
+        <p className="text-xs font-semibold text-[#6487ad] sm:text-sm">
           {title}
         </p>
-        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
-          {value}
+
+        <h2 className="mt-2 truncate whitespace-nowrap text-xl font-extrabold tabular-nums tracking-tight text-[#174574] sm:text-2xl">
+          {isMoney
+            ? money(display)
+            : display.toLocaleString("en-IN")}
         </h2>
+
+        <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-[#8aaccd]">
+          <RotateCcw size={11} />
+          Click to replay
+        </div>
       </div>
 
-      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
-        <Icon size={21} />
+      <div
+        className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 shadow-sm ${color}`}
+      >
+        <Icon size={23} />
       </div>
-    </div>
+    </button>
   );
 }
+
+/* =========================================
+   DETAIL
+========================================= */
 
 function Detail({ label, value }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-medium text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
-        {value === "" || value === null || value === undefined
+      <p className="text-[11px] font-medium text-[#91a7c0]">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-semibold text-[#174574]">
+        {value === "" ||
+        value === null ||
+        value === undefined
           ? "—"
           : value}
       </p>
     </div>
   );
 }
+
+/* =========================================
+   MAIN COMPONENT
+========================================= */
 
 export default function FunctionsWeArrange() {
   const [functions, setFunctions] = useState(() => {
@@ -616,6 +803,7 @@ export default function FunctionsWeArrange() {
 
       if (saved !== null) {
         const parsed = JSON.parse(saved);
+
         return Array.isArray(parsed) ? parsed : DEMO_DATA;
       }
 
@@ -630,24 +818,37 @@ export default function FunctionsWeArrange() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
   const [form, setForm] = useState({
     ...emptyForm,
     services: [],
   });
+
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const { enabled, setEnabled, play } = useSound();
+  const { play } = useSound();
 
   const firstInputRef = useRef(null);
 
+  /* =========================================
+     LOCAL STORAGE
+  ========================================= */
+
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(functions));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(functions)
+      );
     } catch {
       // Ignore storage errors.
     }
   }, [functions]);
+
+  /* =========================================
+     NOTIFICATION
+  ========================================= */
 
   useEffect(() => {
     if (!notice) return;
@@ -657,13 +858,21 @@ export default function FunctionsWeArrange() {
     return () => clearTimeout(timer);
   }, [notice]);
 
+  /* =========================================
+     MODAL EFFECT
+  ========================================= */
+
   useEffect(() => {
     if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
-    const timer = setTimeout(() => firstInputRef.current?.focus(), 30);
+    const timer = setTimeout(
+      () => firstInputRef.current?.focus(),
+      30
+    );
 
     const escape = (event) => {
       if (event.key === "Escape") {
@@ -681,6 +890,10 @@ export default function FunctionsWeArrange() {
       window.removeEventListener("keydown", escape);
     };
   }, [open]);
+
+  /* =========================================
+     FILTERED FUNCTIONS
+  ========================================= */
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -708,13 +921,12 @@ export default function FunctionsWeArrange() {
     });
   }, [functions, search, filter, statusFilter]);
 
+  /* =========================================
+     STATS
+  ========================================= */
+
   const totalBalance = functions.reduce(
-    (sum, item) =>
-      sum +
-      Math.max(
-        0,
-        Number(item.amount || 0) - Number(item.advance || 0)
-      ),
+    (sum, item) => sum + balanceOf(item),
     0
   );
 
@@ -722,33 +934,40 @@ export default function FunctionsWeArrange() {
     (item) => item.status === "Completed"
   ).length;
 
+  const upcoming = functions.filter(
+    (item) => item.status === "Upcoming"
+  ).length;
+
   const stats = [
     {
       title: "Total Functions",
       value: functions.length,
       icon: PartyPopper,
-      color: "bg-blue-50 text-blue-700",
+      color: "bg-[#dbeeff] text-[#357dc6]",
     },
     {
       title: "Upcoming Events",
-      value: functions.filter((item) => item.status === "Upcoming")
-        .length,
+      value: upcoming,
       icon: CalendarCheck2,
-      color: "bg-indigo-50 text-indigo-700",
+      color: "bg-[#d5e7ff] text-[#416fb9]",
     },
     {
       title: "Completed Events",
       value: completed,
       icon: CheckCircle2,
-      color: "bg-emerald-50 text-emerald-700",
+      color: "bg-[#dcf6ee] text-[#238a72]",
     },
     {
       title: "Pending Balance",
-      value: money(totalBalance),
+      value: totalBalance,
       icon: Wallet,
-      color: "bg-amber-50 text-amber-700",
+      color: "bg-[#fff0d6] text-[#b17c25]",
     },
   ];
+
+  /* =========================================
+     FORM FUNCTIONS
+  ========================================= */
 
   const updateForm = (name, value) => {
     setForm((previous) => ({
@@ -761,6 +980,7 @@ export default function FunctionsWeArrange() {
 
   const openAdd = () => {
     play("open");
+
     setEditingId(null);
     setForm({ ...emptyForm, services: [] });
     setError("");
@@ -769,12 +989,17 @@ export default function FunctionsWeArrange() {
 
   const openEdit = (item) => {
     play("open");
+
     setEditingId(item.id);
+
     setForm({
       ...emptyForm,
       ...item,
-      services: Array.isArray(item.services) ? [...item.services] : [],
+      services: Array.isArray(item.services)
+        ? [...item.services]
+        : [],
     });
+
     setError("");
     setOpen(true);
   };
@@ -786,11 +1011,16 @@ export default function FunctionsWeArrange() {
     setError("");
   };
 
+  /* =========================================
+     SAVE FUNCTION
+  ========================================= */
+
   const saveFunction = (event) => {
     event.preventDefault();
 
     const customer = String(form.customer || "").trim();
     const phone = String(form.phone || "").trim();
+    const venue = String(form.venue || "").trim();
 
     if (!customer) {
       setError("Please enter customer name.");
@@ -802,8 +1032,18 @@ export default function FunctionsWeArrange() {
       return;
     }
 
-    if (!form.eventDate || !form.venue.trim()) {
+    if (!form.eventType) {
+      setError("Please select function type.");
+      return;
+    }
+
+    if (!form.eventDate || !venue) {
       setError("Please enter event date and venue.");
+      return;
+    }
+
+    if (!form.status) {
+      setError("Please select function status.");
       return;
     }
 
@@ -836,11 +1076,13 @@ export default function FunctionsWeArrange() {
             `FUNC-${Date.now()}`,
       customer,
       phone,
-      venue: String(form.venue || "").trim(),
+      venue,
       guests: Number(form.guests || 0),
       amount,
       advance,
-      services: Array.isArray(form.services) ? form.services : [],
+      services: Array.isArray(form.services)
+        ? form.services
+        : [],
     };
 
     if (editingId !== null) {
@@ -860,6 +1102,10 @@ export default function FunctionsWeArrange() {
     closeForm();
   };
 
+  /* =========================================
+     DELETE FUNCTION
+  ========================================= */
+
   const deleteFunction = (item) => {
     if (
       !window.confirm(
@@ -877,6 +1123,10 @@ export default function FunctionsWeArrange() {
     setNotice("Function deleted successfully.");
   };
 
+  /* =========================================
+     UPDATE STATUS
+  ========================================= */
+
   const updateStatus = (id, status) => {
     setFunctions((previous) =>
       previous.map((item) =>
@@ -889,19 +1139,25 @@ export default function FunctionsWeArrange() {
   };
 
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-[#f5f7fb] px-3 py-5 text-[#10264d] sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+    <div className="min-h-screen w-full min-w-0 max-w-full bg-gradient-to-br from-[#f9fcff] via-[#f0f7ff] to-[#e5f1ff] px-3 py-5 text-[#174574] sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="mx-auto w-full max-w-[1500px] space-y-6">
-        {/* NOTIFICATION */}
+
+        {/* =====================================
+            NOTIFICATION
+        ===================================== */}
+
         {notice &&
           createPortal(
-            <div className="fixed left-3 right-3 top-4 z-[10001] flex items-center gap-3 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 shadow-xl sm:left-auto sm:right-5 sm:w-auto sm:max-w-md">
+            <div className="fixed left-3 right-3 top-4 z-[10001] flex items-center gap-3 rounded-xl border border-[#cfe2f8] bg-white px-4 py-3 shadow-xl sm:left-auto sm:right-5 sm:w-auto sm:max-w-md">
               <CheckCircle2
                 size={19}
                 className="shrink-0 text-emerald-600"
               />
-              <p className="flex-1 text-sm font-semibold text-[#10264d]">
+
+              <p className="flex-1 text-sm font-semibold text-[#174574]">
                 {notice}
               </p>
+
               <button
                 type="button"
                 onClick={() => setNotice("")}
@@ -913,87 +1169,102 @@ export default function FunctionsWeArrange() {
             document.body
           )}
 
-        {/* HEADER */}
+        {/* =====================================
+            HEADER
+        ===================================== */}
+
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
-              Studio Raw Picturez ERP
-            </p> */}
+          <div className="min-w-0" />
 
-            <div className="flex items-center gap-3">
-              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white shadow-sm">
-                <PartyPopper size={22} />
-              </div> */}
-
-              <div className="min-w-0">
-                {/* <h1 className="text-xl font-extrabold tracking-tight text-[#10264d] sm:text-2xl lg:text-[29px]">
-                  Functions We Arrange
-                </h1> */}
-                {/* <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
-                  Manage events, services, bookings and payments.
-                </p> */}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={openAdd}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c477e]"
-            >
-              <Plus size={18} />
-              Add Function
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#347cc7] to-[#5ba3e7] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(53,125,198,0.2)] transition hover:from-[#286bb4] hover:to-[#468fd5]"
+          >
+            <Plus size={18} />
+            Add Function
+          </button>
         </div>
 
-        {/* STATS */}
+        {/* =====================================
+            ANIMATED STAT CARDS
+        ===================================== */}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
+            <StatCard
+              key={stat.title}
+              {...stat}
+              onReplaySound={() => play("click")}
+            />
           ))}
         </div>
 
-        {/* DIRECTORY */}
-        <section className="min-w-0 overflow-visible rounded-2xl border border-[#e5ebf3] bg-white shadow-[0_4px_18px_rgba(16,38,77,0.04)]">
-          <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+        {/* =====================================
+            FUNCTION BOOKINGS
+        ===================================== */}
+
+        <section className="min-w-0 overflow-visible rounded-[24px] border border-[#cfe2f8] bg-white shadow-[0_8px_30px_rgba(49,113,182,0.07)]">
+
+          {/* DIRECTORY HEADER */}
+
+          <div className="flex flex-col gap-4 rounded-t-[24px] border-b border-[#e1eefc] bg-gradient-to-r from-[#ffffff] to-[#edf6ff] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-[#10264d]">
+              <h2 className="text-lg font-bold text-[#174574]">
                 Function Bookings
               </h2>
-              <p className="mt-1 text-xs text-[#8290a5]">
-                {filtered.length} functions found · {completed} completed
+
+              <p className="mt-1 text-xs text-[#8aa5c1]">
+                {filtered.length} functions found ·{" "}
+                {completed} completed
               </p>
             </div>
 
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-[240px_180px_155px]">
+
+              {/* SEARCH */}
+
               <div className="relative sm:col-span-2 lg:col-span-1">
                 <Search
                   size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#91abc8]"
                 />
+
                 <input
                   type="search"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
                   placeholder="Search functions..."
                   className={`${inputStyle} pl-10`}
                 />
               </div>
 
+              {/* EVENT FILTER */}
+
               <CustomDropdown
-                value={filter === "All" ? "All Events" : filter}
+                value={
+                  filter === "All"
+                    ? "All Events"
+                    : filter
+                }
                 options={["All Events", ...EVENT_TYPES]}
                 onChange={(value) => {
-                  setFilter(value === "All Events" ? "All" : value);
+                  setFilter(
+                    value === "All Events" ? "All" : value
+                  );
                   play("click");
                 }}
               />
 
+              {/* STATUS FILTER */}
+
               <CustomDropdown
                 value={
-                  statusFilter === "All" ? "All Status" : statusFilter
+                  statusFilter === "All"
+                    ? "All Status"
+                    : statusFilter
                 }
                 options={["All Status", ...STATUSES]}
                 onChange={(value) => {
@@ -1006,15 +1277,19 @@ export default function FunctionsWeArrange() {
             </div>
           </div>
 
-          {/* MOBILE & TABLET CARDS */}
+          {/* =====================================
+              MOBILE & TABLET CARDS
+          ===================================== */}
+
           <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5 xl:hidden">
             {filtered.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center sm:col-span-2">
+              <div className="rounded-xl border border-dashed border-[#cfe2f8] bg-[#f6fbff] px-4 py-12 text-center sm:col-span-2">
                 <Users
                   size={32}
-                  className="mx-auto text-slate-300"
+                  className="mx-auto text-[#a9c7e7]"
                 />
-                <p className="mt-3 text-sm text-slate-500">
+
+                <p className="mt-3 text-sm text-[#829db9]">
                   No functions found.
                 </p>
               </div>
@@ -1022,21 +1297,26 @@ export default function FunctionsWeArrange() {
               filtered.map((item) => (
                 <article
                   key={item.id}
-                  className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm"
+                  className="min-w-0 overflow-visible rounded-2xl border border-[#cfe2f8] bg-white shadow-[0_5px_18px_rgba(49,113,182,0.06)]"
                 >
-                  <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] bg-[#f8fafd] p-4">
+
+                  {/* CARD HEADER */}
+
+                  <div className="flex items-start justify-between gap-2 rounded-t-2xl border-b border-[#e1eefc] bg-gradient-to-r from-[#f4faff] to-[#e7f3ff] p-4">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#315f9a]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#dceeff] text-[#397bc0]">
                         <PartyPopper size={19} />
                       </div>
 
                       <div className="min-w-0">
-                        <h3 className="break-words text-sm font-bold text-[#10264d]">
+                        <h3 className="break-words text-sm font-bold text-[#174574]">
                           {item.customer}
                         </h3>
-                        <p className="mt-1 break-all text-[11px] text-[#7e93af]">
+
+                        <p className="mt-1 break-all text-[11px] text-[#8aa5c1]">
                           {item.id}
                         </p>
+
                         <div className="mt-2">
                           <StatusBadge status={item.status} />
                         </div>
@@ -1048,10 +1328,11 @@ export default function FunctionsWeArrange() {
                         type="button"
                         onClick={() => openEdit(item)}
                         aria-label={`Edit ${item.customer}`}
-                        className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
+                        className="rounded-lg bg-[#e1f0ff] p-2 text-[#347cc7] hover:bg-[#cfe5fc]"
                       >
                         <Pencil size={16} />
                       </button>
+
                       <button
                         type="button"
                         onClick={() => deleteFunction(item)}
@@ -1063,46 +1344,64 @@ export default function FunctionsWeArrange() {
                     </div>
                   </div>
 
+                  {/* DETAILS */}
+
                   <div className="grid grid-cols-2 gap-4 p-4">
-                    <Detail label="Event Type" value={item.eventType} />
+                    <Detail
+                      label="Event Type"
+                      value={item.eventType}
+                    />
+
                     <Detail
                       label="Event Date"
                       value={formatDate(item.eventDate)}
                     />
-                    <Detail label="Phone Number" value={item.phone} />
-                    <Detail label="Venue" value={item.venue} />
-                    <Detail label="Guests" value={item.guests} />
+
+                    <Detail
+                      label="Phone Number"
+                      value={item.phone}
+                    />
+
+                    <Detail
+                      label="Venue"
+                      value={item.venue}
+                    />
+
+                    <Detail
+                      label="Guests"
+                      value={item.guests}
+                    />
+
                     <Detail
                       label="Total Amount"
                       value={money(item.amount)}
                     />
+
                     <Detail
                       label="Advance Paid"
                       value={money(item.advance)}
                     />
+
                     <Detail
                       label="Pending Balance"
-                      value={money(
-                        Math.max(
-                          0,
-                          Number(item.amount || 0) -
-                            Number(item.advance || 0)
-                        )
-                      )}
+                      value={money(balanceOf(item))}
                     />
                   </div>
 
-                  <div className="border-t border-[#edf1f6] px-4 py-3">
-                    <p className="mb-2 text-xs font-semibold text-[#52627b]">
+                  {/* SERVICES */}
+
+                  <div className="border-t border-[#e5f0fc] px-4 py-3">
+                    <p className="mb-2 text-xs font-semibold text-[#5e7fa2]">
                       Services
                     </p>
+
                     <div className="flex flex-wrap gap-1.5">
                       {Array.isArray(item.services) &&
                       item.services.length > 0 ? (
                         item.services.map((service) => (
                           <span
                             key={service}
-                            className="rounded-lg bg-[#edf3fc] px-2 py-1 text-[11px] font-medium text-[#315f9a]"
+                            className="rounded-lg bg-[#edf6ff] px-2 py-1 text-[11px] font-medium text-[#397bc0]"
                           >
                             {service}
                           </span>
@@ -1115,10 +1414,13 @@ export default function FunctionsWeArrange() {
                     </div>
                   </div>
 
-                  <div className="border-t border-[#edf1f6] bg-[#fafcff] px-4 py-3">
-                    <p className="mb-2 text-xs font-semibold text-[#52627b]">
+                  {/* STATUS */}
+
+                  <div className="rounded-b-2xl border-t border-[#e5f0fc] bg-[#f7fbff] px-4 py-3">
+                    <p className="mb-2 text-xs font-semibold text-[#5e7fa2]">
                       Function Status
                     </p>
+
                     <CustomDropdown
                       value={item.status || "Upcoming"}
                       options={STATUSES}
@@ -1132,11 +1434,14 @@ export default function FunctionsWeArrange() {
             )}
           </div>
 
-          {/* DESKTOP TABLE */}
+          {/* =====================================
+              DESKTOP TABLE
+          ===================================== */}
+
           <div className="hidden w-full overflow-x-auto xl:block">
             <table className="w-full min-w-[1050px] border-collapse text-left text-sm">
-              <thead className="bg-[#f7f9fd]">
-                <tr className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#8290a5]">
+              <thead className="bg-[#eaf4ff]">
+                <tr className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#688db3]">
                   {[
                     "Customer",
                     "Event",
@@ -1159,12 +1464,12 @@ export default function FunctionsWeArrange() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#edf1f6]">
+              <tbody className="divide-y divide-[#e6f0fc]">
                 {filtered.length === 0 ? (
                   <tr>
                     <td
                       colSpan={10}
-                      className="px-4 py-16 text-center text-slate-400"
+                      className="px-4 py-16 text-center text-[#91abc8]"
                     >
                       No functions found.
                     </td>
@@ -1173,43 +1478,45 @@ export default function FunctionsWeArrange() {
                   filtered.map((item) => (
                     <tr
                       key={item.id}
-                      className="transition hover:bg-[#f8faff]"
+                      className="transition hover:bg-[#f2f8ff]"
                     >
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#edf3fc] text-[#315f9a]">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e1f0ff] text-[#397bc0]">
                             <UserRound size={17} />
                           </div>
+
                           <div className="min-w-0">
-                            <p className="font-semibold text-[#10264d]">
+                            <p className="font-semibold text-[#174574]">
                               {item.customer}
                             </p>
-                            <p className="mt-1 text-[11px] text-slate-400">
+
+                            <p className="mt-1 text-[11px] text-[#91abc8]">
                               {item.phone}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-4 text-[#52627b]">
-                        {item.eventType}
+                      <td className="px-4 py-4 text-[#587796]">
+                        {item.eventType || "—"}
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-4 text-[#52627b]">
+                      <td className="whitespace-nowrap px-4 py-4 text-[#587796]">
                         {formatDate(item.eventDate)}
                       </td>
 
-                      <td className="px-4 py-4 text-[#52627b]">
+                      <td className="px-4 py-4 text-[#587796]">
                         {item.venue || "—"}
                       </td>
 
-                      <td className="px-4 py-4 text-[#52627b]">
+                      <td className="px-4 py-4 text-[#587796]">
                         {item.guests || "—"}
                       </td>
 
                       <td className="max-w-[175px] px-4 py-4">
                         <p
-                          className="truncate text-xs text-[#52627b]"
+                          className="truncate text-xs text-[#587796]"
                           title={
                             Array.isArray(item.services)
                               ? item.services.join(", ")
@@ -1222,24 +1529,19 @@ export default function FunctionsWeArrange() {
                         </p>
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#10264d]">
+                      <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#174574]">
                         {money(item.amount)}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-4 font-semibold text-rose-600">
-                        {money(
-                          Math.max(
-                            0,
-                            Number(item.amount || 0) -
-                              Number(item.advance || 0)
-                          )
-                        )}
+                        {money(balanceOf(item))}
                       </td>
 
                       <td className="min-w-[155px] px-4 py-4">
                         <div className="mb-2">
                           <StatusBadge status={item.status} />
                         </div>
+
                         <CustomDropdown
                           value={item.status || "Upcoming"}
                           options={STATUSES}
@@ -1255,10 +1557,11 @@ export default function FunctionsWeArrange() {
                             type="button"
                             onClick={() => openEdit(item)}
                             title="Edit function"
-                            className="rounded-lg p-2 text-blue-700 hover:bg-blue-50"
+                            className="rounded-lg p-2 text-[#347cc7] hover:bg-[#e5f2ff]"
                           >
                             <Pencil size={17} />
                           </button>
+
                           <button
                             type="button"
                             onClick={() => deleteFunction(item)}
@@ -1276,34 +1579,44 @@ export default function FunctionsWeArrange() {
             </table>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#edf1f6] px-4 py-4 text-xs text-[#8290a5] sm:px-6">
+          {/* FOOTER */}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-b-[24px] border-t border-[#e1eefc] bg-[#f8fbff] px-4 py-4 text-xs text-[#8aa5c1] sm:px-6">
             <span>
               Showing {filtered.length} of {functions.length} functions
             </span>
+
             <span>Studio Raw Picturez ERP</span>
           </div>
         </section>
       </div>
 
-      {/* ADD / EDIT MODAL */}
+      {/* =====================================
+          ADD / EDIT MODAL
+      ===================================== */}
+
       {open &&
         createPortal(
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07172d]/70 p-2 backdrop-blur-[3px] sm:p-4"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) closeForm();
+              if (event.target === event.currentTarget) {
+                closeForm();
+              }
             }}
           >
             <section
               role="dialog"
               aria-modal="true"
               aria-labelledby="function-modal-title"
-              className="flex max-h-[calc(100dvh-16px)] w-full max-w-[800px] flex-col overflow-hidden rounded-2xl border border-[#dce5f1] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.3)] sm:max-h-[calc(100dvh-32px)]"
+              className="flex max-h-[calc(100dvh-16px)] w-full max-w-[800px] flex-col overflow-hidden rounded-2xl border border-[#cfe2f8] bg-white shadow-[0_25px_80px_rgba(0,0,0,0.3)] sm:max-h-[calc(100dvh-32px)]"
             >
+
               {/* MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e9eef5] bg-white px-4 py-4 sm:px-7 sm:py-5">
+
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#dceafb] bg-gradient-to-r from-white to-[#eaf4ff] px-4 py-4 sm:px-7 sm:py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#347cc7] to-[#69adea] text-white">
                     {editingId !== null ? (
                       <Pencil size={19} />
                     ) : (
@@ -1314,13 +1627,14 @@ export default function FunctionsWeArrange() {
                   <div className="min-w-0">
                     <h2
                       id="function-modal-title"
-                      className="text-base font-bold text-[#10264d] sm:text-xl"
+                      className="text-base font-bold text-[#174574] sm:text-xl"
                     >
                       {editingId !== null
                         ? "Edit Function"
                         : "Add New Function"}
                     </h2>
-                    <p className="mt-1 text-xs text-[#8290a5]">
+
+                    <p className="mt-1 text-xs text-[#8aa5c1]">
                       Enter function and event details
                     </p>
                   </div>
@@ -1330,18 +1644,22 @@ export default function FunctionsWeArrange() {
                   type="button"
                   onClick={closeForm}
                   aria-label="Close form"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#6e8ba9] hover:bg-[#e3f1ff]"
                 >
                   <X size={20} />
                 </button>
               </div>
 
+              {/* FORM */}
+
               <form
                 onSubmit={saveFunction}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6">
-                  {/* CUSTOMER DETAILS */}
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-gradient-to-b from-white to-[#f8fbff] px-4 py-5 sm:px-7 sm:py-6">
+
+                  {/* CUSTOMER */}
+
                   <section>
                     <SectionTitle
                       icon={UserRound}
@@ -1350,16 +1668,20 @@ export default function FunctionsWeArrange() {
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="min-w-0 space-y-1.5">
-                        <label className="block text-xs font-semibold text-[#344767]">
+                        <label className="block text-xs font-semibold text-[#416184]">
                           Customer Name
                           <span className="ml-1 text-red-500">*</span>
                         </label>
+
                         <input
                           ref={firstInputRef}
                           type="text"
                           value={form.customer}
                           onChange={(event) =>
-                            updateForm("customer", event.target.value)
+                            updateForm(
+                              "customer",
+                              event.target.value
+                            )
                           }
                           placeholder="Enter customer name"
                           required
@@ -1380,6 +1702,7 @@ export default function FunctionsWeArrange() {
                   </section>
 
                   {/* EVENT DETAILS */}
+
                   <section>
                     <SectionTitle
                       icon={CalendarDays}
@@ -1434,26 +1757,11 @@ export default function FunctionsWeArrange() {
                     </div>
                   </section>
 
-                  {/* SERVICES */}
-                  {/* <section>
-                    <SectionTitle
-                      icon={BriefcaseBusiness}
-                      title="Services Required"
-                    />
-
-                    <p className="mb-3 text-xs text-[#8290a5]">
-                      Select one or multiple services from the dropdown.
-                    </p>
-
-                    <ServicesDropdown
-                      value={form.services}
-                      onChange={(services) =>
-                        updateForm("services", services)
-                      }
-                    />
-                  </section> */}
+                  {/* SERVICES SECTION HIDDEN
+                      SAME AS ORIGINAL CODE */}
 
                   {/* PAYMENT */}
+
                   <section>
                     <SectionTitle
                       icon={IndianRupee}
@@ -1482,11 +1790,12 @@ export default function FunctionsWeArrange() {
                       />
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dce8f7] bg-[#edf3fc] px-4 py-3">
-                      <span className="text-sm font-semibold text-[#315f9a]">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#cde2fa] bg-gradient-to-r from-[#edf6ff] to-[#dceeff] px-4 py-3">
+                      <span className="text-sm font-semibold text-[#397bc0]">
                         Remaining Balance
                       </span>
-                      <span className="text-lg font-extrabold text-[#102f62]">
+
+                      <span className="text-lg font-extrabold text-[#174574]">
                         {money(
                           Math.max(
                             0,
@@ -1499,6 +1808,7 @@ export default function FunctionsWeArrange() {
                   </section>
 
                   {/* NOTES */}
+
                   <section>
                     <SectionTitle
                       icon={FileText}
@@ -1506,9 +1816,10 @@ export default function FunctionsWeArrange() {
                     />
 
                     <label className="block space-y-2">
-                      <span className="text-xs font-semibold text-[#344767]">
+                      <span className="text-xs font-semibold text-[#416184]">
                         Additional Notes
                       </span>
+
                       <textarea
                         rows={3}
                         value={form.notes}
@@ -1521,6 +1832,8 @@ export default function FunctionsWeArrange() {
                     </label>
                   </section>
 
+                  {/* ERROR */}
+
                   {error && (
                     <div
                       role="alert"
@@ -1532,20 +1845,22 @@ export default function FunctionsWeArrange() {
                 </div>
 
                 {/* FOOTER */}
-                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
+
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#dceafb] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
                   <button
                     type="button"
                     onClick={closeForm}
-                    className="w-full rounded-xl border border-[#dce5f1] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] transition hover:bg-[#edf3fc] sm:w-auto"
+                    className="w-full rounded-xl border border-[#cfe2f8] bg-[#f4f9ff] px-6 py-3 text-sm font-semibold text-[#416184] transition hover:bg-[#e5f2ff] sm:w-auto"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e] sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#347cc7] to-[#5ba3e7] px-6 py-3 text-sm font-semibold text-white transition hover:from-[#286bb4] hover:to-[#468fd5] sm:w-auto"
                   >
                     <Save size={17} />
+
                     {editingId !== null
                       ? "Update Function"
                       : "Save Function"}

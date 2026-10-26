@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   CalendarDays,
@@ -9,27 +16,29 @@ import {
   Camera,
   Plus,
   X,
-  Check,
-  Sparkles,
-  Filter,
-  Eye,
   Trash2,
-  Tag,
-  FileText,
-  Clock,
   HeartHandshake,
   Cake,
   Baby,
   PartyPopper,
-  Building2,
-  IndianRupee,
   ChevronDown,
   LayoutGrid,
   List,
+  IndianRupee,
+  RotateCcw,
+  FileText,
+  UserRound,
+  Save,
+  CheckCircle2,
 } from "lucide-react";
 
-// ORIGINAL DUMMY DATA - PRESERVED 100% UNCHANGED
-const initialDummyData = [
+/* =========================================
+   STORAGE & DEMO DATA
+========================================= */
+
+const STORAGE_KEY = "studioraw_enquiries";
+
+const demoData = [
   {
     id: 1,
     name: "Arun Kumar",
@@ -38,7 +47,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2026-11-15",
     city: "Chennai",
-    function: "Wedding & Reception",
     weddingCoverage: "Full Day",
     notes: "Candid photography and cinematic video",
     status: "New",
@@ -52,7 +60,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2026-12-05",
     city: "Coimbatore",
-    function: "Wedding & Reception",
     weddingCoverage: "Full Day",
     notes: "Traditional photography with wedding album",
     status: "In Discussion",
@@ -66,7 +73,6 @@ const initialDummyData = [
     mainEvent: "Engagement",
     eventDate: "2026-11-25",
     city: "Madurai",
-    function: "Engagement",
     weddingCoverage: "Half Day",
     notes: "Photography and highlight video",
     status: "Follow-up",
@@ -80,7 +86,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2026-12-20",
     city: "Tirunelveli",
-    function: "Mehendi & Reception",
     weddingCoverage: "Two Days",
     notes: "Candid photos and outdoor couple shoot",
     status: "Confirmed",
@@ -94,7 +99,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2027-01-10",
     city: "Nagercoil",
-    function: "Wedding",
     weddingCoverage: "Full Day",
     notes: "Traditional photography and video coverage",
     status: "New",
@@ -108,7 +112,6 @@ const initialDummyData = [
     mainEvent: "Birthday",
     eventDate: "2026-11-30",
     city: "Trichy",
-    function: "Birthday Party",
     weddingCoverage: "Not Applicable",
     notes: "Family portraits and event photography",
     status: "In Discussion",
@@ -122,7 +125,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2027-02-14",
     city: "Salem",
-    function: "Wedding & Reception",
     weddingCoverage: "Two Days",
     notes: "Candid photography and cinematic film",
     status: "Confirmed",
@@ -136,7 +138,6 @@ const initialDummyData = [
     mainEvent: "Baby Shower",
     eventDate: "2026-12-12",
     city: "Erode",
-    function: "Baby Shower",
     weddingCoverage: "Not Applicable",
     notes: "Family photos and event highlights",
     status: "New",
@@ -150,7 +151,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2027-01-22",
     city: "Bengaluru",
-    function: "Wedding",
     weddingCoverage: "Full Day",
     notes: "Premium wedding photography package",
     status: "Follow-up",
@@ -164,7 +164,6 @@ const initialDummyData = [
     mainEvent: "Engagement",
     eventDate: "2026-12-28",
     city: "Chennai",
-    function: "Engagement & Reception",
     weddingCoverage: "Half Day",
     notes: "Couple portraits and candid photography",
     status: "Confirmed",
@@ -178,7 +177,6 @@ const initialDummyData = [
     mainEvent: "Wedding",
     eventDate: "2027-02-05",
     city: "Coimbatore",
-    function: "Wedding & Reception",
     weddingCoverage: "Two Days",
     notes: "Wedding album and cinematic video",
     status: "In Discussion",
@@ -192,7 +190,6 @@ const initialDummyData = [
     mainEvent: "Birthday",
     eventDate: "2026-11-18",
     city: "Madurai",
-    function: "Birthday Celebration",
     weddingCoverage: "Not Applicable",
     notes: "Birthday event and family photography",
     status: "New",
@@ -200,1389 +197,1886 @@ const initialDummyData = [
   },
 ];
 
-const STORAGE_KEY = "studioraw_enquiries";
+const emptyForm = {
+  name: "",
+  email: "",
+  number: "",
+  mainEvent: "",
+  eventDate: "",
+  city: "",
+  weddingCoverage: "",
+  notes: "",
+  budget: "",
+  status: "New",
+};
 
-const formatDate = (date) => {
-  if (!date) return "Not specified";
+/* =========================================
+   OPTIONS
+========================================= */
+
+const eventOptions = [
+  "Wedding Photography",
+  "Traditional photography",
+  "Candid photography",
+  "Helicam photography",
+  "Pre-Wedding photography",
+  "Post Wedding photography",
+  "Custom Package",
+  "Wedding Videography",
+  "Functions We Arrange",
+  "Event Management",
+  "Customized Gifts",
+  "Pre-Wedding / Outdoor Shoot",
+  "Baby / Kids Shoot",
+  "Complete Wedding Package",
+];
+
+const coverageOptions = [
+  "Full Day",
+  "Half Day",
+  "Two Days",
+  "Three Days",
+  "Candid Only",
+  "Not Applicable",
+];
+
+const statusOptions = [
+  "New",
+  "In Discussion",
+  "Follow-up",
+  "Confirmed",
+];
+
+/* =========================================
+   HELPERS
+========================================= */
+
+function initials(name = "") {
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0] || "")
+    .join("")
+    .toUpperCase();
+}
+
+function formatDate(value) {
+  if (!value) return "Not specified";
+
+  const date = new Date(
+    `${String(value).slice(0, 10)}T12:00:00`
+  );
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatBudget(value) {
+  const raw = String(value || "").trim();
+
+  if (!raw) return "Not specified";
+
+  const amount = Number(
+    raw.replace(/[₹,\s]/g, "")
+  );
+
+  return Number.isFinite(amount) && amount >= 0
+    ? `₹${amount.toLocaleString("en-IN")}`
+    : raw;
+}
+
+function cleanEnquiry(item) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  // Keep existing fields except the removed function field.
+  const { function: removedFunction, ...rest } = item;
+
+  return rest;
+}
+
+function loadEnquiries() {
   try {
-    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return date;
-  }
-};
+    const saved = localStorage.getItem(STORAGE_KEY);
 
-const getEventStyle = (event, isDark) => {
-  switch (event) {
-    case "Wedding":
-      return {
-        bg: isDark ? "bg-[#351528] text-pink-200 border-[#5e2144]" : "bg-[#fdf2f8] text-[#9d174d] border-[#fbcfe8]",
-        dot: "bg-pink-500",
-        icon: Camera,
-      };
-    case "Engagement":
-      return {
-        bg: isDark ? "bg-[#142646] text-blue-200 border-[#1f427d]" : "bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]",
-        dot: "bg-blue-500",
-        icon: HeartHandshake,
-      };
-    case "Birthday":
-      return {
-        bg: isDark ? "bg-[#33220f] text-amber-200 border-[#5c3e17]" : "bg-[#fffbeb] text-[#b45309] border-[#fde68a]",
-        dot: "bg-amber-500",
-        icon: Cake,
-      };
-    case "Baby Shower":
-      return {
-        bg: isDark ? "bg-[#102d24] text-emerald-200 border-[#1d5440]" : "bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]",
-        dot: "bg-emerald-500",
-        icon: Baby,
-      };
-    default:
-      return {
-        bg: isDark ? "bg-[#271b3d] text-purple-200 border-[#472f6e]" : "bg-[#faf5ff] text-[#7e22ce] border-[#e9d5ff]",
-        dot: "bg-purple-500",
-        icon: PartyPopper,
-      };
-  }
-};
+    if (saved !== null) {
+      const parsed = JSON.parse(saved);
 
-const getStatusStyle = (status, isDark) => {
-  switch (status) {
-    case "Confirmed":
-      return isDark
-        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-        : "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "In Discussion":
-      return isDark
-        ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-        : "bg-amber-50 text-amber-700 border-amber-200";
-    case "Follow-up":
-      return isDark
-        ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
-        : "bg-blue-50 text-blue-700 border-blue-200";
-    default:
-      return isDark
-        ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
-        : "bg-purple-50 text-purple-700 border-purple-200";
-  }
-};
-
-export default function Enquiries() {
-  // Sync with global theme
-  const [dark, setDark] = useState(() => {
-    if (typeof document !== "undefined") {
-      return (
-        document.documentElement.classList.contains("dark") ||
-        document.documentElement.dataset.theme === "dark"
-      );
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    const updateTheme = () => {
-      const isDark =
-        document.documentElement.classList.contains("dark") ||
-        document.documentElement.dataset.theme === "dark";
-      setDark(isDark);
-    };
-    updateTheme();
-    const handleThemeChange = (event) => {
-      if (event.detail?.theme) {
-        setDark(event.detail.theme === "dark");
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map(cleanEnquiry)
+          .filter(Boolean);
       }
-    };
-    window.addEventListener("studioraw-theme-change", handleThemeChange);
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme"],
-    });
-    return () => {
-      window.removeEventListener("studioraw-theme-change", handleThemeChange);
-      observer.disconnect();
-    };
-  }, []);
+    }
+  } catch (error) {
+    console.error(
+      "Unable to load enquiries:",
+      error
+    );
+  }
 
-  // Enquiries state
-  const [enquiries, setEnquiries] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return initialDummyData;
-  });
+  return demoData.map(cleanEnquiry);
+}
 
+/* =========================================
+   COLOUR THEMES
+========================================= */
+
+const statColors = {
+  blue: {
+    bg: "bg-[#e5efff]",
+    border: "border-[#bfd7ff]",
+    icon: "bg-[#cbdfff] text-[#255caa]",
+    text: "text-[#255caa]",
+  },
+  pink: {
+    bg: "bg-[#ffe6ef]",
+    border: "border-[#f8c6d9]",
+    icon: "bg-[#ffd0e2] text-[#b63870]",
+    text: "text-[#b63870]",
+  },
+  amber: {
+    bg: "bg-[#fff0d0]",
+    border: "border-[#f5dca6]",
+    icon: "bg-[#ffe2aa] text-[#a16b14]",
+    text: "text-[#98620e]",
+  },
+  green: {
+    bg: "bg-[#ddf7e9]",
+    border: "border-[#b4e8cd]",
+    icon: "bg-[#c5eed7] text-[#17774e]",
+    text: "text-[#17774e]",
+  },
+};
+
+const eventIcons = {
+  Wedding: Camera,
+  Engagement: HeartHandshake,
+  Birthday: Cake,
+  "Baby Shower": Baby,
+};
+
+const statusStyles = {
+  New: "border-violet-200 bg-violet-50 text-violet-700",
+  "In Discussion":
+    "border-amber-200 bg-amber-50 text-amber-700",
+  "Follow-up":
+    "border-blue-200 bg-blue-50 text-blue-700",
+  Confirmed:
+    "border-emerald-200 bg-emerald-50 text-emerald-700",
+};
+
+const inputClass =
+  "w-full rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-sm text-[#102b53] outline-none transition placeholder:text-slate-400 focus:border-[#3b73b9] focus:ring-[3px] focus:ring-[#e7f0ff]";
+
+/* =========================================
+   SCROLL REVEAL
+   ANIMATES EVERY TIME ELEMENT ENTERS VIEW
+========================================= */
+
+function useScrollReveal(containerRef, dependencies = []) {
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(enquiries));
-    } catch {}
-  }, [enquiries]);
+    const root = containerRef.current;
+    if (!root) return;
 
-  // Filters & view modes
-  const [search, setSearch] = useState("");
-  const [eventFilter, setEventFilter] = useState("All");
-  const [cityFilter, setCityFilter] = useState("All");
-  const [viewMode, setViewMode] = useState("table"); // 'table' | 'grid'
+    const elements = root.querySelectorAll(
+      "[data-enquiry-reveal]"
+    );
 
-  // Modals
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [successToast, setSuccessToast] = useState("");
-
-  // New Enquiry Form State
-  const initialFormState = {
-    name: "",
-    email: "",
-    number: "",
-    mainEvent: "Wedding",
-    eventDate: "",
-    city: "",
-    function: "",
-    weddingCoverage: "Full Day",
-    notes: "",
-    budget: "",
-    status: "New",
-  };
-  const [formData, setFormData] = useState(initialFormState);
-  const [formErrors, setFormErrors] = useState({});
-
-  const showNotification = (msg) => {
-    setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(""), 3500);
-  };
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    const errors = {};
-    if (!formData.name.trim()) errors.name = "Customer name is required";
-    if (!formData.number.trim()) {
-      errors.number = "Phone number is required";
-    } else if (formData.number.trim().length < 10) {
-      errors.number = "Please enter a valid 10-digit number";
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
+    if (
+      !("IntersectionObserver" in window) ||
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches
+    ) {
+      elements.forEach((element) => {
+        element.classList.add("enquiry-visible");
+      });
       return;
     }
 
-    const newEnquiry = {
-      id: enquiries.length ? Math.max(...enquiries.map((e) => e.id)) + 1 : 1,
-      name: formData.name.trim(),
-      email: formData.email.trim() || "Not provided",
-      number: formData.number.trim(),
-      mainEvent: formData.mainEvent || "Wedding",
-      eventDate: formData.eventDate || new Date().toISOString().split("T")[0],
-      city: formData.city.trim() || "Tamil Nadu",
-      function: formData.function.trim() || formData.mainEvent,
-      weddingCoverage: formData.weddingCoverage || "Full Day",
-      notes: formData.notes.trim() || "No additional notes",
-      budget: formData.budget.trim() ? (formData.budget.startsWith("₹") ? formData.budget : `₹${formData.budget}`) : "₹50,000",
-      status: formData.status || "New",
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add(
+              "enquiry-visible"
+            );
+          } else {
+            entry.target.classList.remove(
+              "enquiry-visible"
+            );
+          }
+        });
+      },
+      {
+        threshold: 0.08,
+        rootMargin: "0px 0px -15px 0px",
+      }
+    );
 
-    setEnquiries([newEnquiry, ...enquiries]);
-    setIsAddModalOpen(false);
-    setFormData(initialFormState);
-    setFormErrors({});
-    showNotification(`Enquiry for "${newEnquiry.name}" added successfully!`);
-  };
-
-  const handleDelete = (id, e) => {
-    e?.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this enquiry?")) {
-      setEnquiries((prev) => prev.filter((item) => item.id !== id));
-      if (selectedEnquiry?.id === id) setSelectedEnquiry(null);
-      showNotification("Enquiry deleted successfully.");
-    }
-  };
-
-  // Filtered Enquiries
-  const filteredData = useMemo(() => {
-    const query = search.toLowerCase().trim();
-    return enquiries.filter((item) => {
-      const matchesSearch =
-        !query ||
-        [
-          item.name,
-          item.email,
-          item.number,
-          item.mainEvent,
-          item.city,
-          item.function,
-          item.weddingCoverage,
-          item.notes,
-        ].some((val) => val && String(val).toLowerCase().includes(query));
-
-      const matchesEvent = eventFilter === "All" || item.mainEvent === eventFilter;
-      const matchesCity = cityFilter === "All" || item.city === cityFilter;
-
-      return matchesSearch && matchesEvent && matchesCity;
+    elements.forEach((element) => {
+      observer.observe(element);
     });
-  }, [enquiries, search, eventFilter, cityFilter]);
 
-  const eventTypes = ["All", ...new Set(enquiries.map((item) => item.mainEvent))];
-  const cityList = ["All", ...new Set(enquiries.map((item) => item.city).filter(Boolean))];
+    return () => observer.disconnect();
+  }, [containerRef, ...dependencies]);
+}
 
-  // Stats in DIFFERENT MINIMAL PASTEL COLORS
-  const totalCount = enquiries.length;
-  const weddingCount = enquiries.filter((i) => i.mainEvent === "Wedding").length;
-  const otherCount = enquiries.filter((i) => i.mainEvent !== "Wedding").length;
-  const citiesCount = new Set(enquiries.map((i) => i.city)).size;
+/* =========================================
+   ANIMATION STYLES
+========================================= */
+
+function EnquiryAnimations() {
+  return (
+    <style>{`
+      @keyframes enquiryModalIn {
+        from {
+          opacity: 0;
+          transform: perspective(1100px)
+            translateY(24px)
+            rotateX(6deg)
+            scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: perspective(1100px)
+            translateY(0)
+            rotateX(0)
+            scale(1);
+        }
+      }
+
+      @keyframes enquiry3DEnter {
+        from {
+          opacity: 0;
+          transform: perspective(1100px)
+            translateY(35px)
+            rotateX(9deg)
+            scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: perspective(1100px)
+            translateY(0)
+            rotateX(0)
+            scale(1);
+        }
+      }
+
+      .enquiry-modal {
+        animation: enquiryModalIn 0.4s
+          cubic-bezier(0.22,1,0.36,1) both;
+      }
+
+      [data-enquiry-reveal] {
+        opacity: 0;
+        transform: perspective(1100px)
+          translateY(35px)
+          rotateX(9deg)
+          scale(0.96);
+        transform-origin: center center;
+        transition:
+          opacity 0.6s ease,
+          transform 0.65s
+            cubic-bezier(0.22,1,0.36,1),
+          box-shadow 0.3s ease;
+        transition-delay: var(--reveal-delay, 0ms);
+      }
+
+      [data-enquiry-reveal].enquiry-visible {
+        opacity: 1;
+        transform: perspective(1100px)
+          translateY(0)
+          rotateX(0)
+          scale(1);
+      }
+
+      [data-enquiry-reveal].enquiry-visible:hover {
+        transform: perspective(1100px)
+          translateY(-5px)
+          rotateX(2deg)
+          rotateY(-1deg);
+        box-shadow:
+          0 16px 30px rgba(16,43,83,0.11);
+      }
+
+      .enquiry-form-field {
+        animation: enquiry3DEnter 0.55s ease both;
+        animation-delay: var(--field-delay, 0ms);
+      }
+
+      .enquiry-form-field:hover {
+        transform: translateY(-2px);
+        transition: transform 0.25s ease;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .enquiry-modal,
+        .enquiry-form-field {
+          animation: none !important;
+        }
+
+        [data-enquiry-reveal] {
+          opacity: 1 !important;
+          transform: none !important;
+          transition: none !important;
+        }
+
+        [data-enquiry-reveal]:hover,
+        .enquiry-form-field:hover {
+          transform: none !important;
+        }
+      }
+    `}</style>
+  );
+}
+
+/* =========================================
+   STATS
+========================================= */
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+  index,
+}) {
+  const theme = statColors[color];
 
   return (
     <div
-      className={`min-h-screen px-4 py-6 sm:px-7 sm:py-8 transition-colors duration-300 font-sans ${
-        dark ? "bg-[#0b1528] text-slate-100" : "bg-[#f8fafc] text-slate-900"
+      data-enquiry-reveal
+      style={{
+        "--reveal-delay": `${index * 70}ms`,
+      }}
+      className={`rounded-[19px] border p-4 shadow-sm sm:p-5 ${theme.bg} ${theme.border}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={`text-xs font-bold ${theme.text}`}>
+            {title}
+          </p>
+
+          <h3 className="mt-3 text-[29px] font-black tracking-tight text-[#102b53]">
+            {value}
+          </h3>
+        </div>
+
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${theme.icon}`}
+        >
+          <Icon size={21} />
+        </div>
+      </div>
+
+      <p className={`mt-3 text-[11px] font-medium ${theme.text}`}>
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================
+   BADGES
+========================================= */
+
+function EventBadge({ event }) {
+  const Icon = eventIcons[event] || PartyPopper;
+
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-[#28558d]">
+      <Icon size={13} className="shrink-0" />
+      <span className="break-words">
+        {event || "Other"}
+      </span>
+    </span>
+  );
+}
+
+function StatusBadge({ status }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-bold ${
+        statusStyles[status] || statusStyles.New
       }`}
     >
-      <div className="mx-auto max-w-[1600px] space-y-7">
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {status || "New"}
+    </span>
+  );
+}
 
-        {/* ================= PAGE HEADER ================= */}
-        {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"> */}
-          <div>
-            {/* <div className="mb-2 flex items-center gap-2"> */}
-              {/* <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-600 dark:text-amber-300">
-                
-                Customer Pipeline
-              </span> */}
-              {/* <span className={`text-xs font-semibold ${dark ? "text-slate-400" : "text-slate-500"}`}>
-                • Studio Management
-              </span> */}
-            {/* </div> */}
+/* =========================================
+   MODAL
+========================================= */
 
-            {/* <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight ${dark ? "text-white" : "text-[#0f2444]"}`}>
-              Customer Enquiries
-            </h1> */}
+function Modal({
+  children,
+  onClose,
+  width = "max-w-[650px]",
+}) {
+  const closeRef = useRef(onClose);
 
-            {/* <p className={`mt-1.5 text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>
-              Manage incoming event requests, customer leads, and photography bookings.
-            </p> */}
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const oldOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        closeRef.current?.();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      document.body.style.overflow =
+        oldOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07172b]/65 p-3 backdrop-blur-[3px] sm:p-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`enquiry-modal flex max-h-[94dvh] w-full ${width} flex-col overflow-hidden rounded-[25px] bg-white shadow-2xl`}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* =========================================
+   FORM FIELD
+========================================= */
+
+function FormField({
+  label,
+  name,
+  value,
+  onChange,
+  icon: Icon,
+  options,
+  type = "text",
+  placeholder = "",
+  required = false,
+  error,
+  index = 0,
+}) {
+  return (
+    <label
+      className="enquiry-form-field block space-y-2.5"
+      style={{
+        "--field-delay": `${index * 45}ms`,
+      }}
+    >
+      <span className="flex items-center gap-2 text-xs font-bold text-[#30496c]">
+        {Icon && (
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#3970ad]">
+            <Icon size={14} />
+          </span>
+        )}
+
+        {label}
+
+        {required && (
+          <span className="text-red-500">*</span>
+        )}
+      </span>
+
+      {options ? (
+        <div className="relative">
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`${inputClass} appearance-none pr-10`}
+          >
+            {value &&
+              !options.includes(value) && (
+                <option value={value}>
+                  {value}
+                </option>
+              )}
+
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <ChevronDown
+            size={16}
+            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+        </div>
+      ) : (
+        <input
+          name={name}
+          type={type}
+          required={required}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={`${inputClass} ${
+            error ? "border-red-400" : ""
+          }`}
+        />
+      )}
+
+      {error && (
+        <p className="text-xs font-medium text-red-500">
+          {error}
+        </p>
+      )}
+    </label>
+  );
+}
+
+/* =========================================
+   ADD ENQUIRY MODAL
+========================================= */
+
+function AddEnquiryModal({
+  onClose,
+  onSave,
+}) {
+  const [form, setForm] = useState({
+    ...emptyForm,
+  });
+
+  const [errors, setErrors] = useState({});
+
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+
+    const fields = root.querySelectorAll(
+      ".enquiry-form-field"
+    );
+
+    if (
+      !("IntersectionObserver" in window) ||
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.style.animation = "none";
+            void entry.target.offsetWidth;
+            entry.target.style.animation = "";
+          }
+        });
+      },
+      {
+        root,
+        threshold: 0.3,
+      }
+    );
+
+    fields.forEach((field) => observer.observe(field));
+
+    return () => observer.disconnect();
+  }, []);
+
+  const change = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setErrors((previous) => ({
+      ...previous,
+      [name]: "",
+    }));
+  };
+
+  const submit = (event) => {
+    event.preventDefault();
+
+    const nextErrors = {};
+
+    if (!form.name.trim()) {
+      nextErrors.name =
+        "Customer name is required.";
+    }
+
+    if (!/^\d{10}$/.test(form.number.trim())) {
+      nextErrors.number =
+        "Enter a valid 10-digit phone number.";
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    onSave({
+      ...form,
+      name: form.name.trim(),
+      number: form.number.trim(),
+      email: form.email.trim(),
+      city: form.city.trim(),
+      notes: form.notes.trim(),
+      budget: formatBudget(form.budget),
+    });
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e9eef5] bg-white px-5 py-5 sm:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#102b53] text-white">
+            <Plus size={22} />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b89ad]">
+              Enquiry Management
+            </p>
+
+            <h2 className="mt-1 text-lg font-black text-[#102b53]">
+              Add New Enquiry
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Create a new photography enquiry
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50"
+        >
+          <X size={19} />
+        </button>
+      </div>
+
+      <form
+        onSubmit={submit}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f9fbff] px-5 py-6 sm:px-7"
+        >
+          <FormField
+            index={0}
+            label="Customer Name"
+            name="name"
+            icon={UserRound}
+            required
+            value={form.name}
+            onChange={change}
+            error={errors.name}
+            placeholder="Enter full name"
+          />
+
+          <FormField
+            index={1}
+            label="Phone Number"
+            name="number"
+            type="tel"
+            icon={Phone}
+            required
+            value={form.number}
+            onChange={change}
+            error={errors.number}
+            placeholder="Enter 10-digit mobile number"
+          />
+
+          <FormField
+            index={2}
+            label="Email Address"
+            name="email"
+            type="email"
+            icon={Mail}
+            value={form.email}
+            onChange={change}
+            placeholder="customer@example.com"
+          />
+
+          <FormField
+            index={3}
+            label="City / Location"
+            name="city"
+            icon={MapPin}
+            value={form.city}
+            onChange={change}
+            placeholder="Enter city"
+          />
+
+          <FormField
+            index={4}
+            label="Main Event"
+            name="mainEvent"
+            icon={Camera}
+            value={form.mainEvent}
+            onChange={change}
+            options={eventOptions}
+          />
+
+          <FormField
+            index={5}
+            label="Event Date"
+            name="eventDate"
+            type="date"
+            icon={CalendarDays}
+            value={form.eventDate}
+            onChange={change}
+          />
+
+          <FormField
+            index={6}
+            label="Coverage Type"
+            name="weddingCoverage"
+            icon={Camera}
+            value={form.weddingCoverage}
+            onChange={change}
+            options={coverageOptions}
+          />
+
+          <FormField
+            index={7}
+            label="Estimated Budget (₹)"
+            name="budget"
+            icon={IndianRupee}
+            value={form.budget}
+            onChange={change}
+            placeholder="50000"
+          />
+
+          <FormField
+            index={8}
+            label="Enquiry Status"
+            name="status"
+            icon={CheckCircle2}
+            value={form.status}
+            onChange={change}
+            options={statusOptions}
+          />
+
+          <label
+            className="enquiry-form-field block space-y-2.5"
+            style={{
+              "--field-delay": "405ms",
+            }}
+          >
+            <span className="flex items-center gap-2 text-xs font-bold text-[#30496c]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eaf2ff] text-[#3970ad]">
+                <FileText size={14} />
+              </span>
+              Notes & Requirements
+            </span>
+
+            <textarea
+              name="notes"
+              rows={3}
+              value={form.notes}
+              onChange={change}
+              placeholder="Enter photography requirements..."
+              className={`${inputClass} resize-y`}
+            />
+          </label>
+        </div>
+
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#102b53] px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#244d80]"
+          >
+            <Save size={17} />
+            Save Enquiry
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* =========================================
+   VIEW ENQUIRY MODAL
+========================================= */
+
+function EnquiryDetailsModal({
+  enquiry,
+  onClose,
+  onDelete,
+}) {
+  const details = [
+    ["Event Date", formatDate(enquiry.eventDate)],
+    ["City", enquiry.city],
+    ["Coverage", enquiry.weddingCoverage],
+    ["Estimated Budget", enquiry.budget],
+    ["Status", enquiry.status],
+  ];
+
+  return (
+    <Modal
+      onClose={onClose}
+      width="max-w-[610px]"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#102b53] font-black text-white">
+            {initials(enquiry.name)}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#7990af]">
+              Enquiry Profile
+            </p>
+
+            <h2 className="mt-1 truncate text-lg font-black text-[#102b53]">
+              {enquiry.name}
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-400">
+              #ENQ-
+              {String(enquiry.id).padStart(4, "0")}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="rounded-xl border border-slate-200 p-2.5 text-slate-500"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-6 sm:px-7">
+        <div className="flex flex-wrap gap-2">
+          <EventBadge event={enquiry.mainEvent} />
+          <StatusBadge status={enquiry.status} />
+        </div>
+
+        <div className="rounded-2xl bg-[#f4f7fc] p-5">
+          <h3 className="mb-5 text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+            Event Information
+          </h3>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+            {details.map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <p className="text-[11px] text-slate-500">
+                  {label}
+                </p>
+
+                <p className="mt-2 break-words text-sm font-extrabold text-[#102b53]">
+                  {value || "—"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#e4eaf3] bg-white p-5">
+          <h3 className="mb-4 text-xs font-extrabold uppercase text-[#102b53]">
+            Contact Information
+          </h3>
+
+          <div className="flex flex-wrap gap-2">
+            {enquiry.number && (
+              <a
+                href={`tel:${enquiry.number}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700"
+              >
+                <Phone size={15} />
+                {enquiry.number}
+              </a>
+            )}
+
+            {enquiry.email && (
+              <a
+                href={`mailto:${enquiry.email}`}
+                className="inline-flex items-center gap-2 break-all rounded-xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700"
+              >
+                <Mail size={15} />
+                {enquiry.email}
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#e4eaf3] bg-white p-5">
+          <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase text-[#102b53]">
+            <FileText
+              size={16}
+              className="text-violet-500"
+            />
+            Notes & Requirements
+          </h3>
+
+          <p className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-slate-600">
+            {enquiry.notes || "No additional notes"}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={() => onDelete(enquiry.id)}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600 hover:bg-red-100"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-[#102b53] px-7 py-3 text-xs font-bold text-white hover:bg-[#244d80]"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* =========================================
+   MOBILE ENQUIRY CARD
+========================================= */
+
+function MobileEnquiryCard({
+  item,
+  index,
+  onOpen,
+  onDelete,
+}) {
+  return (
+    <article
+      data-enquiry-reveal
+      style={{
+        "--reveal-delay": `${Math.min(index, 5) * 40}ms`,
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View enquiry for ${item.name}`}
+      onClick={() => onOpen(item)}
+      onKeyDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          (event.key === "Enter" || event.key === " ")
+        ) {
+          event.preventDefault();
+          onOpen(item);
+        }
+      }}
+      className="cursor-pointer rounded-[20px] border border-[#e2e9f3] bg-white p-4 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#e1ecff] text-xs font-extrabold text-[#2b62a9]">
+            {initials(item.name)}
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-extrabold text-[#102b53]">
+              {item.name}
+            </h3>
+
+            <p className="mt-1 text-[11px] text-slate-400">
+              #ENQ-
+              {String(item.id).padStart(4, "0")}
+            </p>
+          </div>
+        </div>
+
+        <StatusBadge status={item.status} />
+      </div>
+
+      <div className="mt-4">
+        <EventBadge event={item.mainEvent} />
+      </div>
+
+      <div className="mt-4 space-y-3 rounded-xl bg-[#f5f8fd] p-4">
+        {[
+          ["Phone", item.number],
+          ["Email", item.email],
+          ["Date", formatDate(item.eventDate)],
+          ["City", item.city],
+          ["Coverage", item.weddingCoverage],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="flex items-start justify-between gap-3 text-xs"
+          >
+            <span className="shrink-0 text-slate-500">
+              {label}
+            </span>
+
+            <span className="min-w-0 break-words text-right font-bold text-[#102b53]">
+              {value || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <div>
+          <p className="text-[10px] text-slate-400">
+            Estimated Budget
+          </p>
+
+          <p className="mt-1 text-base font-extrabold text-emerald-700">
+            {item.budget || "—"}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          title="Delete enquiry"
+          aria-label={`Delete enquiry for ${item.name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete(item.id);
+          }}
+          className="rounded-xl bg-red-50 p-2.5 text-red-500 transition hover:bg-red-100"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/* =========================================
+   GRID ENQUIRY CARD
+========================================= */
+
+function GridEnquiryCard({
+  item,
+  index,
+  onOpen,
+  onDelete,
+}) {
+  return (
+    <article
+      data-enquiry-reveal
+      style={{
+        "--reveal-delay": `${Math.min(index, 5) * 40}ms`,
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View enquiry for ${item.name}`}
+      onClick={() => onOpen(item)}
+      onKeyDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          (event.key === "Enter" || event.key === " ")
+        ) {
+          event.preventDefault();
+          onOpen(item);
+        }
+      }}
+      className="cursor-pointer rounded-[20px] border border-[#e2e9f3] bg-white p-5 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-xs font-extrabold text-blue-700">
+            {initials(item.name)}
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-extrabold text-[#102b53]">
+              {item.name}
+            </h3>
+
+            <p className="mt-1 text-[11px] text-slate-400">
+              #ENQ-
+              {String(item.id).padStart(4, "0")}
+            </p>
+          </div>
+        </div>
+
+        <EventBadge event={item.mainEvent} />
+      </div>
+
+      <div className="mt-4 space-y-3 rounded-xl bg-[#f5f8fd] p-4">
+        {[
+          ["Coverage", item.weddingCoverage],
+          ["Date", formatDate(item.eventDate)],
+          ["City", item.city],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="flex justify-between gap-3 text-xs"
+          >
+            <span className="text-slate-500">
+              {label}
+            </span>
+
+            <span className="text-right font-bold text-[#102b53]">
+              {value || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        <StatusBadge status={item.status} />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+        <div>
+          <p className="text-[10px] text-slate-400">
+            Estimated Budget
+          </p>
+
+          <p className="mt-1 text-base font-extrabold text-emerald-700">
+            {item.budget || "—"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            href={`tel:${item.number}`}
+            title="Call"
+            onClick={(event) => event.stopPropagation()}
+            className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600"
+          >
+            <Phone size={16} />
+          </a>
+
+          <button
+            type="button"
+            title="Delete enquiry"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="rounded-xl bg-red-50 p-2.5 text-red-500"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* =========================================
+   MAIN ENQUIRIES PAGE
+========================================= */
+
+export default function Enquiries() {
+  const pageRef = useRef(null);
+
+  const [enquiries, setEnquiries] =
+    useState(loadEnquiries);
+
+  const [search, setSearch] = useState("");
+  const [eventFilter, setEventFilter] =
+    useState("All");
+  const [cityFilter, setCityFilter] =
+    useState("All");
+
+  const [viewMode, setViewMode] =
+    useState("table");
+
+  const [addOpen, setAddOpen] =
+    useState(false);
+  const [selected, setSelected] =
+    useState(null);
+  const [toast, setToast] =
+    useState("");
+
+  /* SAVE DATA */
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(enquiries)
+      );
+    } catch (error) {
+      console.error(
+        "Unable to save enquiries:",
+        error
+      );
+    }
+  }, [enquiries]);
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(
+      () => setToast(""),
+      3200
+    );
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  /* STATS */
+
+  const stats = useMemo(() => ({
+    total: enquiries.length,
+
+    weddings: enquiries.filter(
+      (item) => item.mainEvent === "Wedding"
+    ).length,
+
+    other: enquiries.filter(
+      (item) => item.mainEvent !== "Wedding"
+    ).length,
+
+    cities: new Set(
+      enquiries
+        .map((item) =>
+          String(item.city || "")
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    ).size,
+  }), [enquiries]);
+
+  /* CITY OPTIONS */
+
+  const cityOptions = useMemo(() => [
+    ...new Set(
+      enquiries
+        .map((item) =>
+          String(item.city || "").trim()
+        )
+        .filter(Boolean)
+    ),
+  ].sort((a, b) => a.localeCompare(b)), [enquiries]);
+
+  /* SEARCH AND FILTER */
+
+  const filtered = useMemo(() => {
+    const keyword =
+      search.trim().toLowerCase();
+
+    return enquiries.filter((item) => {
+      const matchesEvent =
+        eventFilter === "All" ||
+        item.mainEvent === eventFilter;
+
+      const matchesCity =
+        cityFilter === "All" ||
+        item.city === cityFilter;
+
+      const matchesSearch =
+        !keyword ||
+        [
+          item.id,
+          item.name,
+          item.number,
+          item.email,
+          item.city,
+          item.mainEvent,
+          item.weddingCoverage,
+          item.status,
+          item.budget,
+        ].some((value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(keyword)
+        );
+
+      return (
+        matchesEvent &&
+        matchesCity &&
+        matchesSearch
+      );
+    });
+  }, [
+    enquiries,
+    search,
+    eventFilter,
+    cityFilter,
+  ]);
+
+  /* SCROLL ANIMATIONS */
+
+  useScrollReveal(pageRef, [
+    viewMode,
+    filtered,
+  ]);
+
+  /* ACTIONS */
+
+  const clearFilters = () => {
+    setSearch("");
+    setEventFilter("All");
+    setCityFilter("All");
+  };
+
+  const saveEnquiry = (data) => {
+    const nextId =
+      Math.max(
+        0,
+        ...enquiries.map(
+          (item) => Number(item.id) || 0
+        )
+      ) + 1;
+
+    setEnquiries((previous) => [
+      {
+        ...cleanEnquiry(data),
+        id: nextId,
+      },
+      ...previous,
+    ]);
+
+    setAddOpen(false);
+    setToast(
+      "Enquiry added successfully."
+    );
+  };
+
+  const deleteEnquiry = (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this enquiry?"
+    );
+
+    if (!confirmed) return;
+
+    setEnquiries((previous) =>
+      previous.filter(
+        (item) => item.id !== id
+      )
+    );
+
+    setSelected(null);
+    setToast(
+      "Enquiry deleted successfully."
+    );
+  };
+
+  const openDetails = (item) => {
+    setSelected(item);
+  };
+
+  const handleRowKey = (event, item) => {
+    if (
+      event.target === event.currentTarget &&
+      (event.key === "Enter" ||
+        event.key === " ")
+    ) {
+      event.preventDefault();
+      openDetails(item);
+    }
+  };
+
+  return (
+    <div
+      ref={pageRef}
+      className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f8faff] px-3 py-5 text-[#102b53] sm:px-6 lg:px-8"
+    >
+      <EnquiryAnimations />
+
+      <div className="mx-auto max-w-[1700px] space-y-5">
+        {/* TOAST */}
+
+        {toast && (
+          <div
+            role="status"
+            className="fixed right-4 top-4 z-[10000] flex items-center gap-3 rounded-xl border border-emerald-200 bg-white px-5 py-3 text-xs font-bold text-[#102b53] shadow-xl"
+          >
+            <CheckCircle2
+              size={19}
+              className="text-emerald-500"
+            />
+
+            {toast}
+
             <button
               type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-[#102b53] to-[#1e457f] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.22)] transition-all duration-300 hover:scale-[1.02] hover:from-[#163a6e] hover:to-[#265394] hover:shadow-[0_12px_28px_rgba(16,43,83,0.3)] active:scale-[0.98]"
-            >
-              <Plus size={18} strokeWidth={2.5} />
-              <span>Add New Enquiry</span>
-            </button>
-          </div>
-        {/* </header> */}
-
-        {/* ================= SUCCESS TOAST ================= */}
-        {successToast && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200 shadow-sm animate-fadeIn">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-                <Check size={14} strokeWidth={3} />
-              </span>
-              <span>{successToast}</span>
-            </div>
-            <button
-              onClick={() => setSuccessToast("")}
-              className="text-emerald-700 hover:text-emerald-950 dark:text-emerald-300"
+              onClick={() => setToast("")}
+              aria-label="Dismiss notification"
+              className="text-slate-400"
             >
               <X size={16} />
             </button>
           </div>
         )}
 
-        {/* ================= SUMMARY BOXES (DIFFERENT MINIMAL COLORS) ================= */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ADD BUTTON */}
 
-          {/* BOX 1: TOTAL ENQUIRIES - MINIMAL SKY / BLUE */}
-          <article
-            className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-              dark
-                ? "border-[#1e3a63] bg-gradient-to-br from-[#0e213b] via-[#0b1a2f] to-[#081426] shadow-[0_10px_30px_rgba(14,33,59,0.4)]"
-                : "border-[#bfdbfe]/80 bg-gradient-to-br from-[#eff6ff] via-[#f4f8ff] to-[#e0ecfc] shadow-[0_6px_20px_rgba(30,58,138,0.06)]"
-            }`}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#102b53] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#244d80]"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-                  dark ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "bg-blue-100/80 text-blue-800 border border-blue-200"
-                }`}>
-                  Overview
-                </span>
-                <p className={`mt-2 text-xs font-bold uppercase tracking-wider ${dark ? "text-blue-200/70" : "text-blue-900/70"}`}>
-                  Total Enquiries
-                </p>
-                <h3 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${dark ? "text-white" : "text-[#1e3a8a]"}`}>
-                  {totalCount}
-                </h3>
-              </div>
+            <Plus size={19} />
+            Add New Enquiry
+          </button>
+        </div>
 
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${
-                  dark
-                    ? "border border-blue-400/30 bg-blue-500/20 text-blue-300 shadow-[0_0_20px_rgba(59,130,246,0.2)]"
-                    : "border border-blue-200 bg-white text-blue-700 shadow-sm"
-                }`}
-              >
-                <Users size={22} strokeWidth={2.2} />
-              </div>
-            </div>
+        {/* STATS */}
 
-            <div className="mt-4 flex items-center justify-between border-t border-blue-500/15 pt-3 text-xs">
-              <span className={dark ? "text-blue-200/60" : "text-blue-800/70"}>
-                Active Pipeline
-              </span>
-              <span className={`font-semibold ${dark ? "text-blue-300" : "text-blue-700"}`}>
-                100% Leads Tracked
-              </span>
-            </div>
-          </article>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <StatCard
+            title="Total Enquiries"
+            value={stats.total}
+            subtitle="All enquiries"
+            icon={Users}
+            color="blue"
+            index={0}
+          />
 
-          {/* BOX 2: WEDDING EVENTS - MINIMAL ROSE / LAVENDER */}
-          <article
-            className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-              dark
-                ? "border-[#4a1c36] bg-gradient-to-br from-[#27101e] via-[#1f0b17] to-[#150710] shadow-[0_10px_30px_rgba(74,28,54,0.4)]"
-                : "border-[#fbcfe8]/80 bg-gradient-to-br from-[#fdf2f8] via-[#fff5f9] to-[#fce7f3] shadow-[0_6px_20px_rgba(190,24,93,0.06)]"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-                  dark ? "bg-pink-500/20 text-pink-300 border border-pink-500/30" : "bg-pink-100/80 text-pink-800 border border-pink-200"
-                }`}>
-                  High Value
-                </span>
-                <p className={`mt-2 text-xs font-bold uppercase tracking-wider ${dark ? "text-pink-200/70" : "text-pink-900/70"}`}>
-                  Wedding Events
-                </p>
-                <h3 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${dark ? "text-white" : "text-[#831843]"}`}>
-                  {weddingCount}
-                </h3>
-              </div>
+          <StatCard
+            title="Wedding Events"
+            value={stats.weddings}
+            subtitle="Wedding enquiries"
+            icon={HeartHandshake}
+            color="pink"
+            index={1}
+          />
 
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${
-                  dark
-                    ? "border border-pink-400/30 bg-pink-500/20 text-pink-300 shadow-[0_0_20px_rgba(244,114,182,0.2)]"
-                    : "border border-pink-200 bg-white text-pink-700 shadow-sm"
-                }`}
-              >
-                <Camera size={22} strokeWidth={2.2} />
-              </div>
-            </div>
+          <StatCard
+            title="Other Events"
+            value={stats.other}
+            subtitle="Other photography events"
+            icon={PartyPopper}
+            color="amber"
+            index={2}
+          />
 
-            <div className="mt-4 flex items-center justify-between border-t border-pink-500/15 pt-3 text-xs">
-              <span className={dark ? "text-pink-200/60" : "text-pink-800/70"}>
-                Full &amp; Two Day Shoots
-              </span>
-              <span className={`font-semibold ${dark ? "text-pink-300" : "text-pink-700"}`}>
-                {totalCount > 0 ? `${Math.round((weddingCount / totalCount) * 100)}% of total` : "0%"}
-              </span>
-            </div>
-          </article>
+          <StatCard
+            title="Active Cities"
+            value={stats.cities}
+            subtitle="Customer locations"
+            icon={MapPin}
+            color="green"
+            index={3}
+          />
+        </div>
 
-          {/* BOX 3: OTHER EVENTS - MINIMAL WARM AMBER / GOLD */}
-          <article
-            className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-              dark
-                ? "border-[#4e3717] bg-gradient-to-br from-[#281c0c] via-[#1f1508] to-[#150e05] shadow-[0_10px_30px_rgba(78,55,23,0.4)]"
-                : "border-[#fde68a]/90 bg-gradient-to-br from-[#fffbeb] via-[#fffdf5] to-[#fef3c7] shadow-[0_6px_20px_rgba(180,83,9,0.06)]"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-                  dark ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-100/80 text-amber-900 border border-amber-200"
-                }`}>
-                  Functions
-                </span>
-                <p className={`mt-2 text-xs font-bold uppercase tracking-wider ${dark ? "text-amber-200/70" : "text-amber-900/70"}`}>
-                  Other Events
-                </p>
-                <h3 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${dark ? "text-white" : "text-[#78350f]"}`}>
-                  {otherCount}
-                </h3>
-              </div>
+        {/* FILTER BAR */}
 
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${
-                  dark
-                    ? "border border-amber-400/30 bg-amber-500/20 text-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.2)]"
-                    : "border border-amber-200 bg-white text-amber-700 shadow-sm"
-                }`}
-              >
-                <CalendarDays size={22} strokeWidth={2.2} />
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-amber-500/15 pt-3 text-xs">
-              <span className={dark ? "text-amber-200/60" : "text-amber-900/70"}>
-                Engagements &amp; Parties
-              </span>
-              <span className={`font-semibold ${dark ? "text-amber-300" : "text-amber-800"}`}>
-                {otherCount} Bookings
-              </span>
-            </div>
-          </article>
-
-          {/* BOX 4: CITIES / LOCATIONS - MINIMAL EMERALD / SAGE */}
-          <article
-            className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-              dark
-                ? "border-[#1b4332] bg-gradient-to-br from-[#0e271d] via-[#091e16] to-[#06140e] shadow-[0_10px_30px_rgba(27,67,50,0.4)]"
-                : "border-[#bbf7d0]/80 bg-gradient-to-br from-[#f0fdf4] via-[#f7fef9] to-[#dcfce7] shadow-[0_6px_20px_rgba(21,128,61,0.06)]"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-                  dark ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-emerald-100/80 text-emerald-800 border border-emerald-200"
-                }`}>
-                  Coverage
-                </span>
-                <p className={`mt-2 text-xs font-bold uppercase tracking-wider ${dark ? "text-emerald-200/70" : "text-emerald-900/70"}`}>
-                  Active Cities
-                </p>
-                <h3 className={`mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight ${dark ? "text-white" : "text-[#14532d]"}`}>
-                  {citiesCount}
-                </h3>
-              </div>
-
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${
-                  dark
-                    ? "border border-emerald-400/30 bg-emerald-500/20 text-emerald-300 shadow-[0_0_20px_rgba(74,222,128,0.2)]"
-                    : "border border-emerald-200 bg-white text-emerald-700 shadow-sm"
-                }`}
-              >
-                <MapPin size={22} strokeWidth={2.2} />
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-emerald-500/15 pt-3 text-xs">
-              <span className={dark ? "text-emerald-200/60" : "text-emerald-900/70"}>
-                Locations Served
-              </span>
-              <span className={`font-semibold ${dark ? "text-emerald-300" : "text-emerald-700"}`}>
-                {/* TN &amp; Karnataka */}
-              </span>
-            </div>
-          </article>
-        </section>
-
-        {/* ================= CONTROLS & FILTER BAR ================= */}
         <section
-          className={`rounded-2xl border p-4 sm:p-5 transition-colors ${
-            dark ? "border-[#1e3456] bg-[#0f213d]/90 shadow-lg" : "border-slate-200 bg-white shadow-sm"
-          }`}
+          data-enquiry-reveal
+          className="rounded-[20px] border border-[#e3eaf3] bg-white p-4 shadow-sm sm:p-5"
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
-            {/* Event Category Tabs */}
-            <div className="flex flex-wrap items-center gap-2">
-              {eventTypes.map((event) => {
-                const count = event === "All" ? enquiries.length : enquiries.filter((i) => i.mainEvent === event).length;
-                const active = eventFilter === event;
-
-                return (
-                  <button
-                    key={event}
-                    type="button"
-                    onClick={() => setEventFilter(event)}
-                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all duration-200 ${
-                      active
-                        ? "bg-[#102b53] text-white shadow-sm ring-2 ring-[#102b53]/20"
-                        : dark
-                        ? "border border-slate-700/60 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
-                        : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>{event === "All" ? "All Events" : event}</span>
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                        active
-                          ? "bg-white/20 text-white"
-                          : dark
-                          ? "bg-slate-700 text-slate-300"
-                          : "bg-slate-200 text-slate-700"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search, City Filter & View Mode */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Search */}
-              <div className="relative min-w-[220px] flex-1 sm:w-64 sm:flex-initial">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:w-[260px]">
                 <Search
-                  size={16}
-                  className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${
-                    dark ? "text-slate-400" : "text-slate-400"
-                  }`}
+                  size={17}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
+
                 <input
-                  type="text"
+                  type="search"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by client, city, note..."
-                  className={`w-full rounded-xl border py-2.5 pl-9 pr-8 text-xs font-medium outline-none transition ${
-                    dark
-                      ? "border-slate-700 bg-slate-900/80 text-white placeholder:text-slate-500 focus:border-blue-500"
-                      : "border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white"
-                  }`}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search enquiries..."
+                  className={`${inputClass} pl-10`}
                 />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
               </div>
 
-              {/* City Filter */}
-              <div className="relative">
+              <div className="relative w-full sm:w-[175px]">
+                <select
+                  value={eventFilter}
+                  onChange={(event) =>
+                    setEventFilter(event.target.value)
+                  }
+                  className={`${inputClass} appearance-none pr-9`}
+                >
+                  <option value="All">
+                    All Events
+                  </option>
+
+                  {eventOptions.map((event) => (
+                    <option
+                      key={event}
+                      value={event}
+                    >
+                      {event}
+                    </option>
+                  ))}
+                </select>
+
+                <ChevronDown
+                  size={15}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
+
+              <div className="relative w-full sm:w-[175px]">
                 <select
                   value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  className={`rounded-xl border py-2.5 pl-3 pr-8 text-xs font-semibold outline-none appearance-none cursor-pointer transition ${
-                    dark
-                      ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                      : "border-slate-200 bg-slate-50 text-slate-800 focus:border-blue-500"
-                  }`}
+                  onChange={(event) =>
+                    setCityFilter(event.target.value)
+                  }
+                  className={`${inputClass} appearance-none pr-9`}
                 >
-                  <option value="All">All Cities</option>
-                  {cityList
-                    .filter((c) => c !== "All")
-                    .map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
+                  <option value="All">
+                    All Cities
+                  </option>
+
+                  {cityOptions.map((city) => (
+                    <option
+                      key={city}
+                      value={city}
+                    >
+                      {city}
+                    </option>
+                  ))}
                 </select>
+
                 <ChevronDown
-                  size={14}
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={15}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                 />
               </div>
 
-              {/* View Mode Toggle */}
-              <div className={`flex items-center rounded-xl border p-1 ${
-                dark ? "border-slate-700 bg-slate-900/80" : "border-slate-200 bg-slate-50"
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("table")}
-                  title="Table View"
-                  className={`rounded-lg p-1.5 transition ${
-                    viewMode === "table"
-                      ? "bg-[#102b53] text-white shadow-sm"
-                      : dark
-                      ? "text-slate-400 hover:text-white"
-                      : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <List size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  title="Card View"
-                  className={`rounded-lg p-1.5 transition ${
-                    viewMode === "grid"
-                      ? "bg-[#102b53] text-white shadow-sm"
-                      : dark
-                      ? "text-slate-400 hover:text-white"
-                      : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <LayoutGrid size={16} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#dce5f1] bg-[#f7faff] px-4 py-3 text-xs font-bold text-[#45658f] hover:bg-[#edf4ff]"
+              >
+                <RotateCcw size={15} />
+                Reset
+              </button>
+            </div>
+
+            {/* VIEW SWITCH */}
+
+            <div className="flex items-center gap-2 self-end rounded-xl bg-[#f2f5fa] p-1">
+              <button
+                type="button"
+                title="Table view"
+                onClick={() => setViewMode("table")}
+                className={`rounded-lg p-2.5 transition ${
+                  viewMode === "table"
+                    ? "bg-[#102b53] text-white"
+                    : "text-slate-500 hover:bg-white"
+                }`}
+              >
+                <List size={18} />
+              </button>
+
+              <button
+                type="button"
+                title="Grid view"
+                onClick={() => setViewMode("grid")}
+                className={`rounded-lg p-2.5 transition ${
+                  viewMode === "grid"
+                    ? "bg-[#102b53] text-white"
+                    : "text-slate-500 hover:bg-white"
+                }`}
+              >
+                <LayoutGrid size={18} />
+              </button>
             </div>
           </div>
         </section>
 
-        {/* ================= ENQUIRIES CONTENT (TABLE OR GRID) ================= */}
+        {/* DIRECTORY */}
+
         {viewMode === "table" ? (
-          /* TABLE VIEW */
-          <section
-            className={`overflow-hidden rounded-2xl border transition-colors ${
-              dark ? "border-[#1e3456] bg-[#0f213d] shadow-xl" : "border-slate-200 bg-white shadow-sm"
-            }`}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] border-collapse text-left">
+          <section className="overflow-hidden rounded-[22px] border border-[#e3eaf3] bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-5">
+              <div>
+                <h2 className="text-sm font-extrabold text-[#102b53]">
+                  Enquiry Directory
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Click any enquiry to view details
+                </p>
+              </div>
+
+              <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                {filtered.length} Enquiries
+              </span>
+            </div>
+
+            {/* MOBILE: ONE BOX PER ENQUIRY */}
+
+            <div className="space-y-4 p-3 sm:p-4 lg:hidden">
+              {filtered.map((item, index) => (
+                <MobileEnquiryCard
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  onOpen={openDetails}
+                  onDelete={deleteEnquiry}
+                />
+              ))}
+            </div>
+
+            {/* DESKTOP TABLE */}
+
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[950px] border-collapse text-left">
                 <thead>
-                  <tr
-                    className={`border-b text-[11px] font-extrabold uppercase tracking-wider ${
-                      dark
-                        ? "border-slate-800 bg-[#0a182e] text-slate-300"
-                        : "border-slate-200 bg-slate-100/70 text-slate-700"
-                    }`}
-                  >
-                    <th className="px-5 py-4">Customer Details</th>
-                    <th className="px-5 py-4">Contact</th>
-                    <th className="px-5 py-4">Event Type</th>
-                    <th className="px-5 py-4">Event Date</th>
-                    <th className="px-5 py-4">City</th>
-                    <th className="px-5 py-4">Function &amp; Coverage</th>
-                    <th className="px-5 py-4">Budget</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
+                  <tr className="border-b border-slate-200 bg-[#f7faff] text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-4">
+                      Customer
+                    </th>
+                    <th className="px-4 py-4">
+                      Contact
+                    </th>
+                    <th className="px-4 py-4">
+                      Event
+                    </th>
+                    <th className="px-4 py-4">
+                      Date
+                    </th>
+                    <th className="px-4 py-4">
+                      City
+                    </th>
+                    <th className="px-4 py-4">
+                      Coverage
+                    </th>
+                    <th className="px-4 py-4">
+                      Budget
+                    </th>
+                    <th className="px-4 py-4">
+                      Status
+                    </th>
+                    <th className="px-4 py-4">
+                      Action
+                    </th>
                   </tr>
                 </thead>
 
-                <tbody className={`divide-y text-xs ${dark ? "divide-slate-800" : "divide-slate-100"}`}>
-                  {filteredData.map((item) => {
-                    const eventStyle = getEventStyle(item.mainEvent, dark);
-                    const EventIcon = eventStyle.icon;
-
-                    return (
-                      <tr
-                        key={item.id}
-                        onClick={() => setSelectedEnquiry(item)}
-                        className={`group cursor-pointer transition-colors duration-150 ${
-                          dark ? "hover:bg-slate-800/50" : "hover:bg-blue-50/40"
-                        }`}
-                      >
-                        {/* Customer */}
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-extrabold text-xs shadow-sm ${
-                              dark
-                                ? "bg-gradient-to-br from-blue-900 to-indigo-950 text-blue-200 border border-blue-700/40"
-                                : "bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-800 border border-blue-200"
-                            }`}>
-                              {item.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .slice(0, 2)
-                                .join("")}
-                            </div>
-                            <div>
-                              <p className={`font-bold text-sm ${dark ? "text-white" : "text-slate-900"}`}>
-                                {item.name}
-                              </p>
-                              <span className="font-mono text-[10px] text-slate-400">
-                                #ENQ-{String(item.id).padStart(4, "0")}
-                              </span>
-                            </div>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((item) => (
+                    <tr
+                      key={item.id}
+                      tabIndex={0}
+                      aria-label={`View enquiry for ${item.name}`}
+                      onClick={() => openDetails(item)}
+                      onKeyDown={(event) =>
+                        handleRowKey(event, item)
+                      }
+                      className="cursor-pointer transition hover:bg-[#eef5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                    >
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e1ecff] text-xs font-extrabold text-[#2b62a9]">
+                            {initials(item.name)}
                           </div>
-                        </td>
 
-                        {/* Contact */}
-                        <td className="px-5 py-4">
-                          <div className="space-y-1">
-                            <a
-                              href={`tel:${item.number}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className={`flex items-center gap-1.5 font-semibold transition ${
-                                dark ? "text-slate-300 hover:text-emerald-400" : "text-slate-700 hover:text-emerald-600"
-                              }`}
-                            >
-                              <Phone size={13} className="text-emerald-500" />
-                              <span>{item.number}</span>
-                            </a>
-                            <a
-                              href={`mailto:${item.email}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-blue-500"
-                            >
-                              <Mail size={12} className="text-blue-500" />
-                              <span className="truncate max-w-[160px]">{item.email}</span>
-                            </a>
-                          </div>
-                        </td>
-
-                        {/* Event */}
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${eventStyle.bg}`}
-                          >
-                            <EventIcon size={12} />
-                            <span>{item.mainEvent}</span>
-                          </span>
-                        </td>
-
-                        {/* Date */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <CalendarDays size={14} className="text-amber-500" />
-                            <span className={dark ? "text-slate-300" : "text-slate-700"}>
-                              {formatDate(item.eventDate)}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* City */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <MapPin size={14} className="text-rose-500" />
-                            <span className={dark ? "text-slate-300" : "text-slate-700"}>
-                              {item.city}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Function & Coverage */}
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className={`font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>
-                              {item.function}
+                          <div className="min-w-0">
+                            <p className="whitespace-nowrap text-xs font-extrabold text-[#102b53]">
+                              {item.name}
                             </p>
-                            <p className="text-[11px] text-slate-400">
-                              {item.weddingCoverage}
+
+                            <p className="mt-1 text-[10px] text-slate-400">
+                              #ENQ-
+                              {String(item.id).padStart(4, "0")}
                             </p>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Budget */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <span className={`font-bold font-mono ${dark ? "text-emerald-300" : "text-emerald-700"}`}>
-                            {item.budget || "₹60,000"}
-                          </span>
-                        </td>
+                      <td className="px-4 py-4">
+                        <a
+                          href={`tel:${item.number}`}
+                          onClick={(event) =>
+                            event.stopPropagation()
+                          }
+                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-700"
+                        >
+                          <Phone
+                            size={13}
+                            className="text-emerald-500"
+                          />
+                          {item.number}
+                        </a>
 
-                        {/* Status */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[11px] font-bold ${getStatusStyle(
-                              item.status || "New",
-                              dark
-                            )}`}
-                          >
-                            {item.status || "New"}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-5 py-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedEnquiry(item);
-                              }}
-                              title="View Details"
-                              className={`rounded-lg p-2 transition ${
-                                dark
-                                  ? "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                              }`}
-                            >
-                              <Eye size={15} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => handleDelete(item.id, e)}
-                              title="Delete Enquiry"
-                              className="rounded-lg p-2 text-rose-500 transition hover:bg-rose-500/15 hover:text-rose-600"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {filteredData.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="px-5 py-16 text-center">
-                        <Search size={34} className="mx-auto mb-3 text-slate-400" />
-                        <p className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`}>
-                          No enquiries matched your filter
+                        <p className="mt-2 max-w-[160px] truncate text-[11px] text-slate-400">
+                          {item.email || "—"}
                         </p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          Try adjusting your search query, event filter, or city.
-                        </p>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <EventBadge event={item.mainEvent} />
+                      </td>
+
+                      <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-600">
+                        {formatDate(item.eventDate)}
+                      </td>
+
+                      <td className="px-4 py-4 text-xs text-slate-600">
+                        {item.city || "—"}
+                      </td>
+
+                      <td className="px-4 py-4 text-xs text-slate-600">
+                        {item.weddingCoverage || "—"}
+                      </td>
+
+                      <td className="whitespace-nowrap px-4 py-4 text-xs font-extrabold text-emerald-700">
+                        {item.budget || "—"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <StatusBadge status={item.status} />
+                      </td>
+
+                      <td className="px-4 py-4">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSearch("");
-                            setEventFilter("All");
-                            setCityFilter("All");
+                          title="Delete enquiry"
+                          aria-label={`Delete enquiry for ${item.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteEnquiry(item.id);
                           }}
-                          className="mt-4 rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                          className="rounded-xl bg-red-50 p-2.5 text-red-500 transition hover:bg-red-100"
                         >
-                          Clear All Filters
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Table Footer */}
-            <footer
-              className={`flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5 text-xs ${
-                dark ? "border-slate-800 text-slate-400" : "border-slate-200 text-slate-500"
-              }`}
-            >
-              <span>
-                Showing <strong>{filteredData.length}</strong> of <strong>{enquiries.length}</strong> total enquiries
-              </span>
-              <span>Studio Raw Picturez · Customer Ingestion</span>
-            </footer>
-          </section>
-        ) : (
-          /* GRID CARD VIEW */
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredData.map((item) => {
-              const eventStyle = getEventStyle(item.mainEvent, dark);
-              const EventIcon = eventStyle.icon;
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedEnquiry(item)}
-                  className={`group relative flex flex-col justify-between rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer ${
-                    dark
-                      ? "border-slate-800 bg-[#0f213d] hover:border-blue-500/40"
-                      : "border-slate-200 bg-white hover:border-blue-300"
-                  }`}
-                >
-                  <div>
-                    {/* Top Header */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-11 w-11 items-center justify-center rounded-xl font-bold text-sm ${
-                            dark
-                              ? "bg-blue-900/60 text-blue-200 border border-blue-700/50"
-                              : "bg-blue-50 text-blue-800 border border-blue-200"
-                          }`}
-                        >
-                          {item.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .slice(0, 2)
-                            .join("")}
-                        </div>
-                        <div>
-                          <h4 className={`font-bold text-sm ${dark ? "text-white" : "text-slate-900"}`}>
-                            {item.name}
-                          </h4>
-                          <span className="font-mono text-[11px] text-slate-400">
-                            #ENQ-{String(item.id).padStart(4, "0")}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${eventStyle.bg}`}
-                      >
-                        <EventIcon size={11} />
-                        <span>{item.mainEvent}</span>
-                      </span>
-                    </div>
-
-                    {/* Event & Function */}
-                    <div className="mt-4 space-y-2 rounded-xl bg-slate-500/5 p-3 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Function</span>
-                        <span className={`font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>
-                          {item.function}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Coverage</span>
-                        <span className={`font-medium ${dark ? "text-slate-300" : "text-slate-700"}`}>
-                          {item.weddingCoverage}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Date</span>
-                        <span className="flex items-center gap-1 font-semibold text-amber-500">
-                          <CalendarDays size={13} />
-                          {formatDate(item.eventDate)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Location</span>
-                        <span className="flex items-center gap-1 font-semibold text-rose-500">
-                          <MapPin size={13} />
-                          {item.city}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Notes */}
-                    {item.notes && (
-                      <p className={`mt-3 line-clamp-2 text-xs leading-relaxed italic ${dark ? "text-slate-400" : "text-slate-500"}`}>
-                        "{item.notes}"
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Card Footer */}
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-500/15 pt-3">
-                    <span className={`font-bold font-mono text-sm ${dark ? "text-emerald-300" : "text-emerald-700"}`}>
-                      {item.budget || "₹50,000"}
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <a
-                        href={`tel:${item.number}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-500/15"
-                        title="Call Customer"
-                      >
-                        <Phone size={15} />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDelete(item.id, e)}
-                        className="rounded-lg p-2 text-rose-500 transition hover:bg-rose-500/15"
-                        title="Delete"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-        )}
-      </div>
-
-      {/* ================= ADD NEW ENQUIRY MODAL ================= */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div
-            className={`relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border p-6 sm:p-8 shadow-2xl transition-all ${
-              dark
-                ? "border-[#1e3a63] bg-[#0c1a2f] text-white shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
-                : "border-slate-200 bg-white text-slate-900 shadow-2xl"
-            }`}
-          >
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 border-b pb-5 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md">
-                  <Sparkles size={20} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold tracking-tight">Add New Enquiry</h3>
-                  <p className="text-xs text-slate-400">
-                    Record customer booking enquiry details
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleFormSubmit} className="mt-6 space-y-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
-                {/* Customer Name */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Customer Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Anandha Krishnan"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      formErrors.name
-                        ? "border-rose-500 ring-2 ring-rose-500/20"
-                        : dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                  {formErrors.name && (
-                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.name}</p>
-                  )}
-                </div>
-
-                {/* Phone Number */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Phone Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="number"
-                    value={formData.number}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 9876543210"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      formErrors.number
-                        ? "border-rose-500 ring-2 ring-rose-500/20"
-                        : dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                  {formErrors.number && (
-                    <p className="mt-1 text-[11px] font-semibold text-rose-500">{formErrors.number}</p>
-                  )}
-                </div>
-
-                {/* Email Address */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleFormChange}
-                    placeholder="e.g. anand@gmail.com"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                </div>
-
-                {/* City */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    City / Location
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Chennai / Coimbatore"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                </div>
-
-                {/* Main Event */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Main Event
-                  </label>
-                  <select
-                    name="mainEvent"
-                    value={formData.mainEvent}
-                    onChange={handleFormChange}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  >
-                    <option value="Wedding">Wedding</option>
-                    <option value="Engagement">Engagement</option>
-                    <option value="Birthday">Birthday</option>
-                    <option value="Baby Shower">Baby Shower</option>
-                    <option value="Reception">Reception</option>
-                    <option value="Pre-Wedding">Pre-Wedding Shoot</option>
-                    <option value="Corporate">Corporate Event</option>
-                    <option value="Other">Other Event</option>
-                  </select>
-                </div>
-
-                {/* Event Date */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Event Date
-                  </label>
-                  <input
-                    type="date"
-                    name="eventDate"
-                    value={formData.eventDate}
-                    onChange={handleFormChange}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                </div>
-
-                {/* Function Details */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Function Details
-                  </label>
-                  <input
-                    type="text"
-                    name="function"
-                    value={formData.function}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Wedding & Reception"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                </div>
-
-                {/* Coverage Type */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Coverage Type
-                  </label>
-                  <select
-                    name="weddingCoverage"
-                    value={formData.weddingCoverage}
-                    onChange={handleFormChange}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  >
-                    <option value="Full Day">Full Day</option>
-                    <option value="Half Day">Half Day</option>
-                    <option value="Two Days">Two Days</option>
-                    <option value="Three Days">Three Days</option>
-                    <option value="Candid Only">Candid Only</option>
-                    <option value="Not Applicable">Not Applicable</option>
-                  </select>
-                </div>
-
-                {/* Budget */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Estimated Budget (₹)
-                  </label>
-                  <input
-                    type="text"
-                    name="budget"
-                    value={formData.budget}
-                    onChange={handleFormChange}
-                    placeholder="e.g. ₹1,20,000"
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  />
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Initial Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleFormChange}
-                    className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
-                      dark
-                        ? "border-slate-700 bg-slate-900 text-white focus:border-blue-500"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                    }`}
-                  >
-                    <option value="New">New</option>
-                    <option value="In Discussion">In Discussion</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Confirmed">Confirmed</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Notes / Package Requirements
-                </label>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  value={formData.notes}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Candid photography, drone, teaser video, 2 luxury photo albums..."
-                  className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition resize-none ${
-                    dark
-                      ? "border-slate-700 bg-slate-900/80 text-white focus:border-blue-500"
-                      : "border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:bg-white"
-                  }`}
+            {filtered.length === 0 && (
+              <div className="py-14 text-center">
+                <Search
+                  size={30}
+                  className="mx-auto text-slate-400"
                 />
-              </div>
 
-              {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-3 border-t pt-5 dark:border-slate-800">
+                <p className="mt-3 text-sm font-bold text-[#102b53]">
+                  No enquiries found
+                </p>
+
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="rounded-xl border border-slate-300 px-5 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  onClick={clearFilters}
+                  className="mt-2 text-xs font-bold text-blue-600"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#102b53] to-[#1e457f] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:scale-[1.02] hover:from-[#163a6e] hover:to-[#265394]"
-                >
-                  <Check size={16} strokeWidth={2.5} />
-                  <span>Save Enquiry</span>
+                  Clear Filters
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            )}
+
+            <div className="border-t border-slate-100 bg-[#f9fbff] px-5 py-4 text-xs text-slate-500">
+              Showing {filtered.length} of{" "}
+              {enquiries.length} enquiries
+            </div>
+          </section>
+        ) : (
+          /* GRID VIEW */
+
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((item, index) => (
+              <GridEnquiryCard
+                key={item.id}
+                item={item}
+                index={index}
+                onOpen={openDetails}
+                onDelete={deleteEnquiry}
+              />
+            ))}
+
+            {filtered.length === 0 && (
+              <div className="col-span-full py-14 text-center text-sm text-slate-500">
+                No enquiries found.
+
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="ml-2 font-bold text-blue-600"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        <p className="flex items-center justify-center gap-2 pb-3 text-center text-[11px] text-slate-400">
+          <Camera size={14} />
+          Studio Raw Picturez · Enquiry Management
+        </p>
+      </div>
+
+      {/* ADD ENQUIRY */}
+
+      {addOpen && (
+        <AddEnquiryModal
+          onClose={() => setAddOpen(false)}
+          onSave={saveEnquiry}
+        />
       )}
 
-      {/* ================= ENQUIRY DETAILS MODAL ================= */}
-      {selectedEnquiry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div
-            className={`relative w-full max-w-xl rounded-3xl border p-6 sm:p-8 shadow-2xl transition-all ${
-              dark
-                ? "border-[#1e3a63] bg-[#0c1a2f] text-white"
-                : "border-slate-200 bg-white text-slate-900"
-            }`}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 border-b pb-4 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm shadow-md">
-                  {selectedEnquiry.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">{selectedEnquiry.name}</h3>
-                  <span className="font-mono text-xs text-slate-400">
-                    #ENQ-{String(selectedEnquiry.id).padStart(4, "0")}
-                  </span>
-                </div>
-              </div>
+      {/* VIEW DETAILS */}
 
-              <button
-                type="button"
-                onClick={() => setSelectedEnquiry(null)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Details Content */}
-            <div className="mt-5 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-500/5 p-4">
-                <div>
-                  <p className="text-slate-400 font-medium">Event Type</p>
-                  <p className="mt-1 font-bold text-sm text-blue-500">{selectedEnquiry.mainEvent}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium">Event Date</p>
-                  <p className="mt-1 font-bold text-sm text-amber-500">{formatDate(selectedEnquiry.eventDate)}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium">City / Location</p>
-                  <p className="mt-1 font-bold text-sm text-rose-500">{selectedEnquiry.city}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium">Estimated Budget</p>
-                  <p className="mt-1 font-bold text-sm text-emerald-500">{selectedEnquiry.budget || "₹60,000"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium">Function</p>
-                  <p className="mt-1 font-semibold">{selectedEnquiry.function}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 font-medium">Coverage</p>
-                  <p className="mt-1 font-semibold">{selectedEnquiry.weddingCoverage}</p>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="rounded-2xl border p-4 dark:border-slate-800">
-                <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Contact Info</p>
-                <div className="mt-2.5 flex flex-wrap items-center gap-4">
-                  <a
-                    href={`tel:${selectedEnquiry.number}`}
-                    className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400"
-                  >
-                    <Phone size={14} />
-                    <span>{selectedEnquiry.number}</span>
-                  </a>
-                  <a
-                    href={`mailto:${selectedEnquiry.email}`}
-                    className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-3 py-2 font-bold text-blue-600 dark:text-blue-400"
-                  >
-                    <Mail size={14} />
-                    <span>{selectedEnquiry.email}</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="rounded-2xl border p-4 dark:border-slate-800">
-                <p className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Notes &amp; Requirements</p>
-                <p className="mt-2 leading-relaxed text-slate-700 dark:text-slate-300">
-                  {selectedEnquiry.notes || "No special notes recorded."}
-                </p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-6 flex items-center justify-between border-t pt-4 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => handleDelete(selectedEnquiry.id)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10"
-              >
-                <Trash2 size={14} />
-                <span>Delete Enquiry</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedEnquiry(null)}
-                className="rounded-xl bg-[#102b53] px-5 py-2 text-xs font-bold text-white shadow hover:bg-[#163a6e]"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+      {selected && (
+        <EnquiryDetailsModal
+          enquiry={selected}
+          onClose={() => setSelected(null)}
+          onDelete={deleteEnquiry}
+        />
       )}
     </div>
   );

@@ -1,10 +1,9 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Menu,
   Bell,
-  Search,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -19,15 +18,22 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
-  Command,
-  ArrowUpRight,
-  ShieldCheck,
   Camera,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
+
+/* ==========================================
+   CONSTANTS
+========================================== */
 
 const SOUND_KEY = "studioraw_sound";
 const PROFILE_KEY = "studioraw_admin_profile";
+
+// Dummy admin profile image
+// For a permanent local image, place admin-profile.jpg
+// in public/ and change this to "/admin-profile.jpg".
+const ADMIN_IMAGE = "https://i.pravatar.cc/150?img=47";
 
 const pageTitles = {
   dashboard: "Dashboard",
@@ -61,36 +67,18 @@ const pageTitles = {
   roles: "Roles & Permissions",
   notifications: "Notifications & Reminders",
   auditlogs: "Audit Logs & Activity",
-  settings: "Settings & Staff",
+  settings: "Studio Settings",
 };
 
-const searchPages = [
-  ["dashboard", "Dashboard"],
-  ["enquiries", "Enquiries & Leads"],
-  ["customers", "Customers"],
-  ["bookings", "Booking & Calendar"],
-  ["wedding-photography", "Wedding Photography"],
-  ["wedding-videography", "Wedding Videography"],
-  ["functions-we-arrange", "Functions We Arrange"],
-  ["event-management", "Event Management"],
-  ["customized-gifts", "Customized Gifts"],
-  ["payments", "Payment & Billing"],
-  ["deliveries", "Delivery Management"],
-  ["inventory", "Inventory Management"],
-  ["equipment", "Equipment Management"],
-  ["expenses", "Expense & Profit"],
-  ["staff", "Staff Management"],
-  ["branches", "Multi-Branch Management"],
-  ["reports", "Reports & Analytics"],
-  ["notifications", "Notifications & Reminders"],
-  ["settings", "Settings & Staff"],
-];
-
 const defaultProfile = {
-  name: "Demo Admin",
+  name: "Admin",
   role: "Administrator",
   email: "admin@studiorawpicturez.com",
 };
+
+/* ==========================================
+   HELPERS
+========================================== */
 
 function readSetting(key, fallback) {
   try {
@@ -107,12 +95,21 @@ function readProfile() {
     if (saved) {
       const parsed = JSON.parse(saved);
 
-      if (parsed && typeof parsed === "object") {
-        return { ...defaultProfile, ...parsed };
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      ) {
+        return {
+          ...defaultProfile,
+          name: parsed.name || defaultProfile.name,
+          email: parsed.email || defaultProfile.email,
+          role: parsed.role || defaultProfile.role,
+        };
       }
     }
   } catch {
-    // Use default
+    // Use default profile
   }
 
   return { ...defaultProfile };
@@ -127,6 +124,39 @@ function getInitials(name) {
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
 }
+
+/* ==========================================
+   ADMIN AVATAR
+========================================== */
+
+function AdminAvatar({
+  name,
+  className = "",
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-[#10264d] to-[#315b99] text-xs font-extrabold text-white ${className}`}
+    >
+      {!imageFailed ? (
+        <img
+          src={ADMIN_IMAGE}
+          alt={`${name || "Admin"} profile`}
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <span>{getInitials(name)}</span>
+      )}
+    </div>
+  );
+}
+
+/* ==========================================
+   BUTTON CLICK SOUND
+========================================== */
 
 function useBeautifulSound() {
   const [soundEnabled, setSoundEnabled] = useState(
@@ -143,7 +173,10 @@ function useBeautifulSound() {
     };
 
     window.addEventListener("storage", syncSound);
-    window.addEventListener("studioraw-sound-change", syncSound);
+    window.addEventListener(
+      "studioraw-sound-change",
+      syncSound
+    );
 
     return () => {
       window.removeEventListener("storage", syncSound);
@@ -162,7 +195,6 @@ function useBeautifulSound() {
 
   const playSound = (type = "click") => {
     if (!soundEnabled) return;
-
     if (readSetting(SOUND_KEY, "true") === "false") return;
 
     try {
@@ -183,7 +215,6 @@ function useBeautifulSound() {
 
       const sounds = {
         click: [659.25],
-        search: [523.25, 659.25],
         profile: [587.33, 783.99],
         notification: [783.99, 987.77],
         save: [523.25, 659.25, 783.99],
@@ -197,11 +228,17 @@ function useBeautifulSound() {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
 
-        const start = context.currentTime + index * 0.075;
+        const start =
+          context.currentTime + index * 0.075;
+
         const end = start + 0.19;
 
         oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(frequency, start);
+
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          start
+        );
 
         gain.gain.setValueAtTime(0.0001, start);
 
@@ -221,8 +258,8 @@ function useBeautifulSound() {
         oscillator.start(start);
         oscillator.stop(end + 0.01);
       });
-    } catch (error) {
-      console.warn("Sound unavailable:", error);
+    } catch {
+      // Audio unavailable
     }
   };
 
@@ -230,7 +267,50 @@ function useBeautifulSound() {
 }
 
 /* ==========================================
-   EDIT PROFILE MODAL
+   SHARED MODAL STYLES
+========================================== */
+
+const modalInputClass =
+  "flex min-w-0 items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-4 transition-all duration-300 focus-within:border-[#173d77] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(36,77,139,0.09)]";
+
+const modalTextClass =
+  "w-full min-w-0 bg-transparent py-3.5 text-sm font-semibold text-[#10264d] outline-none placeholder:text-[#61758f]";
+
+function useModalEscape(onClose) {
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        onCloseRef.current?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
+}
+
+/* ==========================================
+   EDIT ADMIN PROFILE MODAL
 ========================================== */
 
 function EditProfileModal({
@@ -243,27 +323,19 @@ function EditProfileModal({
     name: profile.name || "",
     email: profile.email || "",
     password: "",
+    reenterPassword: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [visible, setVisible] = useState({
+    password: false,
+    reenterPassword: false,
+  });
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [onClose]);
+  useModalEscape(onClose);
 
   const updateForm = (key, value) => {
     setForm((previous) => ({
@@ -275,8 +347,20 @@ function EditProfileModal({
     setSuccess(false);
   };
 
-  const handleSubmit = (event) => {
+  const toggleVisibility = (key) => {
+    playSound("click");
+
+    setVisible((previous) => ({
+      ...previous,
+      [key]: !previous[key],
+    }));
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    setError("");
+    setSuccess(false);
 
     const name = form.name.trim();
     const email = form.email.trim();
@@ -286,39 +370,65 @@ function EditProfileModal({
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
       setError("Please enter a valid email address.");
       return;
     }
 
-    if (form.password && form.password.length < 8) {
-      setError("Password must contain at least 8 characters.");
+    const wantsPasswordChange =
+      Boolean(form.password) ||
+      Boolean(form.reenterPassword);
+
+    if (wantsPasswordChange) {
+      if (form.password.length < 8) {
+        setError(
+          "Password must contain at least 8 characters."
+        );
+        return;
+      }
+
+      if (form.password !== form.reenterPassword) {
+        setError(
+          "New Password and Re-enter Password do not match."
+        );
+        return;
+      }
+
+      setError(
+        "For security, change your password using Reset Password from the profile menu. You must verify your current password."
+      );
       return;
     }
 
-    const result = onSave({
-      name,
-      email,
-      role: profile.role,
-    });
+    setSaving(true);
 
-    if (result) {
-      playSound("save");
+    try {
+      const result = await onSave({
+        name,
+        email,
+        role: profile.role,
+      });
 
-      setForm((previous) => ({
-        ...previous,
-        password: "",
-      }));
+      if (result) {
+        playSound("save");
+        setSuccess(true);
 
-      setSuccess(true);
-      setError("");
-    } else {
+        setForm((previous) => ({
+          ...previous,
+          password: "",
+          reenterPassword: "",
+        }));
+      } else {
+        setError("Unable to save profile changes.");
+      }
+    } catch {
       setError("Unable to save profile changes.");
+    } finally {
+      setSaving(false);
     }
   };
-
-  const inputClass =
-    "flex min-w-0 items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-4 transition-all duration-300 focus-within:border-[#173d77] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(36,77,139,0.09),0_8px_22px_rgba(16,38,77,0.06)]";
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
@@ -333,26 +443,27 @@ function EditProfileModal({
         aria-labelledby="edit-profile-title"
         className="sr-premium-modal relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-[26px] border border-[#dce5f2] bg-white text-[#10264d] shadow-[0_30px_90px_rgba(5,20,45,0.25)]"
       >
-        {/* HEADER */}
-        <div className="relative overflow-hidden bg-[#10264d] px-5 py-6 text-white sm:px-7">
+        {/* MODAL HEADER */}
+
+        <div className="relative shrink-0 overflow-hidden bg-[#10264d] px-5 py-5 text-white sm:px-7">
           <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-blue-400/15 blur-3xl" />
 
           <div className="relative flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
-                <UserCircle size={27} />
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                <UserCircle size={26} />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <h2
                   id="edit-profile-title"
-                  className="text-lg font-extrabold sm:text-xl"
+                  className="text-lg font-extrabold text-white sm:text-xl"
                 >
                   Edit Admin Profile
                 </h2>
 
                 <p className="mt-1 text-xs text-blue-100">
-                  Personalize your workspace details
+                  Manage your administrator details
                 </p>
               </div>
             </div>
@@ -364,25 +475,28 @@ function EditProfileModal({
                 onClose();
               }}
               aria-label="Close edit profile"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-all duration-300 hover:rotate-90 hover:bg-white/20"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
             >
               <X size={19} />
             </button>
           </div>
         </div>
 
-        {/* BODY */}
+        {/* MODAL CONTENT */}
+
         <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[#e1e8f3] bg-[#f5f8fd] p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#10264d] text-sm font-extrabold text-white">
-              {getInitials(profile.name)}
-            </div>
+          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-[#e1e8f3] bg-[#f5f8fd] p-4">
+            <AdminAvatar
+              name={profile.name}
+              className="h-12 w-12 rounded-2xl border border-[#dce5f2]"
+            />
 
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold">
+              <p className="truncate text-sm font-bold text-[#10264d]">
                 {profile.name}
               </p>
-              <p className="mt-1 text-xs text-[#7185a3]">
+
+              <p className="mt-1 text-xs font-semibold text-[#526581]">
                 {profile.role}
               </p>
             </div>
@@ -391,115 +505,184 @@ function EditProfileModal({
           <form
             id="edit-profile-form"
             onSubmit={handleSubmit}
-            className="space-y-5"
+            className="space-y-4"
           >
-            {/* NAME */}
+            {/* ADMIN NAME */}
+
             <div>
               <label
-                htmlFor="admin-name"
-                className="mb-2 block text-sm font-bold"
+                htmlFor="admin-edit-name"
+                className="mb-2 block text-sm font-bold text-[#10264d]"
               >
                 Admin Name
               </label>
 
-              <div className={inputClass}>
+              <div className={modalInputClass}>
                 <User
                   size={18}
-                  className="shrink-0 text-[#8195b2]"
+                  className="shrink-0 text-[#244d8b]"
                 />
 
                 <input
-                  id="admin-name"
+                  id="admin-edit-name"
                   type="text"
                   required
                   maxLength={80}
                   autoComplete="name"
                   value={form.name}
                   onChange={(event) =>
-                    updateForm("name", event.target.value)
+                    updateForm(
+                      "name",
+                      event.target.value
+                    )
                   }
                   placeholder="Enter admin name"
-                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
+                  className={modalTextClass}
                 />
               </div>
             </div>
 
             {/* EMAIL */}
+
             <div>
               <label
-                htmlFor="admin-email"
-                className="mb-2 block text-sm font-bold"
+                htmlFor="admin-edit-email"
+                className="mb-2 block text-sm font-bold text-[#10264d]"
               >
                 Email Address
               </label>
 
-              <div className={inputClass}>
+              <div className={modalInputClass}>
                 <Mail
                   size={18}
-                  className="shrink-0 text-[#8195b2]"
+                  className="shrink-0 text-[#244d8b]"
                 />
 
                 <input
-                  id="admin-email"
+                  id="admin-edit-email"
                   type="email"
                   required
                   maxLength={254}
                   autoComplete="email"
                   value={form.email}
                   onChange={(event) =>
-                    updateForm("email", event.target.value)
+                    updateForm(
+                      "email",
+                      event.target.value
+                    )
                   }
                   placeholder="Enter email address"
-                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
+                  className={modalTextClass}
                 />
               </div>
             </div>
 
-            {/* PASSWORD */}
+            {/* NEW PASSWORD */}
+
             <div>
               <label
-                htmlFor="admin-password"
-                className="mb-2 block text-sm font-bold"
+                htmlFor="admin-edit-password"
+                className="mb-2 block text-sm font-bold text-[#10264d]"
               >
                 New Password
-                <span className="ml-2 text-xs font-normal text-[#91a0b4]">
-                  (Optional)
-                </span>
               </label>
 
-              <div className={inputClass}>
+              <div className={modalInputClass}>
                 <LockKeyhole
                   size={18}
-                  className="shrink-0 text-[#8195b2]"
+                  className="shrink-0 text-[#244d8b]"
                 />
 
                 <input
-                  id="admin-password"
-                  type={showPassword ? "text" : "password"}
+                  id="admin-edit-password"
+                  type={
+                    visible.password
+                      ? "text"
+                      : "password"
+                  }
                   autoComplete="new-password"
-                  minLength={8}
                   value={form.password}
                   onChange={(event) =>
-                    updateForm("password", event.target.value)
+                    updateForm(
+                      "password",
+                      event.target.value
+                    )
                   }
                   placeholder="Enter new password"
-                  className="w-full min-w-0 bg-transparent py-3.5 text-sm text-[#10264d] outline-none placeholder:text-[#91a0b4]"
+                  className={modalTextClass}
                 />
 
                 <button
                   type="button"
-                  onClick={() => {
-                    playSound("click");
-                    setShowPassword((previous) => !previous);
-                  }}
+                  onClick={() =>
+                    toggleVisibility("password")
+                  }
                   aria-label={
-                    showPassword
+                    visible.password
                       ? "Hide password"
                       : "Show password"
                   }
-                  className="shrink-0 text-[#8195b2] transition hover:text-[#10264d]"
+                  className="shrink-0 text-[#244d8b] transition hover:text-[#10264d]"
                 >
-                  {showPassword ? (
+                  {visible.password ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* RE-ENTER PASSWORD */}
+
+            <div>
+              <label
+                htmlFor="admin-edit-confirm"
+                className="mb-2 block text-sm font-bold text-[#10264d]"
+              >
+                Re-enter Password
+              </label>
+
+              <div className={modalInputClass}>
+                <ShieldCheck
+                  size={18}
+                  className="shrink-0 text-[#244d8b]"
+                />
+
+                <input
+                  id="admin-edit-confirm"
+                  type={
+                    visible.reenterPassword
+                      ? "text"
+                      : "password"
+                  }
+                  autoComplete="new-password"
+                  value={form.reenterPassword}
+                  onChange={(event) =>
+                    updateForm(
+                      "reenterPassword",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Re-enter new password"
+                  className={modalTextClass}
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    toggleVisibility(
+                      "reenterPassword"
+                    )
+                  }
+                  aria-label={
+                    visible.reenterPassword
+                      ? "Hide re-entered password"
+                      : "Show re-entered password"
+                  }
+                  className="shrink-0 text-[#244d8b] transition hover:text-[#10264d]"
+                >
+                  {visible.reenterPassword ? (
                     <EyeOff size={18} />
                   ) : (
                     <Eye size={18} />
@@ -507,42 +690,407 @@ function EditProfileModal({
                 </button>
               </div>
 
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Demo interface only. Changing this field does not
-                update your actual login password.
+              <p className="mt-2 text-xs font-medium text-[#526581]">
+                Leave password fields empty to update
+                only your name and email.
               </p>
             </div>
+
+            {/* ERROR */}
 
             {error && (
               <div
                 role="alert"
-                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
               >
                 <AlertCircle
                   size={17}
                   className="mt-0.5 shrink-0"
                 />
-                {error}
+
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* SUCCESS */}
+
+            {success && (
+              <div
+                role="status"
+                className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-[#10264d]"
+              >
+                <CheckCircle2 size={18} />
+                Profile saved successfully.
+              </div>
+            )}
+          </form>
+        </div>
+
+        {/* MODAL FOOTER */}
+
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#e3eaf4] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+          <button
+            type="button"
+            onClick={() => {
+              playSound("close");
+              onClose();
+            }}
+            className="rounded-xl border border-[#dce5f2] bg-white px-5 py-3 text-sm font-bold text-[#10264d] transition hover:bg-[#eef4fc]"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            form="edit-profile-form"
+            disabled={saving}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#244d8b] disabled:opacity-60"
+          >
+            <CheckCircle2 size={17} />
+
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
+          </button>
+        </div>
+      </section>
+    </div>,
+    document.body
+  );
+}
+
+/* ==========================================
+   RESET PASSWORD MODAL
+========================================== */
+
+function ResetPasswordModal({
+  onClose,
+  playSound,
+  onResetPassword,
+}) {
+  const [form, setForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [visible, setVisible] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useModalEscape(onClose);
+
+  const updateForm = (key, value) => {
+    setForm((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+
+    setError("");
+    setSuccess(false);
+  };
+
+  const toggleVisibility = (key) => {
+    playSound("click");
+
+    setVisible((previous) => ({
+      ...previous,
+      [key]: !previous[key],
+    }));
+  };
+
+  const passwordFields = [
+    {
+      key: "currentPassword",
+      label: "Current Password",
+      placeholder: "Enter current password",
+      autoComplete: "current-password",
+    },
+    {
+      key: "newPassword",
+      label: "New Password",
+      placeholder: "Enter new password",
+      autoComplete: "new-password",
+    },
+    {
+      key: "confirmPassword",
+      label: "Confirm New Password",
+      placeholder: "Re-enter new password",
+      autoComplete: "new-password",
+    },
+  ];
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess(false);
+
+    if (
+      !form.currentPassword ||
+      !form.newPassword ||
+      !form.confirmPassword
+    ) {
+      setError(
+        "Please fill in all password fields."
+      );
+      return;
+    }
+
+    if (form.newPassword.length < 8) {
+      setError(
+        "New password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    if (
+      form.currentPassword ===
+      form.newPassword
+    ) {
+      setError(
+        "New password must be different from current password."
+      );
+      return;
+    }
+
+    if (
+      form.newPassword !==
+      form.confirmPassword
+    ) {
+      setError(
+        "New password and confirm password do not match."
+      );
+      return;
+    }
+
+    if (
+      typeof onResetPassword !== "function"
+    ) {
+      setError(
+        "Password reset is not connected to authentication yet."
+      );
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const result = await onResetPassword({
+        currentPassword:
+          form.currentPassword,
+        newPassword: form.newPassword,
+      });
+
+      if (
+        result === true ||
+        result?.success === true
+      ) {
+        playSound("save");
+
+        setForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+
+        setSuccess(true);
+      } else {
+        setError(
+          result?.message ||
+            "Unable to reset password. Please check your current password."
+        );
+      }
+    } catch {
+      setError(
+        "Password reset failed. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
+      <div
+        className="absolute inset-0 bg-[#06152b]/65 backdrop-blur-[6px]"
+        onClick={onClose}
+      />
+
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reset-password-title"
+        className="sr-premium-modal relative flex max-h-[95dvh] w-full max-w-lg flex-col overflow-hidden rounded-[26px] border border-[#dce5f2] bg-white text-[#10264d] shadow-[0_30px_90px_rgba(5,20,45,0.25)]"
+      >
+        {/* HEADER */}
+
+        <div className="relative shrink-0 overflow-hidden bg-[#10264d] px-5 py-6 text-white sm:px-7">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-blue-400/15 blur-3xl" />
+
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                <KeyRound size={25} />
+              </div>
+
+              <div>
+                <h2
+                  id="reset-password-title"
+                  className="text-lg font-extrabold text-white sm:text-xl"
+                >
+                  Reset Password
+                </h2>
+
+                <p className="mt-1 text-xs text-blue-100">
+                  Update your admin account password
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound("close");
+                onClose();
+              }}
+              aria-label="Close reset password"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+            >
+              <X size={19} />
+            </button>
+          </div>
+        </div>
+
+        {/* CONTENT */}
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[#dce8f8] bg-[#f5f8fd] p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e6eef9] text-[#244d8b]">
+              <ShieldCheck size={21} />
+            </div>
+
+            <div>
+              <p className="text-sm font-extrabold text-[#10264d]">
+                Account Security
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-[#526581]">
+                Choose a strong password with at
+                least 8 characters. Your current
+                password must be verified by your
+                authentication system.
+              </p>
+            </div>
+          </div>
+
+          <form
+            id="reset-password-form"
+            onSubmit={handleSubmit}
+            className="space-y-5"
+          >
+            {passwordFields.map((field) => (
+              <div key={field.key}>
+                <label
+                  htmlFor={field.key}
+                  className="mb-2 block text-sm font-bold text-[#10264d]"
+                >
+                  {field.label}
+                </label>
+
+                <div className={modalInputClass}>
+                  <LockKeyhole
+                    size={18}
+                    className="shrink-0 text-[#244d8b]"
+                  />
+
+                  <input
+                    id={field.key}
+                    type={
+                      visible[field.key]
+                        ? "text"
+                        : "password"
+                    }
+                    autoComplete={
+                      field.autoComplete
+                    }
+                    value={form[field.key]}
+                    onChange={(event) =>
+                      updateForm(
+                        field.key,
+                        event.target.value
+                      )
+                    }
+                    placeholder={
+                      field.placeholder
+                    }
+                    required
+                    className={modalTextClass}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleVisibility(field.key)
+                    }
+                    aria-label={
+                      visible[field.key]
+                        ? `Hide ${field.label}`
+                        : `Show ${field.label}`
+                    }
+                    className="shrink-0 text-[#244d8b] transition hover:text-[#10264d]"
+                  >
+                    {visible[field.key] ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+              >
+                <AlertCircle
+                  size={18}
+                  className="mt-0.5 shrink-0"
+                />
+
+                <span>{error}</span>
               </div>
             )}
 
             {success && (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-[#173d77]"
+                className="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700"
               >
                 <CheckCircle2
                   size={18}
                   className="mt-0.5 shrink-0"
                 />
-                Profile name and email saved successfully.
+
+                <span>
+                  Password updated successfully.
+                </span>
               </div>
             )}
           </form>
         </div>
 
         {/* FOOTER */}
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#e3eaf4] bg-[#fbfcff] px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[#e3eaf4] bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button
             type="button"
             onClick={() => {
@@ -556,11 +1104,15 @@ function EditProfileModal({
 
           <button
             type="submit"
-            form="edit-profile-form"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#244d8b] hover:shadow-[0_10px_24px_rgba(16,38,77,0.2)]"
+            form="reset-password-form"
+            disabled={saving}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#244d8b] disabled:opacity-60"
           >
-            <CheckCircle2 size={17} />
-            Save Changes
+            <KeyRound size={17} />
+
+            {saving
+              ? "Updating..."
+              : "Reset Password"}
           </button>
         </div>
       </section>
@@ -579,85 +1131,97 @@ export default function Header({
   onMenuClick,
   onLogout,
   onNavigate,
+  onResetPassword,
 }) {
   const playSound = useBeautifulSound();
 
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [editOpen, setEditOpen] = useState(false);
-  const [profile, setProfile] = useState(readProfile);
+  const [profileOpen, setProfileOpen] =
+    useState(false);
+
+  const [editOpen, setEditOpen] =
+    useState(false);
+
+  const [resetOpen, setResetOpen] =
+    useState(false);
+
+  const [profile, setProfile] =
+    useState(readProfile);
 
   const profileRef = useRef(null);
-  const searchRef = useRef(null);
-  const searchInputRef = useRef(null);
 
-  const title = pageTitles[activePage] || "Dashboard";
-
-  const filteredPages = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) return [];
-
-    return searchPages.filter(([key, label]) =>
-      `${key} ${label}`.toLowerCase().includes(query)
-    );
-  }, [search]);
+  const title =
+    pageTitles[activePage] || "Dashboard";
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (
         profileRef.current &&
-        !profileRef.current.contains(event.target)
+        !profileRef.current.contains(
+          event.target
+        )
       ) {
         setProfileOpen(false);
-      }
-
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target)
-      ) {
-        setSearchOpen(false);
       }
     };
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setProfileOpen(false);
-        setSearchOpen(false);
       }
     };
 
-    document.addEventListener("pointerdown", handleOutsideClick);
-    window.addEventListener("keydown", handleEscape);
+    document.addEventListener(
+      "pointerdown",
+      handleOutsideClick
+    );
+
+    window.addEventListener(
+      "keydown",
+      handleEscape
+    );
 
     return () => {
       document.removeEventListener(
         "pointerdown",
         handleOutsideClick
       );
-      window.removeEventListener("keydown", handleEscape);
+
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
     };
   }, []);
 
   useEffect(() => {
     setProfileOpen(false);
-    setSearchOpen(false);
-    setSearch("");
   }, [activePage]);
 
   useEffect(() => {
-    if (searchOpen) {
-      searchInputRef.current?.focus();
-    }
-  }, [searchOpen]);
+    const syncProfile = () => {
+      setProfile(readProfile());
+    };
+
+    window.addEventListener(
+      "storage",
+      syncProfile
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        syncProfile
+      );
+    };
+  }, []);
 
   const openSidebar = () => {
     playSound("click");
     setProfileOpen(false);
-    setSearchOpen(false);
 
-    if (typeof onMenuClick === "function") {
+    if (
+      typeof onMenuClick === "function"
+    ) {
       onMenuClick();
     } else {
       setSidebarOpen?.(true);
@@ -668,20 +1232,16 @@ export default function Header({
     playSound(
       page === "notifications"
         ? "notification"
-        : "search"
+        : "click"
     );
 
-    setSearch("");
-    setSearchOpen(false);
     setProfileOpen(false);
-
     onNavigate?.(page);
   };
 
   const handleLogout = () => {
     playSound("logout");
     setProfileOpen(false);
-    setSearchOpen(false);
     onLogout?.();
   };
 
@@ -691,86 +1251,37 @@ export default function Header({
     setEditOpen(true);
   };
 
+  const openResetPassword = () => {
+    playSound("profile");
+    setProfileOpen(false);
+    setResetOpen(true);
+  };
+
   const saveProfile = (updatedProfile) => {
     try {
+      const cleanProfile = {
+        name: updatedProfile.name,
+        email: updatedProfile.email,
+        role: updatedProfile.role,
+      };
+
       localStorage.setItem(
         PROFILE_KEY,
-        JSON.stringify(updatedProfile)
+        JSON.stringify(cleanProfile)
       );
 
-      setProfile(updatedProfile);
+      setProfile(cleanProfile);
+
       return true;
     } catch {
       return false;
     }
   };
 
-  const SearchResults = ({ mobile = false }) => {
-    if (!search.trim()) return null;
-
-    return (
-      <div
-        className={`sr-search-results overflow-hidden rounded-2xl border border-[#dce5f2] bg-white shadow-[0_20px_55px_rgba(16,38,77,0.16)] ${
-          mobile ? "mt-3" : "absolute left-0 right-0 top-full z-50 mt-3"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-[#e8edf5] bg-[#f8fbff] px-4 py-3">
-          <span className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#627895]">
-            <Sparkles size={13} className="text-[#315b99]" />
-            Workspace Pages
-          </span>
-
-          <span className="rounded-lg bg-[#eaf1fc] px-2 py-1 text-[10px] font-bold text-[#315b99]">
-            {filteredPages.length} found
-          </span>
-        </div>
-
-        {filteredPages.length > 0 ? (
-          <div className="max-h-64 overflow-y-auto p-2">
-            {filteredPages.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => navigateTo(key)}
-                className="group flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:translate-x-1 hover:border-[#dce7f8] hover:bg-[#eef5ff]"
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf3fc] text-[#315b99] transition group-hover:bg-[#dceaff]">
-                    <Search size={15} />
-                  </span>
-
-                  <span className="truncate">{label}</span>
-                </span>
-
-                <ArrowUpRight
-                  size={16}
-                  className="shrink-0 text-[#91a0b4] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#173d77]"
-                />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="px-4 py-8 text-center">
-            <Search
-              size={24}
-              className="mx-auto mb-3 text-[#9aacbf]"
-            />
-
-            <p className="text-sm font-semibold text-[#10264d]">
-              No matching pages
-            </p>
-
-            <p className="mt-1 text-xs text-[#91a0b4]">
-              Try searching with another keyword.
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <>
+      {/* ANIMATIONS */}
+
       <style>{`
         @keyframes srHeaderEnter {
           from {
@@ -796,7 +1307,7 @@ export default function Header({
           }
         }
 
-        @keyframes srSearchEnter {
+        @keyframes srDropdownEnter {
           from {
             opacity: 0;
             transform: translateY(-8px) scale(0.97);
@@ -808,42 +1319,61 @@ export default function Header({
         }
 
         @keyframes srBellRing {
-          0%, 100% { transform: rotate(0deg); }
-          15% { transform: rotate(12deg); }
-          30% { transform: rotate(-10deg); }
-          45% { transform: rotate(7deg); }
-          60% { transform: rotate(-4deg); }
+          0%, 100% {
+            transform: rotate(0deg);
+          }
+          15% {
+            transform: rotate(12deg);
+          }
+          30% {
+            transform: rotate(-10deg);
+          }
+          45% {
+            transform: rotate(7deg);
+          }
+          60% {
+            transform: rotate(-4deg);
+          }
         }
 
         @keyframes srPulse {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(49,91,153,0.25);
+            box-shadow:
+              0 0 0 0 rgba(49,91,153,0.25);
           }
           50% {
-            box-shadow: 0 0 0 5px rgba(49,91,153,0);
+            box-shadow:
+              0 0 0 5px rgba(49,91,153,0);
           }
         }
 
         @keyframes srShimmer {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(100%); }
+          from {
+            transform: translateX(-100%);
+          }
+          to {
+            transform: translateX(100%);
+          }
         }
 
         .sr-premium-header {
-          animation: srHeaderEnter 0.55s ease-out both;
+          animation:
+            srHeaderEnter 0.55s ease-out both;
         }
 
         .sr-premium-title {
-          animation: srTitleEnter 0.45s ease-out both;
+          animation:
+            srTitleEnter 0.45s ease-out both;
         }
 
-        .sr-search-results,
         .sr-premium-dropdown {
-          animation: srSearchEnter 0.25s ease-out both;
+          animation:
+            srDropdownEnter 0.25s ease-out both;
         }
 
         .sr-premium-modal {
-          animation: srSearchEnter 0.35s
+          animation:
+            srDropdownEnter 0.35s
             cubic-bezier(0.22,1,0.36,1) both;
         }
 
@@ -857,41 +1387,17 @@ export default function Header({
 
         .sr-premium-control:hover {
           transform: translateY(-2px);
-          box-shadow: 0 7px 18px rgba(16,38,77,0.09);
+          box-shadow:
+            0 7px 18px rgba(16,38,77,0.09);
         }
 
         .sr-premium-control:active {
           transform: scale(0.95);
         }
 
-        .sr-premium-search {
-          transition:
-            border-color 0.35s ease,
-            background-color 0.35s ease,
-            box-shadow 0.35s ease,
-            transform 0.35s ease;
-        }
-
-        .sr-premium-search:focus-within {
-          border-color: #173d77;
-          background: #fff;
-          box-shadow:
-            0 0 0 4px rgba(36,77,139,0.09),
-            0 9px 28px rgba(16,38,77,0.09);
-          transform: translateY(-1px);
-        }
-
-        .sr-premium-search:focus-within .sr-search-icon {
-          color: #173d77;
-          transform: scale(1.12);
-        }
-
-        .sr-search-icon {
-          transition: transform 0.3s ease, color 0.3s ease;
-        }
-
         .sr-premium-bell:hover svg {
-          animation: srBellRing 0.65s ease-in-out;
+          animation:
+            srBellRing 0.65s ease-in-out;
           transform-origin: top center;
         }
 
@@ -900,13 +1406,15 @@ export default function Header({
         }
 
         .sr-header-shimmer {
-          animation: srShimmer 5s linear infinite;
+          animation:
+            srShimmer 5s linear infinite;
         }
 
-        @media (prefers-reduced-motion: reduce) {
+        @media (
+          prefers-reduced-motion: reduce
+        ) {
           .sr-premium-header,
           .sr-premium-title,
-          .sr-search-results,
           .sr-premium-dropdown,
           .sr-premium-modal,
           .sr-premium-dot,
@@ -914,24 +1422,26 @@ export default function Header({
             animation: none !important;
           }
 
-          .sr-premium-control,
-          .sr-premium-search {
+          .sr-premium-control {
             transition: none !important;
           }
         }
       `}</style>
 
-      <header className="sr-premium-header sticky top-0 z-30 w-full min-w-0 border-b border-[#e2e9f3] bg-white/95 text-[#10264d] shadow-[0_4px_25px_rgba(16,38,77,0.055)] backdrop-blur-xl">
+      {/* HEADER */}
 
-        {/* ANIMATED TOP LINE */}
+      <header className="sr-premium-header sticky top-0 z-30 w-full min-w-0 border-b border-[#e2e9f3] bg-white/95 text-[#10264d] shadow-[0_4px_25px_rgba(16,38,77,0.055)] backdrop-blur-xl">
+        {/* TOP LINE */}
+
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] overflow-hidden bg-[#e8f0fc]">
           <div className="sr-header-shimmer h-full w-1/2 bg-gradient-to-r from-transparent via-[#244d8b] to-transparent" />
         </div>
 
         {/* HEADER CONTENT */}
-        <div className="flex h-[70px] w-full min-w-0 items-center justify-between gap-2 px-3 sm:h-[78px] sm:px-5 lg:h-[84px] lg:px-7 xl:px-9">
 
+        <div className="flex h-[70px] w-full min-w-0 items-center justify-between gap-2 px-3 sm:h-[78px] sm:px-5 lg:h-[84px] lg:px-7 xl:px-9">
           {/* LEFT */}
+
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -943,7 +1453,7 @@ export default function Header({
             </button>
 
             <div className="min-w-0 flex-1">
-              <div className="mb-1 hidden items-center gap-1.5 text-[10px] font-semibold tracking-[0.04em] text-[#8b9bb3] sm:flex">
+              <div className="mb-1 hidden items-center gap-1.5 text-[10px] font-semibold tracking-[0.04em] text-[#526581] sm:flex">
                 <Camera size={12} />
                 <span>Studio Management</span>
                 <ChevronRight size={12} />
@@ -960,88 +1470,27 @@ export default function Header({
           </div>
 
           {/* RIGHT */}
+
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
-
-            {/* PREMIUM DESKTOP SEARCH */}
-            <div
-              ref={searchRef}
-              className="relative hidden xl:block"
-            >
-              <div className="sr-premium-search group flex h-12 w-[225px] items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-3.5 2xl:w-[300px]">
-                <Search
-                  size={19}
-                  className="sr-search-icon shrink-0 text-[#8195b2]"
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
-                  placeholder="Search workspace..."
-                  aria-label="Search workspace pages"
-                  className="w-full min-w-0 flex-1 bg-transparent text-sm font-medium text-[#10264d] outline-none placeholder:text-[#91a0b4]"
-                />
-
-                {search ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound("close");
-                      setSearch("");
-                    }}
-                    aria-label="Clear search"
-                    className="text-[#8195b2] transition hover:text-[#10264d]"
-                  >
-                    <X size={16} />
-                  </button>
-                ) : (
-                  <span className="flex h-6 shrink-0 items-center gap-0.5 rounded-md border border-[#e1e8f2] bg-white px-1.5 text-[10px] font-bold text-[#8195b2]">
-                    <Command size={11} /> K
-                  </span>
-                )}
-              </div>
-
-              {search.trim() && <SearchResults />}
-            </div>
-
             {/* BRANCH */}
-            <div className="hidden h-11 items-center gap-2 rounded-2xl border border-[#e1e8f2] bg-[#f8fbff] px-3 2xl:flex">
+
+            <div className="hidden h-11 items-center gap-2 rounded-2xl border border-[#e1e8f2] bg-[#f8fbff] px-3 xl:flex">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#e8f0fb] text-[#244d8b]">
                 <Building2 size={15} />
               </span>
 
-              <span className="text-xs font-bold text-[#344c6d]">
+              <span className="text-xs font-bold text-[#10264d]">
                 Main Branch
               </span>
             </div>
 
-            {/* MOBILE SEARCH */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound("search");
-                setProfileOpen(false);
-                setSearchOpen((previous) => !previous);
-              }}
-              aria-label={
-                searchOpen ? "Close search" : "Open search"
-              }
-              aria-expanded={searchOpen}
-              className="sr-premium-control flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-[#f8fbff] text-[#10264d] sm:h-11 sm:w-11 xl:hidden"
-            >
-              {searchOpen ? (
-                <X size={19} />
-              ) : (
-                <Search size={19} />
-              )}
-            </button>
-
             {/* NOTIFICATIONS */}
+
             <button
               type="button"
-              onClick={() => navigateTo("notifications")}
+              onClick={() =>
+                navigateTo("notifications")
+              }
               aria-label="Open notifications"
               title="Notifications"
               className="sr-premium-control sr-premium-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-[#f8fbff] text-[#10264d] sm:h-11 sm:w-11"
@@ -1052,9 +1501,11 @@ export default function Header({
             </button>
 
             {/* DIVIDER */}
+
             <div className="mx-0.5 hidden h-8 w-px bg-[#e1e8f2] sm:block" />
 
             {/* PROFILE */}
+
             <div
               ref={profileRef}
               className="relative shrink-0"
@@ -1063,8 +1514,10 @@ export default function Header({
                 type="button"
                 onClick={() => {
                   playSound("profile");
-                  setSearchOpen(false);
-                  setProfileOpen((previous) => !previous);
+
+                  setProfileOpen(
+                    (previous) => !previous
+                  );
                 }}
                 aria-label="Open profile menu"
                 aria-expanded={profileOpen}
@@ -1075,44 +1528,55 @@ export default function Header({
                     : "border-transparent hover:border-[#dce5f2] hover:bg-[#f5f8fd]"
                 }`}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#10264d] to-[#315b99] text-xs font-extrabold text-white shadow-[0_5px_14px_rgba(16,38,77,0.18)] sm:h-10 sm:w-10">
-                  {getInitials(profile.name)}
-                </div>
+                {/* DUMMY ADMIN IMAGE */}
 
-                <div className="hidden min-w-0 text-left 2xl:block">
+                <AdminAvatar
+                  name={profile.name}
+                  className="h-9 w-9 rounded-xl border border-[#dce5f2] shadow-[0_5px_14px_rgba(16,38,77,0.18)] sm:h-10 sm:w-10"
+                />
+
+                <div className="hidden min-w-0 text-left xl:block">
                   <p className="max-w-32 truncate text-sm font-extrabold text-[#10264d]">
                     {profile.name}
                   </p>
 
-                  <p className="text-[11px] text-[#8195b2]">
+                  <p className="text-[11px] text-[#526581]">
                     {profile.role}
                   </p>
                 </div>
 
                 <ChevronDown
                   size={15}
-                  className={`hidden shrink-0 text-[#8195b2] transition-transform duration-300 sm:block ${
-                    profileOpen ? "rotate-180" : ""
+                  className={`hidden shrink-0 text-[#526581] transition-transform duration-300 sm:block ${
+                    profileOpen
+                      ? "rotate-180"
+                      : ""
                   }`}
                 />
               </button>
 
               {/* PROFILE DROPDOWN */}
+
               {profileOpen && (
                 <div
                   role="menu"
                   className="sr-premium-dropdown absolute right-0 top-full z-50 mt-3 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-[20px] border border-[#dce5f2] bg-white shadow-[0_20px_55px_rgba(16,38,77,0.16)]"
                 >
+                  {/* PROFILE INFO */}
+
                   <div className="relative overflow-hidden bg-[#10264d] p-4 text-white">
                     <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-300/15 blur-2xl" />
 
                     <div className="relative flex items-center gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-sm font-extrabold">
-                        {getInitials(profile.name)}
-                      </div>
+                      {/* DUMMY ADMIN IMAGE */}
+
+                      <AdminAvatar
+                        name={profile.name}
+                        className="h-11 w-11 rounded-xl border border-white/20"
+                      />
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-extrabold">
+                        <p className="truncate text-sm font-extrabold text-white">
                           {profile.name}
                         </p>
 
@@ -1127,7 +1591,11 @@ export default function Header({
                     </p>
                   </div>
 
+                  {/* ACTIONS */}
+
                   <div className="p-2">
+                    {/* EDIT PROFILE */}
+
                     <button
                       type="button"
                       role="menuitem"
@@ -1135,7 +1603,26 @@ export default function Header({
                       className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:bg-[#eef5ff]"
                     >
                       <Pencil size={17} />
+
                       Edit Profile
+
+                      <ChevronRight
+                        size={15}
+                        className="ml-auto transition-transform group-hover:translate-x-1"
+                      />
+                    </button>
+
+                    {/* RESET PASSWORD */}
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={openResetPassword}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:bg-[#eef5ff]"
+                    >
+                      <KeyRound size={17} />
+
+                      Reset Password
 
                       <ChevronRight
                         size={15}
@@ -1145,6 +1632,8 @@ export default function Header({
 
                     <div className="my-1 border-t border-[#e7edf6]" />
 
+                    {/* LOGOUT */}
+
                     <button
                       type="button"
                       role="menuitem"
@@ -1152,6 +1641,7 @@ export default function Header({
                       className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-rose-500 transition hover:bg-rose-50"
                     >
                       <LogOut size={17} />
+
                       Logout
                     </button>
                   </div>
@@ -1160,57 +1650,32 @@ export default function Header({
             </div>
           </div>
         </div>
-
-        {/* MOBILE SEARCH PANEL */}
-        {searchOpen && (
-          <div className="sr-search-results border-t border-[#e7edf6] bg-white px-3 py-4 sm:px-5 xl:hidden">
-            <div className="mx-auto max-w-3xl">
-              <div className="sr-premium-search flex min-w-0 items-center gap-3 rounded-2xl border border-[#dce5f2] bg-[#f8fbff] px-4">
-                <Search
-                  size={19}
-                  className="sr-search-icon shrink-0 text-[#8195b2]"
-                />
-
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(event.target.value)
-                  }
-                  placeholder="Search workspace pages..."
-                  aria-label="Search workspace pages"
-                  className="w-full min-w-0 flex-1 bg-transparent py-3.5 text-sm font-medium text-[#10264d] outline-none placeholder:text-[#91a0b4]"
-                />
-
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound("close");
-                      setSearch("");
-                    }}
-                    aria-label="Clear search"
-                    className="text-[#8195b2]"
-                  >
-                    <X size={17} />
-                  </button>
-                )}
-              </div>
-
-              <SearchResults mobile />
-            </div>
-          </div>
-        )}
       </header>
 
       {/* EDIT PROFILE MODAL */}
+
       {editOpen && (
         <EditProfileModal
           profile={profile}
-          onClose={() => setEditOpen(false)}
+          onClose={() =>
+            setEditOpen(false)
+          }
           onSave={saveProfile}
           playSound={playSound}
+        />
+      )}
+
+      {/* RESET PASSWORD MODAL */}
+
+      {resetOpen && (
+        <ResetPasswordModal
+          onClose={() =>
+            setResetOpen(false)
+          }
+          playSound={playSound}
+          onResetPassword={
+            onResetPassword
+          }
         />
       )}
     </>

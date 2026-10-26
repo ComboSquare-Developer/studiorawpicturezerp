@@ -14,21 +14,25 @@ import {
   CheckCircle2,
   IndianRupee,
   ChevronDown,
-  MapPin,
-  Phone,
   UserRound,
   Wallet,
-  CalendarCheck2,
-  BriefcaseBusiness,
   ClipboardList,
-  Clock3,
   Check,
   FileText,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react";
+
+/* =========================================
+   STORAGE
+========================================= */
 
 const STORAGE_KEY = "studioraw_event_management";
 const SOUND_KEY = "studioraw_dashboard_sound";
+
+/* =========================================
+   OPTIONS
+========================================= */
 
 const EVENT_TYPES = [
   "Event Decoration",
@@ -42,9 +46,6 @@ const EVENT_TYPES = [
   "360° Selfie Booth",
   "Custom Package",
   "Mehendi Ceremony",
-  
-  
- 
 ];
 
 const SERVICES = [
@@ -129,15 +130,6 @@ const CUSTOMERS = [
   "Suresh",
 ];
 
-const DEMO_EVENT_TYPES = [
-  "Event Decoration",
-  "LED Wall & Live Event Streaming",
-  "YouTube Live Streaming",
-  "On-Site Video Editing",
-  "Instant Photo Printing",
-  "DJ & Sound Entertainment",
- ];
-
 const DEMO_SERVICES = [
   ["Event Planning", "Photography", "Videography", "Venue Decoration"],
   ["Venue Decoration", "Photography", "Catering"],
@@ -161,8 +153,13 @@ const DEMO_SERVICES = [
   ["Photography", "Videography", "Catering"],
 ];
 
+/* =========================================
+   DEMO DATA
+========================================= */
+
 const dateOffset = (days) => {
   const date = new Date();
+
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + days);
 
@@ -175,12 +172,16 @@ const dateOffset = (days) => {
 
 const DEMO_DATA = CUSTOMERS.map((customer, index) => {
   const amount = 35000 + (index % 9) * 25000;
+
   const advance =
     index % 5 === 0
       ? amount
-      : Math.round(amount * (index % 2 === 0 ? 0.4 : 0.3));
+      : Math.round(
+          amount * (index % 2 === 0 ? 0.4 : 0.3)
+        );
 
-  const eventType = DEMO_EVENT_TYPES[index];
+  // Cycle through all available event types.
+  const eventType = EVENT_TYPES[index % EVENT_TYPES.length];
 
   return {
     id: `EVENT-DEMO-${String(index + 1).padStart(3, "0")}`,
@@ -188,11 +189,14 @@ const DEMO_DATA = CUSTOMERS.map((customer, index) => {
     customer,
     phone: `98765${String(10000 + index).slice(-5)}`,
     eventType,
-    eventDate: dateOffset(index < 5 ? -(25 - index * 4) : index * 4),
+    eventDate: dateOffset(
+      index < 5 ? -(25 - index * 4) : index * 4
+    ),
     startTime: index % 3 === 0 ? "09:00" : "10:00",
     endTime: index % 3 === 0 ? "17:00" : "18:00",
     venue: VENUES[index % (VENUES.length - 1)],
-    coordinator: COORDINATORS[index % (COORDINATORS.length - 1)],
+    coordinator:
+      COORDINATORS[index % (COORDINATORS.length - 1)],
     guests: 100 + (index % 8) * 100,
     services: DEMO_SERVICES[index],
     amount,
@@ -216,7 +220,7 @@ const emptyForm = {
   eventName: "",
   customer: "",
   phone: "",
-  eventType: "Wedding",
+  eventType: "",
   eventDate: "",
   startTime: "",
   endTime: "",
@@ -231,15 +235,30 @@ const emptyForm = {
   notes: "",
 };
 
+/* =========================================
+   HELPERS
+========================================= */
+
 const money = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
+const balanceOf = (item) =>
+  Math.max(
+    0,
+    Number(item.amount || 0) -
+      Number(item.advance || 0)
+  );
 
 const formatDate = (value) => {
   if (!value) return "—";
 
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  const date = new Date(
+    `${String(value).slice(0, 10)}T00:00:00`
+  );
 
-  if (Number.isNaN(date.getTime())) return String(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
 
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -249,26 +268,112 @@ const formatDate = (value) => {
 };
 
 const inputClass =
-  "block w-full min-w-0 rounded-xl border border-[#dce5f1] bg-white px-3.5 py-3 text-sm text-[#10264d] outline-none transition placeholder:text-slate-400 focus:border-[#376ca9] focus:ring-2 focus:ring-blue-100";
+  "block w-full min-w-0 rounded-xl border border-[#c9def5] bg-[#f8fbff] px-3.5 py-3 text-sm text-[#174574] outline-none transition placeholder:text-[#92a9c3] focus:border-[#68a6e8] focus:bg-white focus:ring-2 focus:ring-[#dceeff]";
 
 const STATUS_COLORS = {
-  Planning: "border-violet-100 bg-violet-50 text-violet-700",
-  Confirmed: "border-blue-100 bg-blue-50 text-blue-700",
-  "In Progress": "border-amber-100 bg-amber-50 text-amber-700",
-  Completed: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-red-100 bg-red-50 text-red-700",
+  Planning:
+    "border-violet-100 bg-violet-50 text-violet-700",
+  Confirmed:
+    "border-[#c8dfff] bg-[#edf5ff] text-[#2867b2]",
+  "In Progress":
+    "border-amber-100 bg-amber-50 text-amber-700",
+  Completed:
+    "border-emerald-100 bg-emerald-50 text-emerald-700",
+  Cancelled:
+    "border-red-100 bg-red-50 text-red-700",
 };
 
 const PRIORITY_COLORS = {
   Low: "border-green-100 bg-green-50 text-green-700",
-  Medium: "border-amber-100 bg-amber-50 text-amber-700",
+  Medium:
+    "border-amber-100 bg-amber-50 text-amber-700",
   High: "border-red-100 bg-red-50 text-red-700",
 };
+
+/* =========================================
+   AUTOMATIC COUNT-UP + CLICK REPLAY
+========================================= */
+
+function useCountUp(target, duration = 1500) {
+  const finalValue = Math.max(0, Number(target) || 0);
+
+  const [display, setDisplay] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
+
+  const currentRef = useRef(0);
+
+  const replay = () => {
+    currentRef.current = 0;
+    setDisplay(0);
+    setReplayKey((previous) => previous + 1);
+  };
+
+  useEffect(() => {
+    const startValue = currentRef.current;
+
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)"
+      )?.matches;
+
+    if (reducedMotion) {
+      currentRef.current = finalValue;
+      setDisplay(finalValue);
+      return;
+    }
+
+    let frameId;
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (startTime === null) {
+        startTime = timestamp;
+      }
+
+      const progress = Math.min(
+        (timestamp - startTime) / duration,
+        1
+      );
+
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      const next =
+        startValue +
+        (finalValue - startValue) * eased;
+
+      currentRef.current = next;
+      setDisplay(Math.round(next));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(animate);
+      } else {
+        currentRef.current = finalValue;
+        setDisplay(finalValue);
+      }
+    };
+
+    frameId = requestAnimationFrame(animate);
+
+    return () => {
+      if (frameId !== undefined) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [finalValue, duration, replayKey]);
+
+  return { display, replay };
+}
+
+/* =========================================
+   BUTTON CLICK SOUND ONLY
+========================================= */
 
 function playTone(type = "click") {
   try {
     const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
+      window.AudioContext ||
+      window.webkitAudioContext;
 
     if (!AudioContextClass) return;
 
@@ -287,14 +392,27 @@ function playTone(type = "click") {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
 
-      const start = context.currentTime + index * 0.075;
+      const start =
+        context.currentTime + index * 0.075;
 
       oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, start);
+
+      oscillator.frequency.setValueAtTime(
+        frequency,
+        start
+      );
 
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.05, start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.05,
+        start + 0.015
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        start + 0.13
+      );
 
       oscillator.connect(gain);
       gain.connect(context.destination);
@@ -303,11 +421,17 @@ function playTone(type = "click") {
       oscillator.stop(start + 0.14);
     });
 
-    setTimeout(() => context.close().catch(() => {}), 600);
+    setTimeout(() => {
+      context.close().catch(() => {});
+    }, 600);
   } catch {
     // Sound is optional.
   }
 }
+
+/* =========================================
+   DROPDOWN
+========================================= */
 
 function Dropdown({
   value,
@@ -329,25 +453,46 @@ function Dropdown({
     };
 
     const escape = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
     };
 
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
+    document.addEventListener(
+      "pointerdown",
+      outside
+    );
+
+    document.addEventListener(
+      "keydown",
+      escape
+    );
 
     return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
+      document.removeEventListener(
+        "pointerdown",
+        outside
+      );
+
+      document.removeEventListener(
+        "keydown",
+        escape
+      );
     };
   }, []);
 
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div
+      ref={rootRef}
+      className="relative min-w-0"
+    >
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={() =>
+          setOpen((previous) => !previous)
+        }
         className={`${inputClass} flex items-center justify-between gap-2 text-left`}
       >
         <span className="min-w-0 flex-1 truncate">
@@ -356,7 +501,7 @@ function Dropdown({
 
         <ChevronDown
           size={16}
-          className={`shrink-0 text-[#607b9f] transition-transform ${
+          className={`shrink-0 text-[#6b95c2] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -365,27 +510,35 @@ function Dropdown({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full z-[150] mt-1 max-h-48 overflow-y-auto overscroll-contain rounded-xl border border-[#dce5f1] bg-white p-1 shadow-xl"
+          className="absolute left-0 right-0 top-full z-[150] mt-1 max-h-48 overflow-y-auto overscroll-contain rounded-xl border border-[#c9def5] bg-white p-1 shadow-[0_15px_35px_rgba(35,90,155,0.16)]"
         >
           {options.map((option) => (
             <button
               key={option}
               type="button"
               role="option"
-              aria-selected={value === option}
+              aria-selected={
+                value === option
+              }
               onClick={() => {
                 onChange(option);
                 setOpen(false);
               }}
               className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm ${
                 value === option
-                  ? "bg-[#edf3fc] font-semibold text-[#102f62]"
-                  : "text-slate-600 hover:bg-slate-50"
+                  ? "bg-[#e4f1ff] font-semibold text-[#225b9c]"
+                  : "text-[#5b7695] hover:bg-[#f0f7ff]"
               }`}
             >
-              <span className="min-w-0 break-words">{option}</span>
+              <span className="min-w-0 break-words">
+                {option}
+              </span>
+
               {value === option && (
-                <Check size={15} className="shrink-0" />
+                <Check
+                  size={15}
+                  className="shrink-0"
+                />
               )}
             </button>
           ))}
@@ -395,11 +548,20 @@ function Dropdown({
   );
 }
 
-function ServicesDropdown({ value, onChange }) {
+/* =========================================
+   SERVICES DROPDOWN
+========================================= */
+
+function ServicesDropdown({
+  value,
+  onChange,
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
-  const selected = Array.isArray(value) ? value : [];
+  const selected = Array.isArray(value)
+    ? value
+    : [];
 
   useEffect(() => {
     const outside = (event) => {
@@ -412,32 +574,55 @@ function ServicesDropdown({ value, onChange }) {
     };
 
     const escape = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
     };
 
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
+    document.addEventListener(
+      "pointerdown",
+      outside
+    );
+
+    document.addEventListener(
+      "keydown",
+      escape
+    );
 
     return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
+      document.removeEventListener(
+        "pointerdown",
+        outside
+      );
+
+      document.removeEventListener(
+        "keydown",
+        escape
+      );
     };
   }, []);
 
   const toggleService = (service) => {
     onChange(
       selected.includes(service)
-        ? selected.filter((item) => item !== service)
+        ? selected.filter(
+            (item) => item !== service
+          )
         : [...selected, service]
     );
   };
 
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div
+      ref={rootRef}
+      className="relative min-w-0"
+    >
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={() =>
+          setOpen((previous) => !previous)
+        }
         className={`${inputClass} flex items-center justify-between gap-2 text-left`}
       >
         <span className="min-w-0 flex-1 truncate">
@@ -445,6 +630,7 @@ function ServicesDropdown({ value, onChange }) {
             ? `${selected.length} services selected`
             : "Select event services"}
         </span>
+
         <ChevronDown
           size={17}
           className={`shrink-0 transition-transform ${
@@ -454,45 +640,55 @@ function ServicesDropdown({ value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-[150] mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#dce5f1] bg-white p-2 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-            <span className="text-xs font-semibold text-[#10264d]">
+        <div className="absolute left-0 right-0 top-full z-[150] mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#c9def5] bg-white p-2 shadow-xl">
+          <div className="flex items-center justify-between border-b border-[#e4effc] px-2 pb-2">
+            <span className="text-xs font-semibold text-[#174574]">
               Select Services
             </span>
 
             <button
               type="button"
-              onClick={() => onChange([])}
-              className="text-xs font-semibold text-blue-700"
+              onClick={() =>
+                onChange([])
+              }
+              className="text-xs font-semibold text-[#347cc7]"
             >
               Clear
             </button>
           </div>
 
           {SERVICES.map((service) => {
-            const checked = selected.includes(service);
+            const checked =
+              selected.includes(service);
 
             return (
               <button
                 key={service}
                 type="button"
-                onClick={() => toggleService(service)}
+                onClick={() =>
+                  toggleService(service)
+                }
                 className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${
                   checked
-                    ? "bg-blue-50 text-[#102f62]"
-                    : "text-slate-600 hover:bg-slate-50"
+                    ? "bg-[#eaf4ff] text-[#225b9c]"
+                    : "text-slate-600 hover:bg-[#f4f9ff]"
                 }`}
               >
                 <span
                   className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                     checked
-                      ? "border-[#102f62] bg-[#102f62] text-white"
+                      ? "border-[#397dc2] bg-[#397dc2] text-white"
                       : "border-slate-300"
                   }`}
                 >
-                  {checked && <Check size={12} />}
+                  {checked && (
+                    <Check size={12} />
+                  )}
                 </span>
-                <span className="break-words">{service}</span>
+
+                <span className="break-words">
+                  {service}
+                </span>
               </button>
             );
           })}
@@ -504,12 +700,17 @@ function ServicesDropdown({ value, onChange }) {
           {selected.map((service) => (
             <span
               key={service}
-              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-800"
+              className="inline-flex max-w-full items-center gap-1 rounded-lg border border-[#cfe3fb] bg-[#edf6ff] px-2 py-1 text-[11px] font-medium text-[#2867a9]"
             >
-              <span className="truncate">{service}</span>
+              <span className="truncate">
+                {service}
+              </span>
+
               <button
                 type="button"
-                onClick={() => toggleService(service)}
+                onClick={() =>
+                  toggleService(service)
+                }
                 aria-label={`Remove ${service}`}
               >
                 <X size={12} />
@@ -521,6 +722,10 @@ function ServicesDropdown({ value, onChange }) {
     </div>
   );
 }
+
+/* =========================================
+   FORM FIELD
+========================================= */
 
 function Field({
   label,
@@ -534,16 +739,23 @@ function Field({
 }) {
   return (
     <div className="min-w-0 space-y-1.5">
-      <label className="block text-xs font-semibold text-[#344767]">
+      <label className="block text-xs font-semibold text-[#416184]">
         {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
+
+        {required && (
+          <span className="ml-1 text-red-500">
+            *
+          </span>
+        )}
       </label>
 
       {options ? (
         <Dropdown
           value={value}
           options={options}
-          onChange={(selected) => onChange(name, selected)}
+          onChange={(selected) =>
+            onChange(name, selected)
+          }
         />
       ) : (
         <input
@@ -553,16 +765,34 @@ function Field({
             onChange(
               name,
               type === "tel"
-                ? event.target.value.replace(/\D/g, "").slice(0, 10)
+                ? event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10)
                 : event.target.value
             )
           }
           placeholder={placeholder}
           required={required}
-          min={type === "number" ? "0" : undefined}
-          step={type === "number" ? "0.01" : undefined}
-          inputMode={type === "tel" ? "numeric" : undefined}
-          maxLength={type === "tel" ? 10 : undefined}
+          min={
+            type === "number"
+              ? "0"
+              : undefined
+          }
+          step={
+            type === "number"
+              ? "0.01"
+              : undefined
+          }
+          inputMode={
+            type === "tel"
+              ? "numeric"
+              : undefined
+          }
+          maxLength={
+            type === "tel"
+              ? 10
+              : undefined
+          }
           className={inputClass}
         />
       )}
@@ -570,22 +800,40 @@ function Field({
   );
 }
 
-function SectionTitle({ icon: Icon, title }) {
+/* =========================================
+   SECTION TITLE
+========================================= */
+
+function SectionTitle({
+  icon: Icon,
+  title,
+}) {
   return (
-    <div className="mb-4 flex items-center gap-2.5 border-b border-[#edf1f6] pb-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf3fc] text-[#17477e]">
+    <div className="mb-4 flex items-center gap-2.5 border-b border-[#e5f0fc] pb-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e3f1ff] text-[#397bc0]">
         <Icon size={17} />
       </div>
-      <h3 className="text-sm font-bold text-[#10264d]">{title}</h3>
+
+      <h3 className="text-sm font-bold text-[#174574]">
+        {title}
+      </h3>
     </div>
   );
 }
 
-function Badge({ value, colors }) {
+/* =========================================
+   BADGE
+========================================= */
+
+function Badge({
+  value,
+  colors,
+}) {
   return (
     <span
       className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-        colors[value] || "border-slate-200 bg-slate-50 text-slate-600"
+        colors[value] ||
+        "border-slate-200 bg-slate-50 text-slate-600"
       }`}
     >
       {value || "—"}
@@ -593,31 +841,83 @@ function Badge({ value, colors }) {
   );
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
+/* =========================================
+   PREMIUM ANIMATED STAT CARD
+========================================= */
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+  onReplaySound,
+}) {
+  const {
+    display,
+    replay,
+  } = useCountUp(value, 1500);
+
+  const isMoney =
+    title === "Pending Balance";
+
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-[#e5ebf3] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-[#8290a5] sm:text-sm">
+    <button
+      type="button"
+      onClick={() => {
+        replay();
+        onReplaySound?.();
+      }}
+      title="Click to replay number animation"
+      className="group relative flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[22px] border border-[#cfe2f8] bg-gradient-to-br from-white via-[#f0f7ff] to-[#deeeff] p-4 text-left shadow-[0_8px_25px_rgba(49,113,182,0.09)] transition duration-300 hover:-translate-y-1 hover:border-[#a8cef7] hover:shadow-[0_15px_32px_rgba(49,113,182,0.16)] sm:p-5"
+    >
+      <div className="pointer-events-none absolute -right-9 -top-9 h-28 w-28 rounded-full bg-white/40" />
+
+      <div className="relative z-10 min-w-0">
+        <p className="text-xs font-semibold text-[#6487ad] sm:text-sm">
           {title}
         </p>
-        <h2 className="mt-2 truncate whitespace-nowrap text-lg font-extrabold text-[#10264d] sm:text-xl xl:text-2xl">
-          {value}
+
+        <h2 className="mt-2 truncate whitespace-nowrap text-xl font-extrabold tabular-nums tracking-tight text-[#174574] sm:text-2xl">
+          {isMoney
+            ? money(display)
+            : display.toLocaleString(
+                "en-IN"
+              )}
         </h2>
+
+        <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-[#8aaccd]">
+          <RotateCcw size={11} />
+          Click to replay
+        </div>
       </div>
 
-      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
-        <Icon size={21} />
+      <div
+        className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 shadow-sm ${color}`}
+      >
+        <Icon size={23} />
       </div>
-    </div>
+    </button>
   );
 }
 
-function Detail({ label, value }) {
+/* =========================================
+   DETAIL
+========================================= */
+
+function Detail({
+  label,
+  value,
+}) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-[#10264d]">
-        {value === "" || value === undefined || value === null
+      <p className="text-[11px] text-[#91a7c0]">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-semibold text-[#174574]">
+        {value === "" ||
+        value === undefined ||
+        value === null
           ? "—"
           : value}
       </p>
@@ -625,14 +925,24 @@ function Detail({ label, value }) {
   );
 }
 
+/* =========================================
+   MAIN COMPONENT
+========================================= */
+
 export default function EventManagement() {
   const [events, setEvents] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved =
+        localStorage.getItem(
+          STORAGE_KEY
+        );
 
       if (saved !== null) {
         const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : DEMO_DATA;
+
+        return Array.isArray(parsed)
+          ? parsed
+          : DEMO_DATA;
       }
 
       return DEMO_DATA;
@@ -641,176 +951,299 @@ export default function EventManagement() {
     }
   });
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [typeFilter, setTypeFilter] = useState("All");
+  const [search, setSearch] =
+    useState("");
 
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState("All");
+
+  const [
+    typeFilter,
+    setTypeFilter,
+  ] = useState("All");
+
+  const [open, setOpen] =
+    useState(false);
+
+  const [
+    editingId,
+    setEditingId,
+  ] = useState(null);
+
   const [form, setForm] = useState({
     ...emptyForm,
     services: [],
   });
 
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [soundEnabled, setSoundEnabled] = useState(() => {
+  const [notice, setNotice] =
+    useState("");
+
+  const [soundEnabled] = useState(() => {
     try {
-      return localStorage.getItem(SOUND_KEY) !== "false";
+      return (
+        localStorage.getItem(
+          SOUND_KEY
+        ) !== "false"
+      );
     } catch {
       return true;
     }
   });
 
-  const firstInputRef = useRef(null);
+  const firstInputRef =
+    useRef(null);
 
-  const sound = (type = "click") => {
-    if (soundEnabled) playTone(type);
+  const sound = (
+    type = "click"
+  ) => {
+    if (soundEnabled) {
+      playTone(type);
+    }
   };
+
+  /* =========================================
+     LOCAL STORAGE
+  ========================================= */
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(events)
+      );
     } catch {
       // Ignore storage errors.
     }
   }, [events]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(SOUND_KEY, String(soundEnabled));
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [soundEnabled]);
+  /* =========================================
+     NOTIFICATION
+  ========================================= */
 
   useEffect(() => {
     if (!notice) return;
 
-    const timer = setTimeout(() => setNotice(""), 3000);
+    const timer = setTimeout(
+      () => setNotice(""),
+      3000
+    );
 
-    return () => clearTimeout(timer);
+    return () =>
+      clearTimeout(timer);
   }, [notice]);
+
+  /* =========================================
+     MODAL
+  ========================================= */
 
   useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const previousOverflow =
+      document.body.style.overflow;
 
-    const timer = setTimeout(() => firstInputRef.current?.focus(), 30);
+    document.body.style.overflow =
+      "hidden";
+
+    const timer = setTimeout(
+      () =>
+        firstInputRef.current?.focus(),
+      30
+    );
 
     const escape = (event) => {
-      if (event.key === "Escape") {
+      if (
+        event.key === "Escape"
+      ) {
         setOpen(false);
         setEditingId(null);
         setError("");
       }
     };
 
-    window.addEventListener("keydown", escape);
+    window.addEventListener(
+      "keydown",
+      escape
+    );
 
     return () => {
       clearTimeout(timer);
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", escape);
+
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        escape
+      );
     };
   }, [open]);
 
-  const filteredEvents = useMemo(() => {
-    const query = search.toLowerCase().trim();
+  /* =========================================
+     SEARCH & FILTER
+  ========================================= */
 
-    return events.filter((item) => {
-      const matchesSearch = [
-        item.eventName,
-        item.customer,
-        item.phone,
-        item.eventType,
-        item.venue,
-        item.coordinator,
-        item.status,
-        item.priority,
-        item.id,
-        ...(Array.isArray(item.services) ? item.services : []),
-      ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
+  const filteredEvents =
+    useMemo(() => {
+      const query = search
+        .toLowerCase()
+        .trim();
+
+      return events.filter(
+        (item) => {
+          const matchesSearch = [
+            item.eventName,
+            item.customer,
+            item.phone,
+            item.eventType,
+            item.venue,
+            item.coordinator,
+            item.status,
+            item.priority,
+            item.id,
+            ...(Array.isArray(
+              item.services
+            )
+              ? item.services
+              : []),
+          ].some((value) =>
+            String(value || "")
+              .toLowerCase()
+              .includes(query)
+          );
+
+          const matchesStatus =
+            statusFilter ===
+              "All" ||
+            item.status ===
+              statusFilter;
+
+          const matchesType =
+            typeFilter ===
+              "All" ||
+            item.eventType ===
+              typeFilter;
+
+          return (
+            matchesSearch &&
+            matchesStatus &&
+            matchesType
+          );
+        }
       );
+    }, [
+      events,
+      search,
+      statusFilter,
+      typeFilter,
+    ]);
 
-      const matchesStatus =
-        statusFilter === "All" || item.status === statusFilter;
+  /* =========================================
+     STATISTICS
+  ========================================= */
 
-      const matchesType =
-        typeFilter === "All" || item.eventType === typeFilter;
+  const totalBalance =
+    events.reduce(
+      (sum, item) =>
+        sum + balanceOf(item),
+      0
+    );
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [events, search, statusFilter, typeFilter]);
+  const planningCount =
+    events.filter(
+      (item) =>
+        item.status === "Planning"
+    ).length;
 
-  const totalBalance = events.reduce(
-    (sum, item) =>
-      sum +
-      Math.max(
-        0,
-        Number(item.amount || 0) - Number(item.advance || 0)
-      ),
-    0
-  );
+  const completedCount =
+    events.filter(
+      (item) =>
+        item.status === "Completed"
+    ).length;
 
   const stats = [
     {
       title: "Total Events",
       value: events.length,
       icon: PartyPopper,
-      color: "bg-blue-50 text-blue-700",
+      color:
+        "bg-[#dbeeff] text-[#357dc6]",
     },
     {
       title: "Planning Events",
-      value: events.filter((item) => item.status === "Planning").length,
+      value: planningCount,
       icon: ClipboardList,
-      color: "bg-indigo-50 text-indigo-700",
+      color:
+        "bg-[#d5e7ff] text-[#416fb9]",
     },
     {
       title: "Completed Events",
-      value: events.filter((item) => item.status === "Completed").length,
+      value: completedCount,
       icon: CheckCircle2,
-      color: "bg-emerald-50 text-emerald-700",
+      color:
+        "bg-[#dcf6ee] text-[#238a72]",
     },
     {
       title: "Pending Balance",
-      value: money(totalBalance),
+      value: totalBalance,
       icon: Wallet,
-      color: "bg-amber-50 text-amber-700",
+      color:
+        "bg-[#fff0d6] text-[#b17c25]",
     },
   ];
 
-  const updateForm = (name, value) => {
+  /* =========================================
+     FORM FUNCTIONS
+  ========================================= */
+
+  const updateForm = (
+    name,
+    value
+  ) => {
     setForm((previous) => ({
       ...previous,
       [name]: value,
     }));
 
-    if (error) setError("");
+    if (error) {
+      setError("");
+    }
   };
 
   const openAdd = () => {
     sound("open");
+
     setEditingId(null);
-    setForm({ ...emptyForm, services: [] });
+
+    setForm({
+      ...emptyForm,
+      services: [],
+    });
+
     setError("");
     setOpen(true);
   };
 
   const openEdit = (item) => {
     sound("open");
+
     setEditingId(item.id);
+
     setForm({
       ...emptyForm,
       ...item,
-      services: Array.isArray(item.services)
+      services: Array.isArray(
+        item.services
+      )
         ? [...item.services]
         : [],
     });
+
     setError("");
     setOpen(true);
   };
@@ -818,43 +1251,93 @@ export default function EventManagement() {
   const closeForm = () => {
     setOpen(false);
     setEditingId(null);
-    setForm({ ...emptyForm, services: [] });
+
+    setForm({
+      ...emptyForm,
+      services: [],
+    });
+
     setError("");
   };
+
+  /* =========================================
+     SAVE EVENT
+  ========================================= */
 
   const saveEvent = (event) => {
     event.preventDefault();
 
-    const customer = String(form.customer || "").trim();
-    const eventName = String(form.eventName || "").trim();
-    const phone = String(form.phone || "").trim();
+    const customer = String(
+      form.customer || ""
+    ).trim();
 
-    if (!customer || !eventName) {
-      setError("Please enter event name and customer name.");
+    const eventName = String(
+      form.eventName || ""
+    ).trim();
+
+    const phone = String(
+      form.phone || ""
+    ).trim();
+
+    const venue = String(
+      form.venue || ""
+    ).trim();
+
+    if (
+      !customer ||
+      !eventName
+    ) {
+      setError(
+        "Please enter event name and customer name."
+      );
       return;
     }
 
-    if (!/^\d{10}$/.test(phone)) {
-      setError("Please enter a valid 10-digit phone number.");
+    if (
+      !/^\d{10}$/.test(phone)
+    ) {
+      setError(
+        "Please enter a valid 10-digit phone number."
+      );
       return;
     }
 
-    if (!form.eventDate || !String(form.venue || "").trim()) {
-      setError("Please enter event date and venue.");
+    if (!form.eventType) {
+      setError(
+        "Please select event type."
+      );
+      return;
+    }
+
+    if (
+      !form.eventDate ||
+      !venue
+    ) {
+      setError(
+        "Please enter event date and venue."
+      );
       return;
     }
 
     if (
       form.startTime &&
       form.endTime &&
-      form.endTime <= form.startTime
+      form.endTime <=
+        form.startTime
     ) {
-      setError("End time must be after start time.");
+      setError(
+        "End time must be after start time."
+      );
       return;
     }
 
-    const amount = Number(form.amount);
-    const advance = Number(form.advance);
+    const amount = Number(
+      form.amount
+    );
+
+    const advance = Number(
+      form.advance
+    );
 
     if (
       form.amount === "" ||
@@ -864,167 +1347,246 @@ export default function EventManagement() {
       amount < 0 ||
       advance < 0
     ) {
-      setError("Please enter valid payment amounts.");
+      setError(
+        "Please enter valid payment amounts."
+      );
       return;
     }
 
-    if (advance > amount) {
-      setError("Advance amount cannot exceed total amount.");
+    if (
+      advance > amount
+    ) {
+      setError(
+        "Advance amount cannot exceed total amount."
+      );
       return;
     }
 
     const record = {
       ...form,
+
       id:
         editingId !== null
           ? editingId
-          : globalThis.crypto?.randomUUID?.() ||
+          : globalThis.crypto
+              ?.randomUUID?.() ||
             `EVENT-${Date.now()}`,
+
       eventName,
       customer,
       phone,
-      venue: String(form.venue || "").trim(),
-      guests: Number(form.guests || 0),
+      venue,
+
+      guests: Number(
+        form.guests || 0
+      ),
+
       amount,
       advance,
-      services: Array.isArray(form.services) ? form.services : [],
+
+      services: Array.isArray(
+        form.services
+      )
+        ? form.services
+        : [],
     };
 
-    if (editingId !== null) {
+    if (
+      editingId !== null
+    ) {
       setEvents((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? record : item
+        previous.map(
+          (item) =>
+            item.id ===
+            editingId
+              ? record
+              : item
         )
       );
 
-      setNotice("Event updated successfully.");
+      setNotice(
+        "Event updated successfully."
+      );
     } else {
-      setEvents((previous) => [record, ...previous]);
-      setNotice("Event added successfully.");
+      setEvents((previous) => [
+        record,
+        ...previous,
+      ]);
+
+      setNotice(
+        "Event added successfully."
+      );
     }
 
     sound("success");
     closeForm();
   };
 
+  /* =========================================
+     DELETE EVENT
+  ========================================= */
+
   const deleteEvent = (item) => {
     if (
-      !window.confirm(`Delete "${item.eventName}" event?`)
+      !window.confirm(
+        `Delete "${item.eventName}" event?`
+      )
     ) {
       return;
     }
 
     setEvents((previous) =>
-      previous.filter((record) => record.id !== item.id)
-    );
-
-    sound("delete");
-    setNotice("Event deleted successfully.");
-  };
-
-  const updateStatus = (id, status) => {
-    setEvents((previous) =>
-      previous.map((item) =>
-        item.id === id ? { ...item, status } : item
+      previous.filter(
+        (record) =>
+          record.id !== item.id
       )
     );
 
-    sound();
-    setNotice("Event status updated.");
+    sound("delete");
+
+    setNotice(
+      "Event deleted successfully."
+    );
+  };
+
+  /* =========================================
+     UPDATE STATUS
+  ========================================= */
+
+  const updateStatus = (
+    id,
+    status
+  ) => {
+    setEvents((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status,
+            }
+          : item
+      )
+    );
+
+    sound("click");
+
+    setNotice(
+      "Event status updated."
+    );
   };
 
   return (
-    <div className="min-h-screen w-full min-w-0 bg-[#f5f7fb] px-3 py-5 text-[#10264d] sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+    <div className="min-h-screen w-full min-w-0 bg-gradient-to-br from-[#f9fcff] via-[#f0f7ff] to-[#e5f1ff] px-3 py-5 text-[#174574] sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-[1500px] space-y-6">
-        {/* NOTIFICATION */}
+
+        {/* =====================================
+            NOTIFICATION
+        ===================================== */}
+
         {notice &&
           createPortal(
-            <div className="fixed left-3 right-3 top-4 z-[10001] flex items-center gap-3 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 shadow-xl sm:left-auto sm:right-5 sm:max-w-md">
+            <div className="fixed left-3 right-3 top-4 z-[10001] flex items-center gap-3 rounded-xl border border-[#cfe2f8] bg-white px-4 py-3 shadow-xl sm:left-auto sm:right-5 sm:max-w-md">
               <CheckCircle2
                 size={19}
                 className="shrink-0 text-emerald-600"
               />
-              <p className="flex-1 text-sm font-semibold">
+
+              <p className="flex-1 text-sm font-semibold text-[#174574]">
                 {notice}
               </p>
+
               <button
                 type="button"
-                onClick={() => setNotice("")}
+                onClick={() =>
+                  setNotice("")
+                }
                 aria-label="Close notification"
               >
-                <X size={16} className="text-slate-400" />
+                <X
+                  size={16}
+                  className="text-slate-400"
+                />
               </button>
             </div>,
             document.body
           )}
 
-        {/* HEADER */}
+        {/* =====================================
+            HEADER
+        ===================================== */}
+
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            {/* <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.17em] text-[#7e93af]">
-              Studio Raw Picturez ERP
-            </p> */}
+          <div className="min-w-0" />
 
-            <div className="flex items-center gap-3">
-              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                <PartyPopper size={22} />
-              </div> */}
-
-              <div className="min-w-0">
-                {/* <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl lg:text-[29px]">
-                  Event Management
-                </h1> */}
-                {/* <p className="mt-1 text-xs text-[#8290a5] sm:text-sm">
-                  Manage events, planning, coordinators and payments.
-                </p> */}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={openAdd}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#102f62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1c477e]"
-            >
-              <Plus size={18} />
-              Add Event
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#347cc7] to-[#5ba3e7] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(53,125,198,0.2)] transition hover:from-[#286bb4] hover:to-[#468fd5]"
+          >
+            <Plus size={18} />
+            Add Event
+          </button>
         </div>
 
-        {/* STATISTICS */}
+        {/* =====================================
+            ANIMATED STAT CARDS
+        ===================================== */}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
+            <StatCard
+              key={stat.title}
+              {...stat}
+              onReplaySound={() =>
+                sound("click")
+              }
+            />
           ))}
         </div>
 
-        {/* EVENT DIRECTORY */}
-        <section className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-[#edf1f6] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-            <div>
-              <h2 className="text-lg font-bold">Event Bookings</h2>
-              <p className="mt-1 text-xs text-[#8290a5]">
+        {/* =====================================
+            EVENT BOOKINGS
+        ===================================== */}
+
+        <section className="min-w-0 rounded-[24px] border border-[#cfe2f8] bg-white shadow-[0_8px_30px_rgba(49,113,182,0.07)]">
+
+          {/* DIRECTORY HEADER */}
+
+          <div className="flex flex-col gap-4 rounded-t-[24px] border-b border-[#e1eefc] bg-gradient-to-r from-white to-[#edf6ff] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-[#174574]">
+                Event Bookings
+              </h2>
+
+              <p className="mt-1 text-xs text-[#8aa5c1]">
                 {filteredEvents.length} events found
               </p>
             </div>
 
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-[230px_190px_160px]">
+
+              {/* SEARCH */}
+
               <div className="relative sm:col-span-2 lg:col-span-1">
                 <Search
                   size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#91abc8]"
                 />
 
                 <input
                   type="search"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
                   placeholder="Search events..."
                   className={`${inputClass} pl-10`}
                 />
               </div>
+
+              {/* EVENT TYPE FILTER */}
 
               <Dropdown
                 value={
@@ -1032,14 +1594,23 @@ export default function EventManagement() {
                     ? "All Event Types"
                     : typeFilter
                 }
-                options={["All Event Types", ...EVENT_TYPES]}
+                options={[
+                  "All Event Types",
+                  ...EVENT_TYPES,
+                ]}
                 onChange={(value) => {
                   setTypeFilter(
-                    value === "All Event Types" ? "All" : value
+                    value ===
+                      "All Event Types"
+                      ? "All"
+                      : value
                   );
-                  sound();
+
+                  sound("click");
                 }}
               />
+
+              {/* STATUS FILTER */}
 
               <Dropdown
                 value={
@@ -1047,167 +1618,251 @@ export default function EventManagement() {
                     ? "All Status"
                     : statusFilter
                 }
-                options={["All Status", ...STATUSES]}
+                options={[
+                  "All Status",
+                  ...STATUSES,
+                ]}
                 onChange={(value) => {
                   setStatusFilter(
-                    value === "All Status" ? "All" : value
+                    value ===
+                      "All Status"
+                      ? "All"
+                      : value
                   );
-                  sound();
+
+                  sound("click");
                 }}
               />
             </div>
           </div>
 
-          {/* MOBILE / TABLET CARDS */}
+          {/* =====================================
+              MOBILE / TABLET CARDS
+          ===================================== */}
+
           <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-5 xl:hidden">
-            {filteredEvents.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center sm:col-span-2">
-                <Users size={32} className="mx-auto text-slate-300" />
-                <p className="mt-3 text-sm text-slate-500">
+            {filteredEvents.length ===
+            0 ? (
+              <div className="rounded-xl border border-dashed border-[#cfe2f8] bg-[#f6fbff] px-4 py-12 text-center sm:col-span-2">
+                <Users
+                  size={32}
+                  className="mx-auto text-[#a9c7e7]"
+                />
+
+                <p className="mt-3 text-sm text-[#829db9]">
                   No events found.
                 </p>
               </div>
             ) : (
-              filteredEvents.map((item) => (
-                <article
-                  key={item.id}
-                  className="min-w-0 rounded-2xl border border-[#e5ebf3] bg-white shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-2 border-b border-[#edf1f6] bg-[#f8fafd] p-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf1fc] text-[#315f9a]">
-                        <PartyPopper size={19} />
-                      </div>
+              filteredEvents.map(
+                (item) => (
+                  <article
+                    key={item.id}
+                    className="min-w-0 rounded-2xl border border-[#cfe2f8] bg-white shadow-[0_5px_18px_rgba(49,113,182,0.06)]"
+                  >
 
-                      <div className="min-w-0">
-                        <h3 className="break-words text-sm font-bold">
-                          {item.eventName}
-                        </h3>
-                        <p className="mt-1 text-xs text-[#7e93af]">
-                          {item.customer}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          <Badge
-                            value={item.status}
-                            colors={STATUS_COLORS}
-                          />
-                          <Badge
-                            value={item.priority}
-                            colors={PRIORITY_COLORS}
+                    {/* CARD HEADER */}
+
+                    <div className="flex items-start justify-between gap-2 rounded-t-2xl border-b border-[#e1eefc] bg-gradient-to-r from-[#f4faff] to-[#e7f3ff] p-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#dceeff] text-[#397bc0]">
+                          <PartyPopper
+                            size={19}
                           />
                         </div>
+
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-bold text-[#174574]">
+                            {
+                              item.eventName
+                            }
+                          </h3>
+
+                          <p className="mt-1 text-xs text-[#7e9dbd]">
+                            {
+                              item.customer
+                            }
+                          </p>
+
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <Badge
+                              value={
+                                item.status
+                              }
+                              colors={
+                                STATUS_COLORS
+                              }
+                            />
+
+                            <Badge
+                              value={
+                                item.priority
+                              }
+                              colors={
+                                PRIORITY_COLORS
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openEdit(
+                              item
+                            )
+                          }
+                          aria-label="Edit event"
+                          className="rounded-lg bg-[#e1f0ff] p-2 text-[#347cc7] hover:bg-[#cfe5fc]"
+                        >
+                          <Pencil
+                            size={16}
+                          />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteEvent(
+                              item
+                            )
+                          }
+                          aria-label="Delete event"
+                          className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100"
+                        >
+                          <Trash2
+                            size={16}
+                          />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(item)}
-                        aria-label="Edit event"
-                        className="rounded-lg bg-blue-50 p-2 text-blue-700"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                    {/* DETAILS */}
 
-                      <button
-                        type="button"
-                        onClick={() => deleteEvent(item)}
-                        aria-label="Delete event"
-                        className="rounded-lg bg-red-50 p-2 text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="grid grid-cols-2 gap-4 p-4">
+                      <Detail
+                        label="Event Type"
+                        value={
+                          item.eventType
+                        }
+                      />
+
+                      <Detail
+                        label="Event Date"
+                        value={formatDate(
+                          item.eventDate
+                        )}
+                      />
+
+                      <Detail
+                        label="Start Time"
+                        value={
+                          item.startTime ||
+                          "—"
+                        }
+                      />
+
+                      <Detail
+                        label="End Time"
+                        value={
+                          item.endTime ||
+                          "—"
+                        }
+                      />
+
+                      <Detail
+                        label="Venue"
+                        value={
+                          item.venue
+                        }
+                      />
+
+                      <Detail
+                        label="Coordinator"
+                        value={
+                          item.coordinator
+                        }
+                      />
+
+                      <Detail
+                        label="Guests"
+                        value={
+                          item.guests
+                        }
+                      />
+
+                      <Detail
+                        label="Phone"
+                        value={
+                          item.phone
+                        }
+                      />
+
+                      <Detail
+                        label="Total Budget"
+                        value={money(
+                          item.amount
+                        )}
+                      />
+
+                      <Detail
+                        label="Advance Paid"
+                        value={money(
+                          item.advance
+                        )}
+                      />
+
+                      <Detail
+                        label="Pending Balance"
+                        value={money(
+                          balanceOf(
+                            item
+                          )
+                        )}
+                      />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4 p-4">
-                    <Detail label="Event Type" value={item.eventType} />
-                    <Detail
-                      label="Event Date"
-                      value={formatDate(item.eventDate)}
-                    />
-                    <Detail
-                      label="Start Time"
-                      value={item.startTime || "—"}
-                    />
-                    <Detail
-                      label="End Time"
-                      value={item.endTime || "—"}
-                    />
-                    <Detail label="Venue" value={item.venue} />
-                    <Detail
-                      label="Coordinator"
-                      value={item.coordinator}
-                    />
-                    <Detail label="Guests" value={item.guests} />
-                    <Detail label="Phone" value={item.phone} />
-                    <Detail
-                      label="Total Budget"
-                      value={money(item.amount)}
-                    />
-                    <Detail
-                      label="Advance Paid"
-                      value={money(item.advance)}
-                    />
-                    <Detail
-                      label="Pending Balance"
-                      value={money(
-                        Math.max(
-                          0,
-                          Number(item.amount || 0) -
-                            Number(item.advance || 0)
-                        )
-                      )}
-                    />
-                  </div>
+                    {/* STATUS */}
 
-                  <div className="border-t border-[#edf1f6] px-4 py-3">
-                    <p className="mb-2 text-xs font-semibold text-[#52627b]">
-                      Event Services
-                    </p>
+                    <div className="rounded-b-2xl border-t border-[#e5f0fc] bg-[#f7fbff] px-4 py-3">
+                      <p className="mb-2 text-xs font-semibold text-[#5e7fa2]">
+                        Update Status
+                      </p>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {Array.isArray(item.services) &&
-                      item.services.length > 0 ? (
-                        item.services.map((service) => (
-                          <span
-                            key={service}
-                            className="rounded-lg bg-[#edf3fc] px-2 py-1 text-[11px] font-medium text-[#315f9a]"
-                          >
-                            {service}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400">
-                          No services selected
-                        </span>
-                      )}
+                      <Dropdown
+                        value={
+                          item.status ||
+                          "Planning"
+                        }
+                        options={
+                          STATUSES
+                        }
+                        onChange={(
+                          status
+                        ) =>
+                          updateStatus(
+                            item.id,
+                            status
+                          )
+                        }
+                      />
                     </div>
-                  </div>
-
-                  <div className="border-t border-[#edf1f6] bg-[#fafcff] px-4 py-3">
-                    <p className="mb-2 text-xs font-semibold text-[#52627b]">
-                      Update Status
-                    </p>
-
-                    <Dropdown
-                      value={item.status || "Planning"}
-                      options={STATUSES}
-                      onChange={(status) =>
-                        updateStatus(item.id, status)
-                      }
-                    />
-                  </div>
-                </article>
-              ))
+                  </article>
+                )
+              )
             )}
           </div>
 
-          {/* DESKTOP TABLE */}
+          {/* =====================================
+              DESKTOP TABLE
+          ===================================== */}
+
           <div className="hidden w-full overflow-x-auto xl:block">
             <table className="w-full min-w-[1200px] border-collapse text-left text-sm">
-              <thead className="bg-[#f7f9fd]">
-                <tr className="text-[11px] font-bold uppercase tracking-wide text-[#8290a5]">
+              <thead className="bg-[#eaf4ff]">
+                <tr className="text-[11px] font-bold uppercase tracking-wide text-[#688db3]">
                   {[
                     "Event / Customer",
                     "Event Type",
@@ -1220,153 +1875,249 @@ export default function EventManagement() {
                     "Priority",
                     "Status",
                     "Actions",
-                  ].map((heading) => (
-                    <th
-                      key={heading}
-                      className="whitespace-nowrap px-4 py-4"
-                    >
-                      {heading}
-                    </th>
-                  ))}
+                  ].map(
+                    (heading) => (
+                      <th
+                        key={
+                          heading
+                        }
+                        className="whitespace-nowrap px-4 py-4"
+                      >
+                        {
+                          heading
+                        }
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-[#edf1f6]">
-                {filteredEvents.length === 0 ? (
+              <tbody className="divide-y divide-[#e6f0fc]">
+                {filteredEvents.length ===
+                0 ? (
                   <tr>
                     <td
                       colSpan={11}
-                      className="px-4 py-16 text-center text-slate-400"
+                      className="px-4 py-16 text-center text-[#91abc8]"
                     >
                       No events found.
                     </td>
                   </tr>
                 ) : (
-                  filteredEvents.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition hover:bg-[#f8faff]"
-                    >
-                      <td className="px-4 py-4">
-                        <p className="font-semibold text-[#10264d]">
-                          {item.eventName}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {item.customer}
-                        </p>
-                        <p className="mt-1 text-[11px] text-slate-400">
-                          {item.phone}
-                        </p>
-                      </td>
+                  filteredEvents.map(
+                    (item) => (
+                      <tr
+                        key={
+                          item.id
+                        }
+                        className="transition hover:bg-[#f2f8ff]"
+                      >
 
-                      <td className="px-4 py-4 text-[#52627b]">
-                        {item.eventType}
-                      </td>
+                        {/* EVENT */}
 
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <p className="text-[#52627b]">
-                          {formatDate(item.eventDate)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {item.startTime || "—"} -{" "}
-                          {item.endTime || "—"}
-                        </p>
-                      </td>
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-[#174574]">
+                            {
+                              item.eventName
+                            }
+                          </p>
 
-                      <td className="px-4 py-4 text-[#52627b]">
-                        {item.venue || "—"}
-                      </td>
+                          <p className="mt-1 text-xs text-[#91abc8]">
+                            {
+                              item.customer
+                            }
+                          </p>
 
-                      <td className="px-4 py-4 text-[#52627b]">
-                        {item.coordinator || "—"}
-                      </td>
+                          <p className="mt-1 text-[11px] text-[#91abc8]">
+                            {
+                              item.phone
+                            }
+                          </p>
+                        </td>
 
-                      <td className="px-4 py-4 text-[#52627b]">
-                        {item.guests || "—"}
-                      </td>
+                        {/* TYPE */}
 
-                      <td className="whitespace-nowrap px-4 py-4 font-semibold">
-                        {money(item.amount)}
-                      </td>
+                        <td className="px-4 py-4 text-[#587796]">
+                          {item.eventType ||
+                            "—"}
+                        </td>
 
-                      <td className="whitespace-nowrap px-4 py-4 font-semibold text-red-600">
-                        {money(
-                          Math.max(
-                            0,
-                            Number(item.amount || 0) -
-                              Number(item.advance || 0)
-                          )
-                        )}
-                      </td>
+                        {/* DATE */}
 
-                      <td className="px-4 py-4">
-                        <Badge
-                          value={item.priority}
-                          colors={PRIORITY_COLORS}
-                        />
-                      </td>
+                        <td className="whitespace-nowrap px-4 py-4">
+                          <p className="text-[#587796]">
+                            {formatDate(
+                              item.eventDate
+                            )}
+                          </p>
 
-                      <td className="min-w-[160px] px-4 py-4">
-                        <div className="mb-2">
+                          <p className="mt-1 text-xs text-[#91abc8]">
+                            {item.startTime ||
+                              "—"}{" "}
+                            -{" "}
+                            {item.endTime ||
+                              "—"}
+                          </p>
+                        </td>
+
+                        {/* VENUE */}
+
+                        <td className="px-4 py-4 text-[#587796]">
+                          {item.venue ||
+                            "—"}
+                        </td>
+
+                        {/* COORDINATOR */}
+
+                        <td className="px-4 py-4 text-[#587796]">
+                          {item.coordinator ||
+                            "—"}
+                        </td>
+
+                        {/* GUESTS */}
+
+                        <td className="px-4 py-4 text-[#587796]">
+                          {item.guests ||
+                            "—"}
+                        </td>
+
+                        {/* BUDGET */}
+
+                        <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#174574]">
+                          {money(
+                            item.amount
+                          )}
+                        </td>
+
+                        {/* BALANCE */}
+
+                        <td className="whitespace-nowrap px-4 py-4 font-semibold text-red-600">
+                          {money(
+                            balanceOf(
+                              item
+                            )
+                          )}
+                        </td>
+
+                        {/* PRIORITY */}
+
+                        <td className="px-4 py-4">
                           <Badge
-                            value={item.status}
-                            colors={STATUS_COLORS}
+                            value={
+                              item.priority
+                            }
+                            colors={
+                              PRIORITY_COLORS
+                            }
                           />
-                        </div>
+                        </td>
 
-                        <Dropdown
-                          value={item.status || "Planning"}
-                          options={STATUSES}
-                          onChange={(status) =>
-                            updateStatus(item.id, status)
-                          }
-                        />
-                      </td>
+                        {/* STATUS */}
 
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(item)}
-                            title="Edit event"
-                            className="rounded-lg p-2 text-blue-700 hover:bg-blue-50"
-                          >
-                            <Pencil size={17} />
-                          </button>
+                        <td className="min-w-[160px] px-4 py-4">
+                          <div className="mb-2">
+                            <Badge
+                              value={
+                                item.status
+                              }
+                              colors={
+                                STATUS_COLORS
+                              }
+                            />
+                          </div>
 
-                          <button
-                            type="button"
-                            onClick={() => deleteEvent(item)}
-                            title="Delete event"
-                            className="rounded-lg p-2 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                          <Dropdown
+                            value={
+                              item.status ||
+                              "Planning"
+                            }
+                            options={
+                              STATUSES
+                            }
+                            onChange={(
+                              status
+                            ) =>
+                              updateStatus(
+                                item.id,
+                                status
+                              )
+                            }
+                          />
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEdit(
+                                  item
+                                )
+                              }
+                              title="Edit event"
+                              className="rounded-lg p-2 text-[#347cc7] hover:bg-[#e5f2ff]"
+                            >
+                              <Pencil
+                                size={17}
+                              />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deleteEvent(
+                                  item
+                                )
+                              }
+                              title="Delete event"
+                              className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2
+                                size={17}
+                              />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )
                 )}
               </tbody>
             </table>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#edf1f6] px-4 py-4 text-xs text-[#8290a5] sm:px-6">
+          {/* FOOTER */}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-b-[24px] border-t border-[#e1eefc] bg-[#f8fbff] px-4 py-4 text-xs text-[#8aa5c1] sm:px-6">
             <span>
-              Showing {filteredEvents.length} of {events.length} events
+              Showing{" "}
+              {filteredEvents.length}{" "}
+              of {events.length}{" "}
+              events
             </span>
-            <span>Studio Raw Picturez ERP</span>
+
+            <span>
+              Studio Raw Picturez ERP
+            </span>
           </div>
         </section>
       </div>
 
-      {/* ADD / EDIT MODAL */}
+      {/* =====================================
+          ADD / EDIT MODAL
+      ===================================== */}
+
       {open &&
         createPortal(
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07172d]/70 p-2 backdrop-blur-[3px] sm:p-4"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
                 closeForm();
               }
             }}
@@ -1375,29 +2126,38 @@ export default function EventManagement() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="event-modal-title"
-              className="flex max-h-[calc(100dvh-16px)] w-full max-w-[820px] flex-col overflow-hidden rounded-2xl border border-[#dce5f1] bg-white shadow-2xl sm:max-h-[calc(100dvh-32px)]"
+              className="flex max-h-[calc(100dvh-16px)] w-full max-w-[820px] flex-col overflow-hidden rounded-2xl border border-[#cfe2f8] bg-white shadow-2xl sm:max-h-[calc(100dvh-32px)]"
             >
+
               {/* MODAL HEADER */}
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e9eef5] bg-white px-4 py-4 sm:px-7 sm:py-5">
+
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#dceafb] bg-gradient-to-r from-white to-[#eaf4ff] px-4 py-4 sm:px-7 sm:py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102f62] text-white">
-                    {editingId !== null ? (
-                      <Pencil size={19} />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#347cc7] to-[#69adea] text-white">
+                    {editingId !==
+                    null ? (
+                      <Pencil
+                        size={19}
+                      />
                     ) : (
-                      <PartyPopper size={20} />
+                      <PartyPopper
+                        size={20}
+                      />
                     )}
                   </div>
 
                   <div className="min-w-0">
                     <h2
                       id="event-modal-title"
-                      className="text-base font-bold sm:text-xl"
+                      className="text-base font-bold text-[#174574] sm:text-xl"
                     >
-                      {editingId !== null
+                      {editingId !==
+                      null
                         ? "Edit Event"
                         : "Add New Event"}
                     </h2>
-                    <p className="mt-1 text-xs text-[#8290a5]">
+
+                    <p className="mt-1 text-xs text-[#8aa5c1]">
                       Enter event planning and booking details
                     </p>
                   </div>
@@ -1405,43 +2165,68 @@ export default function EventManagement() {
 
                 <button
                   type="button"
-                  onClick={closeForm}
+                  onClick={
+                    closeForm
+                  }
                   aria-label="Close form"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#6e8ba9] hover:bg-[#e3f1ff]"
                 >
                   <X size={20} />
                 </button>
               </div>
 
+              {/* FORM */}
+
               <form
-                onSubmit={saveEvent}
+                onSubmit={
+                  saveEvent
+                }
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6">
-                  {/* CUSTOMER DETAILS */}
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain bg-gradient-to-b from-white to-[#f8fbff] px-4 py-5 sm:px-7 sm:py-6">
+
+                  {/* CUSTOMER */}
+
                   <section>
                     <SectionTitle
-                      icon={UserRound}
+                      icon={
+                        UserRound
+                      }
                       title="Customer Information"
                     />
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="min-w-0 space-y-1.5">
-                        <label className="block text-xs font-semibold text-[#344767]">
+                        <label className="block text-xs font-semibold text-[#416184]">
                           Customer / Client Name
-                          <span className="ml-1 text-red-500">*</span>
+
+                          <span className="ml-1 text-red-500">
+                            *
+                          </span>
                         </label>
 
                         <input
-                          ref={firstInputRef}
+                          ref={
+                            firstInputRef
+                          }
                           type="text"
-                          value={form.customer}
-                          onChange={(event) =>
-                            updateForm("customer", event.target.value)
+                          value={
+                            form.customer
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateForm(
+                              "customer",
+                              event.target
+                                .value
+                            )
                           }
                           placeholder="Enter customer name"
                           required
-                          className={inputClass}
+                          className={
+                            inputClass
+                          }
                         />
                       </div>
 
@@ -1449,8 +2234,12 @@ export default function EventManagement() {
                         label="Phone Number"
                         name="phone"
                         type="tel"
-                        value={form.phone}
-                        onChange={updateForm}
+                        value={
+                          form.phone
+                        }
+                        onChange={
+                          updateForm
+                        }
                         placeholder="Enter 10-digit phone number"
                         required
                       />
@@ -1458,9 +2247,12 @@ export default function EventManagement() {
                   </section>
 
                   {/* EVENT DETAILS */}
+
                   <section>
                     <SectionTitle
-                      icon={CalendarDays}
+                      icon={
+                        CalendarDays
+                      }
                       title="Event Information"
                     />
 
@@ -1468,8 +2260,12 @@ export default function EventManagement() {
                       <Field
                         label="Event Name"
                         name="eventName"
-                        value={form.eventName}
-                        onChange={updateForm}
+                        value={
+                          form.eventName
+                        }
+                        onChange={
+                          updateForm
+                        }
                         placeholder="Enter event name"
                         required
                       />
@@ -1477,9 +2273,15 @@ export default function EventManagement() {
                       <Field
                         label="Event Type"
                         name="eventType"
-                        value={form.eventType}
-                        onChange={updateForm}
-                        options={EVENT_TYPES}
+                        value={
+                          form.eventType
+                        }
+                        onChange={
+                          updateForm
+                        }
+                        options={
+                          EVENT_TYPES
+                        }
                         required
                       />
 
@@ -1487,20 +2289,39 @@ export default function EventManagement() {
                         label="Event Date"
                         name="eventDate"
                         type="date"
-                        value={form.eventDate}
-                        onChange={updateForm}
+                        value={
+                          form.eventDate
+                        }
+                        onChange={
+                          updateForm
+                        }
                         required
                       />
 
                       <Field
                         label="Venue / Location"
                         name="venue"
-                        value={form.venue}
-                        onChange={updateForm}
+                        value={
+                          form.venue
+                        }
+                        onChange={
+                          updateForm
+                        }
                         options={
-                          VENUES.includes(form.venue)
+                          VENUES.includes(
+                            form.venue
+                          )
                             ? VENUES
-                            : [form.venue, ...VENUES]
+                            : [
+                                ...(
+                                  form.venue
+                                    ? [
+                                        form.venue,
+                                      ]
+                                    : []
+                                ),
+                                ...VENUES,
+                              ]
                         }
                         required
                       />
@@ -1509,27 +2330,50 @@ export default function EventManagement() {
                         label="Start Time"
                         name="startTime"
                         type="time"
-                        value={form.startTime}
-                        onChange={updateForm}
+                        value={
+                          form.startTime
+                        }
+                        onChange={
+                          updateForm
+                        }
                       />
 
                       <Field
                         label="End Time"
                         name="endTime"
                         type="time"
-                        value={form.endTime}
-                        onChange={updateForm}
+                        value={
+                          form.endTime
+                        }
+                        onChange={
+                          updateForm
+                        }
                       />
 
                       <Field
                         label="Event Coordinator"
                         name="coordinator"
-                        value={form.coordinator}
-                        onChange={updateForm}
+                        value={
+                          form.coordinator
+                        }
+                        onChange={
+                          updateForm
+                        }
                         options={
-                          COORDINATORS.includes(form.coordinator)
+                          COORDINATORS.includes(
+                            form.coordinator
+                          )
                             ? COORDINATORS
-                            : [form.coordinator, ...COORDINATORS]
+                            : [
+                                ...(
+                                  form.coordinator
+                                    ? [
+                                        form.coordinator,
+                                      ]
+                                    : []
+                                ),
+                                ...COORDINATORS,
+                              ]
                         }
                       />
 
@@ -1537,52 +2381,55 @@ export default function EventManagement() {
                         label="Expected Guests"
                         name="guests"
                         type="number"
-                        value={form.guests}
-                        onChange={updateForm}
+                        value={
+                          form.guests
+                        }
+                        onChange={
+                          updateForm
+                        }
                         placeholder="Enter number of guests"
                       />
 
                       <Field
                         label="Event Priority"
                         name="priority"
-                        value={form.priority}
-                        onChange={updateForm}
-                        options={PRIORITIES}
+                        value={
+                          form.priority
+                        }
+                        onChange={
+                          updateForm
+                        }
+                        options={
+                          PRIORITIES
+                        }
                       />
 
                       <Field
                         label="Event Status"
                         name="status"
-                        value={form.status}
-                        onChange={updateForm}
-                        options={STATUSES}
+                        value={
+                          form.status
+                        }
+                        onChange={
+                          updateForm
+                        }
+                        options={
+                          STATUSES
+                        }
                       />
                     </div>
                   </section>
 
-                  {/* SERVICES */}
-                  <section>
-                    <SectionTitle
-                      icon={BriefcaseBusiness}
-                      title="Event Services"
-                    />
-
-                    <p className="mb-3 text-xs text-[#8290a5]">
-                      Select one or multiple services from the dropdown.
-                    </p>
-
-                    <ServicesDropdown
-                      value={form.services}
-                      onChange={(services) =>
-                        updateForm("services", services)
-                      }
-                    />
-                  </section>
+                  {/* SERVICES SECTION HIDDEN
+                      SAME AS ORIGINAL CODE */}
 
                   {/* PAYMENT */}
+
                   <section>
                     <SectionTitle
-                      icon={IndianRupee}
+                      icon={
+                        IndianRupee
+                      }
                       title="Budget & Payment Details"
                     />
 
@@ -1591,8 +2438,12 @@ export default function EventManagement() {
                         label="Total Event Budget (₹)"
                         name="amount"
                         type="number"
-                        value={form.amount}
-                        onChange={updateForm}
+                        value={
+                          form.amount
+                        }
+                        onChange={
+                          updateForm
+                        }
                         placeholder="Enter event budget"
                         required
                       />
@@ -1601,24 +2452,36 @@ export default function EventManagement() {
                         label="Advance Paid (₹)"
                         name="advance"
                         type="number"
-                        value={form.advance}
-                        onChange={updateForm}
+                        value={
+                          form.advance
+                        }
+                        onChange={
+                          updateForm
+                        }
                         placeholder="Enter advance amount"
                         required
                       />
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dce8f7] bg-[#edf3fc] px-4 py-3">
-                      <span className="text-sm font-semibold text-[#315f9a]">
+                    {/* BALANCE */}
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#cde2fa] bg-gradient-to-r from-[#edf6ff] to-[#dceeff] px-4 py-3">
+                      <span className="text-sm font-semibold text-[#397bc0]">
                         Remaining Balance
                       </span>
 
-                      <span className="text-lg font-extrabold text-[#102f62]">
+                      <span className="text-lg font-extrabold text-[#174574]">
                         {money(
                           Math.max(
                             0,
-                            Number(form.amount || 0) -
-                              Number(form.advance || 0)
+                            Number(
+                              form.amount ||
+                                0
+                            ) -
+                              Number(
+                                form.advance ||
+                                  0
+                              )
                           )
                         )}
                       </span>
@@ -1626,22 +2489,33 @@ export default function EventManagement() {
                   </section>
 
                   {/* NOTES */}
+
                   <section>
                     <SectionTitle
-                      icon={FileText}
+                      icon={
+                        FileText
+                      }
                       title="Additional Information"
                     />
 
                     <label className="block space-y-2">
-                      <span className="text-xs font-semibold text-[#344767]">
+                      <span className="text-xs font-semibold text-[#416184]">
                         Additional Notes
                       </span>
 
                       <textarea
                         rows={3}
-                        value={form.notes}
-                        onChange={(event) =>
-                          updateForm("notes", event.target.value)
+                        value={
+                          form.notes
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateForm(
+                            "notes",
+                            event.target
+                              .value
+                          )
                         }
                         placeholder="Enter event requirements, special instructions or planning notes..."
                         className={`${inputClass} resize-y`}
@@ -1649,33 +2523,44 @@ export default function EventManagement() {
                     </label>
                   </section>
 
+                  {/* ERROR */}
+
                   {error && (
                     <div
                       role="alert"
                       className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600"
                     >
-                      <AlertCircle size={18} className="shrink-0" />
+                      <AlertCircle
+                        size={18}
+                        className="shrink-0"
+                      />
+
                       {error}
                     </div>
                   )}
                 </div>
 
                 {/* MODAL FOOTER */}
-                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#e9eef5] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
+
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-[#dceafb] bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-7">
                   <button
                     type="button"
-                    onClick={closeForm}
-                    className="w-full rounded-xl border border-[#dce5f1] bg-[#f8fafd] px-6 py-3 text-sm font-semibold text-[#344767] hover:bg-[#edf3fc] sm:w-auto"
+                    onClick={
+                      closeForm
+                    }
+                    className="w-full rounded-xl border border-[#cfe2f8] bg-[#f4f9ff] px-6 py-3 text-sm font-semibold text-[#416184] transition hover:bg-[#e5f2ff] sm:w-auto"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#102f62] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1c477e] sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#347cc7] to-[#5ba3e7] px-6 py-3 text-sm font-semibold text-white transition hover:from-[#286bb4] hover:to-[#468fd5] sm:w-auto"
                   >
                     <Save size={17} />
-                    {editingId !== null
+
+                    {editingId !==
+                    null
                       ? "Update Event"
                       : "Save Event"}
                   </button>

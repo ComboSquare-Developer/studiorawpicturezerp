@@ -1,126 +1,304 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
+  Users,
+  UserRound,
+  ContactRound,
   Plus,
   Search,
+  Filter,
   X,
-  Users,
   Pencil,
   Trash2,
   Phone,
   Mail,
   MapPin,
-  CalendarDays,
   ChevronDown,
-  UserRound,
+  ChevronLeft,
+  ChevronRight,
+  HeartHandshake,
+  Globe2,
+  FileText,
+  Save,
   CheckCircle2,
   AlertCircle,
-  ShieldCheck,
-  Save,
-  Eye,
-  ContactRound,
-  Volume2,
-  VolumeX,
-  FileText,
-  Globe2,
-  HeartHandshake,
+  Clock3,
+  BarChart3,
   Camera,
-  Sparkles,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 
-/* =====================================================
-   STORAGE
-===================================================== */
+/* =========================================
+   STORAGE & CONSTANTS
+========================================= */
 
 const STORAGE_KEY = "studio_raw_customers";
-const DEMO_SEED_KEY = "studio_raw_customers_demo_v4_100";
-const SOUND_KEY = "studioraw_customers_sounds";
+const DEMO_KEY = "studio_raw_customers_demo_v4_100";
+const PAYMENT_KEY = "studioraw_payments";
+const BOOKING_KEY = "studioraw_bookings";
+const UPDATE_EVENT = "studioraw:data-updated";
+const PAGE_SIZE = 10;
 
-/* =====================================================
-   ORIGINAL 100 DUMMY CUSTOMERS - UNCHANGED
-===================================================== */
-
-const sampleNames = [
-  ["Arun Kumar", "Male", "Nagercoil", "Instagram"],
-  ["Priya Devi", "Female", "Kanyakumari", "Referral"],
-  ["Karthik Raj", "Male", "Marthandam", "Facebook"],
-  ["Divya S", "Female", "Thuckalay", "Instagram"],
-  ["Vijay Anand", "Male", "Nagercoil", "Walk-in"],
-  ["Meena R", "Female", "Colachel", "Website"],
-  ["Sanjay Kumar", "Male", "Chennai", "Referral"],
-  ["Nithya P", "Female", "Tirunelveli", "Instagram"],
-  ["Rahul M", "Male", "Kuzhithurai", "Facebook"],
-  ["Anitha S", "Female", "Nagercoil", "Walk-in"],
-  ["Ajith Kumar", "Male", "Kanyakumari", "Instagram"],
-  ["Swetha R", "Female", "Chennai", "Referral"],
-  ["Dinesh B", "Male", "Nagercoil", "Website"],
-  ["Keerthana V", "Female", "Marthandam", "Instagram"],
-  ["Praveen Raj", "Male", "Tirunelveli", "Facebook"],
-  ["Aishwarya S", "Female", "Thuckalay", "Referral"],
-  ["Manoj Kumar", "Male", "Nagercoil", "Walk-in"],
-  ["Harini P", "Female", "Kanyakumari", "Instagram"],
-  ["Suresh Babu", "Male", "Colachel", "Referral"],
-  ["Deepika R", "Female", "Chennai", "Website"],
-  ["Vishnu Kumar", "Male", "Nagercoil", "Instagram"],
-  ["Lavanya M", "Female", "Marthandam", "Facebook"],
-  ["Aravind S", "Male", "Tirunelveli", "Walk-in"],
-  ["Janani K", "Female", "Nagercoil", "Referral"],
-  ["Bala Murugan", "Male", "Kuzhithurai", "Instagram"],
-  ["Pavithra S", "Female", "Thuckalay", "Website"],
-  ["Ramesh Kumar", "Male", "Kanyakumari", "Referral"],
-  ["Gayathri P", "Female", "Nagercoil", "Facebook"],
-  ["Naveen Raj", "Male", "Chennai", "Instagram"],
-  ["Monisha R", "Female", "Colachel", "Walk-in"],
-  ["Ashwin Kumar", "Male", "Nagercoil", "Instagram"],
-  ["Reshma P", "Female", "Tirunelveli", "Referral"],
-  ["Gokul Raj", "Male", "Marthandam", "Facebook"],
-  ["Abinaya S", "Female", "Kanyakumari", "Website"],
-  ["Mohan Raj", "Male", "Chennai", "Walk-in"],
-  ["Lakshmi P", "Female", "Nagercoil", "Instagram"],
-  ["Sathish Kumar", "Male", "Thuckalay", "Referral"],
-  ["Shalini R", "Female", "Colachel", "Facebook"],
-  ["Vignesh S", "Male", "Nagercoil", "Instagram"],
-  ["Yamini P", "Female", "Kuzhithurai", "Website"],
-  ["Prakash Raj", "Male", "Tirunelveli", "Walk-in"],
-  ["Varsha S", "Female", "Chennai", "Referral"],
-  ["Kishore Kumar", "Male", "Nagercoil", "Instagram"],
-  ["Sandhiya R", "Female", "Kanyakumari", "Facebook"],
-  ["Ranjith Kumar", "Male", "Marthandam", "Walk-in"],
-  ["Sneha P", "Female", "Thuckalay", "Instagram"],
-  ["Hari Prasad", "Male", "Nagercoil", "Referral"],
-  ["Dhanya S", "Female", "Tirunelveli", "Website"],
-  ["Muthu Kumar", "Male", "Colachel", "Facebook"],
-  ["Kavya R", "Female", "Chennai", "Instagram"],
+const sources = [
+  "Instagram",
+  "Facebook",
+  "Referral",
+  "Walk-in",
+  "Website",
 ];
 
-const customerNotes = [
+const names = [
+  "Arun Kumar", "Priya Devi", "Karthik Raj", "Divya S",
+  "Vijay Anand", "Meena R", "Sanjay Kumar", "Nithya P",
+  "Rahul M", "Anitha S", "Ajith Kumar", "Swetha R",
+  "Dinesh B", "Keerthana V", "Praveen Raj", "Aishwarya S",
+  "Manoj Kumar", "Harini P", "Suresh Babu", "Deepika R",
+  "Vishnu Kumar", "Lavanya M", "Aravind S", "Janani K",
+  "Bala Murugan", "Pavithra S", "Ramesh Kumar",
+  "Gayathri P", "Naveen Raj", "Monisha R", "Ashwin Kumar",
+  "Reshma P", "Gokul Raj", "Abinaya S", "Mohan Raj",
+  "Lakshmi P", "Sathish Kumar", "Shalini R", "Vignesh S",
+  "Yamini P", "Prakash Raj", "Varsha S", "Kishore Kumar",
+  "Sandhiya R", "Ranjith Kumar", "Sneha P", "Hari Prasad",
+  "Dhanya S", "Muthu Kumar", "Kavya R",
+];
+
+const cities = [
+  "Nagercoil",
+  "Kanyakumari",
+  "Marthandam",
+  "Thuckalay",
+  "Colachel",
+  "Chennai",
+  "Tirunelveli",
+  "Kuzhithurai",
+  "Madurai",
+];
+
+const demoNotes = [
   "Wedding photography enquiry",
-  "Pre-wedding photography customer",
-  "Birthday event photography",
-  "Family portrait booking",
+  "Pre-wedding photography",
+  "Birthday event coverage",
+  "Family portrait session",
   "Album printing enquiry",
-  "Regular studio customer",
-  "Engagement photography enquiry",
-  "Maternity photoshoot enquiry",
-  "Traditional wedding coverage",
-  "Candid photography package",
-  "Outdoor photoshoot booking",
-  "Wedding videography enquiry",
+  "Engagement photography",
+  "Candid wedding photography",
+  "Traditional wedding photography",
+  "Wedding videography",
+  "Outdoor photoshoot",
 ];
 
-function createDummyCustomers() {
+const emptyForm = {
+  name: "",
+  phone: "",
+  email: "",
+  gender: "",
+  language: "Tamil",
+  source: "",
+  address: "",
+  notes: "",
+};
+
+/* =========================================
+   HELPERS
+========================================= */
+
+function todayLocal() {
+  const date = new Date();
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function readStoredArray(key) {
+  try {
+    const raw = localStorage.getItem(key);
+
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+
+    if (Array.isArray(parsed)) return parsed;
+
+    for (const field of [
+      "data",
+      "records",
+      "items",
+      "list",
+      "customers",
+      "payments",
+      "bookings",
+    ]) {
+      if (Array.isArray(parsed?.[field])) {
+        return parsed[field];
+      }
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function notifyDataUpdated(key = STORAGE_KEY) {
+  window.dispatchEvent(
+    new CustomEvent(UPDATE_EVENT, {
+      detail: {
+        key,
+        module: "customers",
+      },
+    })
+  );
+}
+
+function generateCustomerId(customers) {
+  const existing = new Set(
+    customers.map((customer) => String(customer.id))
+  );
+
+  let id;
+
+  do {
+    id = `CUS${Date.now()}${Math.floor(
+      Math.random() * 10000
+    )}`;
+  } while (existing.has(id));
+
+  return id;
+}
+
+function normalizePhone(value) {
+  return String(value ?? "")
+    .replace(/\D/g, "")
+    .slice(-10);
+}
+
+function recordMatchesCustomer(record, customer) {
+  const customerId = String(customer.id || "").trim();
+
+  const linkedId = String(
+    record.customerId ?? record.clientId ?? ""
+  ).trim();
+
+  if (linkedId && customerId) {
+    return linkedId === customerId;
+  }
+
+  const customerPhone = normalizePhone(customer.phone);
+
+  const recordPhone = normalizePhone(
+    record.phone ??
+      record.customerPhone ??
+      record.mobile ??
+      record.contactNumber ??
+      ""
+  );
+
+  if (customerPhone && recordPhone) {
+    return customerPhone === recordPhone;
+  }
+
+  return false;
+}
+
+function hasCustomerLinkedRecords(
+  customer,
+  payments,
+  bookings
+) {
+  return (
+    payments.some((payment) =>
+      recordMatchesCustomer(payment, customer)
+    ) ||
+    bookings.some((booking) =>
+      recordMatchesCustomer(booking, customer)
+    )
+  );
+}
+
+function initials(name = "") {
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0] || "")
+    .join("")
+    .toUpperCase();
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  const date = new Date(
+    `${String(value).slice(0, 10)}T12:00:00`
+  );
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getCity(address) {
+  return (
+    String(address || "").split(",")[0].trim() ||
+    "Unknown"
+  );
+}
+
+const avatarColors = [
+  "bg-blue-100 text-blue-700",
+  "bg-violet-100 text-violet-700",
+  "bg-rose-100 text-rose-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+];
+
+function avatarColor(name) {
+  const number = String(name || "")
+    .split("")
+    .reduce(
+      (sum, character) => sum + character.charCodeAt(0),
+      0
+    );
+
+  return avatarColors[number % avatarColors.length];
+}
+
+/* =========================================
+   DEMO CUSTOMERS
+========================================= */
+
+function generateDemoCustomers() {
   return Array.from({ length: 100 }, (_, index) => {
-    const person = sampleNames[index % sampleNames.length];
-    const date = new Date(2026, index % 10, (index % 28) + 1);
     const number = index + 1;
+    const baseName = names[index % names.length];
 
     const name =
-      index < sampleNames.length
-        ? person[0]
-        : `${person[0]} ${
-            Math.floor(index / sampleNames.length) + 1
+      index < names.length
+        ? baseName
+        : `${baseName} ${
+            Math.floor(index / names.length) + 1
           }`;
+
+    const date = new Date(
+      2026,
+      index % 10,
+      (index % 28) + 1
+    );
 
     return {
       id: `CUS${String(number).padStart(3, "0")}`,
@@ -129,13 +307,12 @@ function createDummyCustomers() {
       email: `${name
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "")}${number}@example.com`,
-      address: `${person[2]}, Tamil Nadu`,
-      gender: person[1],
-      status: index % 7 === 0 ? "Inactive" : "Active",
+      address: `${cities[index % cities.length]}, Tamil Nadu`,
+      gender: index % 2 === 0 ? "Male" : "Female",
       language:
         index % 5 === 0 ? "Tamil & English" : "Tamil",
-      source: person[3],
-      notes: customerNotes[index % customerNotes.length],
+      source: sources[index % sources.length],
+      notes: demoNotes[index % demoNotes.length],
       createdAt: [
         date.getFullYear(),
         String(date.getMonth() + 1).padStart(2, "0"),
@@ -146,215 +323,259 @@ function createDummyCustomers() {
   });
 }
 
-const initialCustomers = createDummyCustomers();
-
 function loadCustomers() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const parsed = saved ? JSON.parse(saved) : [];
-    const existing = Array.isArray(parsed) ? parsed : [];
+    const existing = readStoredArray(STORAGE_KEY);
 
-    if (localStorage.getItem(DEMO_SEED_KEY) === "true") {
+    if (localStorage.getItem(DEMO_KEY) === "true") {
       return existing;
     }
 
-    const existingIds = new Set(
-      existing.map((item) => String(item.id))
+    const ids = new Set(
+      existing.map((customer) => String(customer.id))
     );
 
-    const existingPhones = new Set(
-      existing.map((item) => String(item.phone))
+    const phones = new Set(
+      existing.map((customer) =>
+        normalizePhone(customer.phone)
+      )
     );
 
-    const missingDemo = initialCustomers.filter(
-      (item) =>
-        !existingIds.has(String(item.id)) &&
-        !existingPhones.has(String(item.phone))
+    const missing = generateDemoCustomers().filter(
+      (customer) =>
+        !ids.has(String(customer.id)) &&
+        !phones.has(normalizePhone(customer.phone))
     );
 
-    const merged = [...existing, ...missingDemo];
+    const merged = [...existing, ...missing];
 
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(merged)
     );
-    localStorage.setItem(DEMO_SEED_KEY, "true");
+
+    localStorage.setItem(DEMO_KEY, "true");
 
     return merged;
   } catch {
-    return initialCustomers;
+    return generateDemoCustomers();
   }
 }
 
-/* =====================================================
-   HELPERS
-===================================================== */
+/* =========================================
+   3D PAGE ANIMATIONS
+   NO FORM / MODAL ANIMATIONS
+========================================= */
 
-const emptyForm = {
-  name: "",
-  phone: "",
-  email: "",
-  address: "",
-  gender: "",
-  language: "Tamil",
-  source: "",
-  notes: "",
-};
+function CustomerAnimationStyles() {
+  return (
+    <style>{`
+      .customer-3d-reveal {
+        opacity: 0;
+        transform:
+          perspective(1100px)
+          translate3d(0, 38px, -25px)
+          rotateX(7deg)
+          scale(0.97);
+        transform-origin: center center;
+        transition:
+          opacity 650ms ease,
+          transform 750ms cubic-bezier(0.22,1,0.36,1),
+          box-shadow 300ms ease;
+        will-change: transform, opacity;
+      }
 
-const inputClass =
-  "w-full min-w-0 rounded-xl border border-[#e1e7f0] bg-white px-4 py-3 text-sm text-[#17233b] outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-[#8ea9d4] focus:ring-[3px] focus:ring-blue-100/70";
+      .customer-3d-reveal.customer-3d-visible {
+        opacity: 1;
+        transform:
+          perspective(1100px)
+          translate3d(0,0,0)
+          rotateX(0deg)
+          scale(1);
+        animation:
+          customerFloat3D 5s ease-in-out 750ms infinite;
+      }
 
-function formatDate(date) {
-  if (!date) return "—";
+      @keyframes customerFloat3D {
+        0%, 100% {
+          transform:
+            perspective(1100px)
+            translate3d(0,0,0)
+            rotateX(0deg);
+        }
 
-  const parsed = new Date(date);
+        50% {
+          transform:
+            perspective(1100px)
+            translate3d(0,-7px,0)
+            rotateX(1.5deg);
+        }
+      }
 
-  if (Number.isNaN(parsed.getTime())) return "—";
+      .customer-3d-reveal.customer-3d-visible:hover {
+        animation-play-state: paused;
+        box-shadow:
+          0 16px 30px rgba(16,43,83,0.10);
+      }
 
-  return parsed.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+      .customer-table-row {
+        transition:
+          background-color 220ms ease,
+          transform 280ms ease;
+      }
 
-function getInitials(name) {
-  return String(name || "C")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-}
+      .customer-table-row:hover {
+        background-color: #eef5ff;
+      }
 
-const avatarThemes = [
-  "bg-blue-50 text-blue-700",
-  "bg-violet-50 text-violet-700",
-  "bg-rose-50 text-rose-700",
-  "bg-emerald-50 text-emerald-700",
-  "bg-amber-50 text-amber-700",
-  "bg-cyan-50 text-cyan-700",
-];
+      .customer-source-bar {
+        transition:
+          width 800ms cubic-bezier(0.22,1,0.36,1);
+      }
 
-const borderThemes = [
-  "customer-border-blue",
-  "customer-border-violet",
-  "customer-border-rose",
-  "customer-border-green",
-  "customer-border-amber",
-  "customer-border-cyan",
-];
+      .customer-action-button {
+        transition:
+          transform 200ms ease,
+          background-color 200ms ease,
+          box-shadow 200ms ease;
+      }
 
-/* =====================================================
-   SOUNDS
-===================================================== */
+      .customer-action-button:hover {
+        transform: translateY(-2px);
+      }
 
-function useCustomerSounds() {
-  const [enabled, setEnabled] = useState(
-    () => localStorage.getItem(SOUND_KEY) !== "false"
+      @media (prefers-reduced-motion: reduce) {
+        .customer-3d-reveal,
+        .customer-3d-reveal.customer-3d-visible {
+          opacity: 1 !important;
+          transform: none !important;
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .customer-action-button:hover {
+          transform: none !important;
+        }
+      }
+    `}</style>
   );
+}
 
-  const audioRef = useRef(null);
+function useCustomerScrollAnimation(
+  containerRef,
+  dependencies
+) {
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  const play = (type = "click") => {
-    if (!enabled) return;
+    const elements = container.querySelectorAll(
+      ".customer-3d-reveal"
+    );
 
-    try {
-      const AudioClass =
-        window.AudioContext || window.webkitAudioContext;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
-      if (!AudioClass) return;
+    if (
+      reducedMotion ||
+      !("IntersectionObserver" in window)
+    ) {
+      elements.forEach((element) =>
+        element.classList.add("customer-3d-visible")
+      );
 
-      if (!audioRef.current) {
-        audioRef.current = new AudioClass();
-      }
-
-      const ctx = audioRef.current;
-
-      if (ctx.state === "suspended") {
-        ctx.resume().catch(() => {});
-      }
-
-      const patterns = {
-        click: [520],
-        open: [420, 580],
-        success: [440, 660, 880],
-        delete: [440, 300],
-        error: [250, 210],
-      };
-
-      const notes = patterns[type] || patterns.click;
-
-      notes.forEach((frequency, index) => {
-        const start = ctx.currentTime + index * 0.075;
-        const oscillator = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(
-          frequency,
-          start
-        );
-
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(
-          0.028,
-          start + 0.012
-        );
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          start + 0.14
-        );
-
-        oscillator.connect(gain);
-        gain.connect(ctx.destination);
-
-        oscillator.start(start);
-        oscillator.stop(start + 0.15);
-      });
-    } catch {
-      // Optional sound
+      return;
     }
-  };
 
-  const toggle = () => {
-    const next = !enabled;
-    setEnabled(next);
-    localStorage.setItem(SOUND_KEY, String(next));
-  };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add(
+              "customer-3d-visible"
+            );
+          } else {
+            entry.target.classList.remove(
+              "customer-3d-visible"
+            );
+          }
+        });
+      },
+      {
+        threshold: 0.08,
+        rootMargin: "0px 0px -10px 0px",
+      }
+    );
+
+    elements.forEach((element) =>
+      observer.observe(element)
+    );
+
+    return () => observer.disconnect();
+  }, dependencies);
+}
+
+/* =========================================
+   AUTO COUNT ANIMATION
+========================================= */
+
+function AnimatedCustomerCount({ value }) {
+  const [count, setCount] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const elementRef = useRef(null);
 
   useEffect(() => {
-    return () => {
-      audioRef.current?.close?.().catch(() => {});
-    };
+    const element = elementRef.current;
+    if (!element) return;
+
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setVisible(entry.isIntersecting);
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
   }, []);
 
-  return { enabled, toggle, play };
-}
-
-/* =====================================================
-   ANIMATED NUMBER
-===================================================== */
-
-function AnimatedNumber({ value }) {
-  const [display, setDisplay] = useState(0);
-
   useEffect(() => {
+    if (!visible) {
+      setCount(0);
+      return;
+    }
+
+    const target = Number(value) || 0;
+
+    if (
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches
+    ) {
+      setCount(target);
+      return;
+    }
+
     let frame;
-    let start = null;
+    const duration = 1100;
+    const start = performance.now();
 
-    const animate = (time) => {
-      if (start === null) start = time;
-
+    const animate = (now) => {
       const progress = Math.min(
-        (time - start) / 850,
+        (now - start) / duration,
         1
       );
 
       const eased = 1 - Math.pow(1 - progress, 3);
 
-      setDisplay(Math.round(value * eased));
+      setCount(Math.round(target * eased));
 
       if (progress < 1) {
         frame = requestAnimationFrame(animate);
@@ -364,100 +585,366 @@ function AnimatedNumber({ value }) {
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
-  }, [value]);
+  }, [value, visible]);
 
-  return display.toLocaleString("en-IN");
+  return (
+    <span ref={elementRef}>
+      {count.toLocaleString("en-IN")}
+    </span>
+  );
 }
 
-/* =====================================================
-   PREMIUM SUMMARY CARDS
-===================================================== */
+/* =========================================
+   SUMMARY CARDS
+========================================= */
 
-const summaryThemes = {
+const statThemes = {
   blue: {
-    bg: "bg-[#eff6ff]",
-    border: "border-[#dbeafe]",
-    icon: "bg-[#dbeafe] text-[#2563eb]",
-    accent: "bg-blue-500",
+    bg: "from-[#edf5ff] via-[#e5f0ff] to-[#d7e8ff]",
+    border: "border-[#bed7ff]",
+    icon: "bg-[#d4e5ff] text-blue-600",
+    label: "text-blue-600",
+    bar: "bg-blue-500",
   },
-  violet: {
-    bg: "bg-[#f5f3ff]",
-    border: "border-[#e9e2ff]",
-    icon: "bg-[#ede9fe] text-[#7c3aed]",
-    accent: "bg-violet-500",
-  },
-  rose: {
-    bg: "bg-[#fff1f5]",
-    border: "border-[#ffe0e9]",
-    icon: "bg-[#ffe4ec] text-[#e11d48]",
-    accent: "bg-rose-500",
+  purple: {
+    bg: "from-[#f5edff] via-[#f0e5ff] to-[#e7d8ff]",
+    border: "border-[#e0ceff]",
+    icon: "bg-[#e6d6ff] text-violet-600",
+    label: "text-violet-600",
+    bar: "bg-violet-500",
   },
   green: {
-    bg: "bg-[#effcf6]",
-    border: "border-[#d4f5e2]",
-    icon: "bg-[#d1fae5] text-[#059669]",
-    accent: "bg-emerald-500",
+    bg: "from-[#edfff5] via-[#e1faed] to-[#d0f5e1]",
+    border: "border-[#acebcf]",
+    icon: "bg-[#d0f4e0] text-emerald-600",
+    label: "text-emerald-600",
+    bar: "bg-emerald-500",
+  },
+  orange: {
+    bg: "from-[#fff9ed] via-[#fff1d9] to-[#ffe8be]",
+    border: "border-[#f9dea1]",
+    icon: "bg-[#ffe7b9] text-amber-600",
+    label: "text-amber-600",
+    bar: "bg-amber-500",
   },
 };
 
 function SummaryCard({
   title,
   value,
+  subtitle,
   icon: Icon,
   theme,
-  index,
 }) {
-  const style = summaryThemes[theme] || summaryThemes.blue;
+  const style = statThemes[theme];
 
   return (
     <div
-      className={`customer-summary group relative min-w-0 overflow-hidden rounded-[22px] border ${style.border} ${style.bg} p-4 sm:p-5`}
-      style={{
-        animationDelay: `${index * 90}ms`,
-      }}
+      className={`customer-3d-reveal relative overflow-hidden rounded-[24px] border bg-gradient-to-br p-5 shadow-sm sm:p-6 ${style.bg} ${style.border}`}
     >
-      <div className="relative z-10 flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-600 sm:text-sm">
+          <p
+            className={`text-xs font-bold sm:text-sm ${style.label}`}
+          >
             {title}
           </p>
 
-          <h3 className="mt-4 text-[30px] font-black tracking-tight text-[#17233b] sm:text-[38px]">
-            <AnimatedNumber value={value} />
-          </h3>
+          <h2 className="mt-5 text-3xl font-black text-[#102b53]">
+            <AnimatedCustomerCount value={value} />
+          </h2>
+
+          <p className="mt-3 text-[11px] text-[#536783]">
+            {subtitle}
+          </p>
         </div>
 
         <div
-          className={`customer-summary-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${style.icon}`}
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${style.icon}`}
         >
-          <Icon size={23} strokeWidth={1.9} />
+          <Icon size={24} />
         </div>
       </div>
 
-      <div className="mt-5 h-1 overflow-hidden rounded-full bg-white/80">
-        <div
-          className={`customer-progress h-full w-[65%] rounded-full ${style.accent}`}
-        />
-      </div>
+      <div
+        className={`absolute bottom-0 left-0 h-1 w-full ${style.bar}`}
+      />
     </div>
   );
 }
 
-/* =====================================================
-   FORM FIELD
-===================================================== */
+/* =========================================
+   SOURCE BADGE
+========================================= */
 
-function FormField({
-  label,
+function SourceBadge({ source }) {
+  const styles = {
+    Instagram:
+      "bg-pink-50 text-pink-600 border-pink-100",
+    Facebook:
+      "bg-blue-50 text-blue-600 border-blue-100",
+    Referral:
+      "bg-violet-50 text-violet-600 border-violet-100",
+    "Walk-in":
+      "bg-amber-50 text-amber-700 border-amber-100",
+    Website:
+      "bg-emerald-50 text-emerald-600 border-emerald-100",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${
+        styles[source] ||
+        "border-slate-200 bg-slate-50 text-slate-600"
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {source || "Unknown"}
+    </span>
+  );
+}
+
+/* =========================================
+   CUSTOMER SOURCES
+========================================= */
+
+function SourceDistribution({ customers }) {
+  const data = useMemo(() => {
+    const counts = {};
+
+    customers.forEach((customer) => {
+      const source = customer.source || "Unknown";
+      counts[source] = (counts[source] || 0) + 1;
+    });
+
+    return Object.entries(counts).sort(
+      (a, b) => b[1] - a[1]
+    );
+  }, [customers]);
+
+  const colors = [
+    "bg-blue-500",
+    "bg-violet-500",
+    "bg-emerald-500",
+    "bg-rose-500",
+    "bg-amber-500",
+  ];
+
+  return (
+    <section className="customer-3d-reveal rounded-[24px] border border-[#e4eaf3] bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold text-[#102b53]">
+            Customer Sources
+          </h3>
+
+          <p className="mt-1 text-xs text-slate-400">
+            Customer acquisition channels
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+          <BarChart3 size={19} />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {data.length ? (
+          data.map(([source, count], index) => {
+            const percentage =
+              (count / Math.max(customers.length, 1)) *
+              100;
+
+            return (
+              <div key={source}>
+                <div className="mb-2 flex justify-between text-xs">
+                  <span className="font-semibold text-slate-600">
+                    {source}
+                  </span>
+
+                  <span className="font-bold text-[#102b53]">
+                    {count} ({Math.round(percentage)}%)
+                  </span>
+                </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className={`customer-source-bar h-full rounded-full ${
+                      colors[index % colors.length]
+                    }`}
+                    style={{
+                      width: `${percentage}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="py-8 text-center text-xs text-slate-400">
+            No source data
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================
+   RECENT CUSTOMERS
+========================================= */
+
+function RecentCustomers({ customers, onView }) {
+  const recent = useMemo(
+    () =>
+      [...customers]
+        .sort((a, b) =>
+          String(b.createdAt || "").localeCompare(
+            String(a.createdAt || "")
+          )
+        )
+        .slice(0, 4),
+    [customers]
+  );
+
+  return (
+    <section className="customer-3d-reveal rounded-[24px] border border-[#e4eaf3] bg-white p-5 shadow-sm sm:p-6">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-extrabold text-[#102b53]">
+            Recent Customers
+          </h3>
+
+          <p className="mt-1 text-xs text-slate-400">
+            Latest customer records
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+          <Clock3 size={19} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {recent.map((customer) => (
+          <button
+            key={customer.id}
+            type="button"
+            onClick={() => onView(customer)}
+            className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-blue-50"
+          >
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${avatarColor(
+                customer.name
+              )}`}
+            >
+              {initials(customer.name)}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-[#102b53]">
+                {customer.name}
+              </p>
+
+              <p className="mt-1 text-[11px] text-slate-400">
+                {getCity(customer.address)}
+              </p>
+            </div>
+
+            <span className="text-[10px] text-slate-400">
+              {formatDate(customer.createdAt)}
+            </span>
+          </button>
+        ))}
+
+        {!recent.length && (
+          <p className="py-8 text-center text-xs text-slate-400">
+            No recent customers
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================
+   MODAL - NO ANIMATION
+========================================= */
+
+function Modal({
   children,
+  onClose,
+  width = "max-w-2xl",
+}) {
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onEscape = (event) => {
+      if (event.key === "Escape") {
+        closeRef.current?.();
+      }
+    };
+
+    window.addEventListener("keydown", onEscape);
+
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener(
+        "keydown",
+        onEscape
+      );
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#09172c]/65 p-3 backdrop-blur-[3px] sm:p-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`flex max-h-[94dvh] w-full ${width} flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl`}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* =========================================
+   FORM FIELD - NO ANIMATION
+========================================= */
+
+function PremiumField({
+  label,
+  icon: Icon,
   required = false,
+  children,
 }) {
   return (
-    <div className="min-w-0 space-y-2">
-      <label className="block text-xs font-semibold text-slate-600">
+    <div className="space-y-2.5">
+      <label className="flex items-center gap-2 text-xs font-bold text-[#30486b]">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#edf4ff] text-[#3465a5]">
+          <Icon size={14} />
+        </span>
+
         {label}
+
         {required && (
-          <span className="ml-1 text-red-500">*</span>
+          <span className="text-red-500">*</span>
         )}
       </label>
 
@@ -466,345 +953,90 @@ function FormField({
   );
 }
 
-/* =====================================================
-   CUSTOMER DETAILS
-===================================================== */
+/* =========================================
+   CUSTOMER ADD / EDIT
+========================================= */
 
-function DetailField({
-  label,
-  value,
-  icon: Icon,
-  full = false,
-}) {
-  return (
-    <div
-      className={`customer-detail-field min-w-0 rounded-2xl border border-[#e7edf5] bg-[#fbfcff] p-4 ${
-        full ? "sm:col-span-2" : ""
-      }`}
-    >
-      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500">
-        <Icon size={15} />
-        {label}
-      </div>
-
-      <p className="whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-[#17233b]">
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
-
-function CustomerDetailsModal({
+function CustomerFormModal({
   customer,
-  onClose,
-  onEdit,
-}) {
-  useEffect(() => {
-    if (!customer) return;
-
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener(
-        "keydown",
-        handleEscape
-      );
-    };
-  }, [customer, onClose]);
-
-  if (!customer) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/55 p-3 backdrop-blur-[3px] sm:p-5"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="customer-details-title"
-        className="customer-modal flex max-h-[94dvh] w-full max-w-[740px] flex-col overflow-hidden rounded-[24px] border border-white bg-white shadow-2xl"
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-5 sm:px-6">
-          <div>
-            <h2
-              id="customer-details-title"
-              className="text-xl font-bold text-[#14233f]"
-            >
-              Customer Details
-            </h2>
-
-            <p className="mt-1 text-xs text-slate-500">
-              {customer.id}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50"
-            aria-label="Close details"
-          >
-            <X size={19} />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-xl font-extrabold text-blue-700">
-              {getInitials(customer.name)}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h3 className="break-words text-lg font-bold text-[#14233f]">
-                {customer.name}
-              </h3>
-
-              <p className="mt-1 text-xs text-slate-500">
-                {customer.id}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <DetailField
-              label="Customer Name"
-              value={customer.name}
-              icon={UserRound}
-            />
-
-            <DetailField
-              label="Customer ID"
-              value={customer.id}
-              icon={ContactRound}
-            />
-
-            <DetailField
-              label="Phone Number"
-              value={customer.phone}
-              icon={Phone}
-            />
-
-            <DetailField
-              label="Email Address"
-              value={customer.email}
-              icon={Mail}
-            />
-
-            <DetailField
-              label="Gender"
-              value={customer.gender}
-              icon={Users}
-            />
-
-            <DetailField
-              label="Preferred Language"
-              value={customer.language}
-              icon={Globe2}
-            />
-
-            <DetailField
-              label="Customer Source"
-              value={customer.source}
-              icon={HeartHandshake}
-            />
-
-            <DetailField
-              label="Added Date"
-              value={formatDate(customer.createdAt)}
-              icon={CalendarDays}
-            />
-
-            <DetailField
-              label="Address"
-              value={customer.address}
-              icon={MapPin}
-              full
-            />
-
-            <DetailField
-              label="Notes"
-              value={customer.notes}
-              icon={FileText}
-              full
-            />
-          </div>
-        </div>
-
-        <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 bg-white p-5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            Close
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onEdit(customer)}
-            className="flex items-center gap-2 rounded-xl bg-[#243a62] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#314e80]"
-          >
-            <Pencil size={16} />
-            Edit Customer
-          </button>
-        </div>
-      </section>
-    </div>,
-    document.body
-  );
-}
-
-/* =====================================================
-   ADD / EDIT CUSTOMER MODAL
-===================================================== */
-
-function CustomerModal({
-  open,
   onClose,
   onSave,
-  customer,
-  playSound,
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() =>
+    customer
+      ? { ...emptyForm, ...customer }
+      : { ...emptyForm }
+  );
+
   const [error, setError] = useState("");
-  const nameRef = useRef(null);
 
-  useEffect(() => {
-    if (!open) return;
-
-    setForm(
-      customer
-        ? {
-            ...emptyForm,
-            ...customer,
-          }
-        : { ...emptyForm }
-    );
-
-    setError("");
-
-    const timer = window.setTimeout(() => {
-      nameRef.current?.focus();
-    }, 30);
-
-    return () => window.clearTimeout(timer);
-  }, [open, customer]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    window.addEventListener(
-      "keydown",
-      handleEscape
-    );
-
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener(
-        "keydown",
-        handleEscape
-      );
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  const updateField = (field, value) => {
+  const update = (name, value) => {
     setForm((previous) => ({
       ...previous,
-      [field]: value,
+      [name]: value,
     }));
+
+    setError("");
   };
 
-  const handleSubmit = (event) => {
+  const submit = (event) => {
     event.preventDefault();
 
-    const name = form.name.trim();
-    const phone = form.phone.trim();
-
-    if (!name || !/^\d{10}$/.test(phone)) {
-      setError(
-        "Enter customer name and a valid 10-digit phone number."
-      );
-      playSound("error");
+    if (!form.name.trim()) {
+      setError("Please enter customer name.");
       return;
     }
 
-    const { status, ...formWithoutStatus } = form;
+    if (!/^\d{10}$/.test(form.phone.trim())) {
+      setError("Enter a valid 10-digit phone number.");
+      return;
+    }
 
     const success = onSave({
-      ...formWithoutStatus,
-      name,
-      phone,
+      ...form,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
       email: form.email.trim(),
       address: form.address.trim(),
       notes: form.notes.trim(),
     });
 
-    if (success !== false) {
-      onClose();
+    if (!success) {
+      setError("This phone number already exists.");
     }
   };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/55 p-3 backdrop-blur-[3px] sm:p-5"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="customer-modal-title"
-        className="customer-modal flex max-h-[calc(100dvh-24px)] w-full max-w-[780px] flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-40px)]"
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:px-7">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+  const inputClass =
+    "w-full rounded-2xl border border-[#dfe7f2] bg-white px-4 py-3.5 text-[13px] font-medium text-[#102b53] outline-none transition placeholder:text-slate-400 hover:border-[#b9cce7] focus:border-[#3265a8] focus:ring-[3px] focus:ring-[#e5efff]";
+
+  return (
+    <Modal onClose={onClose} width="max-w-[660px]">
+      <div className="shrink-0 border-b border-[#e8edf5] bg-white px-5 py-6 sm:px-8">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#102b53] text-white shadow-lg">
               {customer ? (
-                <Pencil size={21} />
+                <Pencil size={23} />
               ) : (
-                <Plus size={22} />
+                <UserRound size={24} />
               )}
             </div>
 
-            <div>
-              <h2
-                id="customer-modal-title"
-                className="text-lg font-bold text-[#14233f]"
-              >
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#5377a5]">
+                Customer Management
+              </p>
+
+              <h2 className="mt-1 text-xl font-black text-[#102b53]">
                 {customer
-                  ? "Edit Customer"
-                  : "Add New Customer"}
+                  ? "Edit Customer Profile"
+                  : "Create Customer Profile"}
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-400">
                 {customer
                   ? "Update customer information"
-                  : "Enter customer details below"}
+                  : "Add a new customer to your studio"}
               </p>
             </div>
           </div>
@@ -812,397 +1044,779 @@ function CustomerModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50"
-            aria-label="Close modal"
+            aria-label="Close"
+            className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+          >
+            <X size={19} />
+          </button>
+        </div>
+      </div>
+
+      <form
+        onSubmit={submit}
+        className="flex min-h-0 flex-1 flex-col bg-[#f9fbff]"
+      >
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-6 sm:px-8">
+          <PremiumField
+            label="Full Name"
+            icon={UserRound}
+            required
+          >
+            <input
+              autoFocus
+              required
+              className={inputClass}
+              value={form.name}
+              onChange={(event) =>
+                update("name", event.target.value)
+              }
+              placeholder="Enter customer's full name"
+            />
+          </PremiumField>
+
+          <PremiumField
+            label="Mobile Number"
+            icon={Phone}
+            required
+          >
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 border-r border-slate-200 pr-3 text-xs font-bold text-[#45658f]">
+                +91
+              </span>
+
+              <input
+                required
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                className={`${inputClass} pl-[69px]`}
+                value={form.phone}
+                onChange={(event) =>
+                  update(
+                    "phone",
+                    event.target.value.replace(/\D/g, "")
+                  )
+                }
+                placeholder="Enter mobile number"
+              />
+            </div>
+          </PremiumField>
+
+          <PremiumField
+            label="Email Address"
+            icon={Mail}
+          >
+            <input
+              type="email"
+              className={inputClass}
+              value={form.email}
+              onChange={(event) =>
+                update("email", event.target.value)
+              }
+              placeholder="customer@example.com"
+            />
+          </PremiumField>
+
+          <PremiumField
+            label="Gender"
+            icon={Users}
+          >
+            <div className="relative">
+              <select
+                className={`${inputClass} appearance-none pr-10`}
+                value={form.gender}
+                onChange={(event) =>
+                  update("gender", event.target.value)
+                }
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          </PremiumField>
+
+          <PremiumField
+            label="Preferred Language"
+            icon={Globe2}
+          >
+            <div className="relative">
+              <select
+                className={`${inputClass} appearance-none pr-10`}
+                value={form.language}
+                onChange={(event) =>
+                  update("language", event.target.value)
+                }
+              >
+                <option value="Tamil">Tamil</option>
+                <option value="English">English</option>
+                <option value="Tamil & English">
+                  Tamil & English
+                </option>
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          </PremiumField>
+
+          <PremiumField
+            label="Customer Source"
+            icon={HeartHandshake}
+          >
+            <div className="relative">
+              <select
+                className={`${inputClass} appearance-none pr-10`}
+                value={form.source}
+                onChange={(event) =>
+                  update("source", event.target.value)
+                }
+              >
+                <option value="">Select Source</option>
+
+                {sources.map((source) => (
+                  <option key={source} value={source}>
+                    {source}
+                  </option>
+                ))}
+
+                <option value="Other">Other</option>
+              </select>
+
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          </PremiumField>
+
+          <PremiumField
+            label="Customer Address"
+            icon={MapPin}
+          >
+            <textarea
+              rows={3}
+              className={`${inputClass} resize-y`}
+              value={form.address}
+              onChange={(event) =>
+                update("address", event.target.value)
+              }
+              placeholder="Enter complete address"
+            />
+          </PremiumField>
+
+          <PremiumField
+            label="Notes & Requirements"
+            icon={FileText}
+          >
+            <textarea
+              rows={3}
+              className={`${inputClass} resize-y`}
+              value={form.notes}
+              onChange={(event) =>
+                update("notes", event.target.value)
+              }
+              placeholder="Enter customer requirements..."
+            />
+          </PremiumField>
+
+          {error && (
+            <div
+              role="alert"
+              className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-600"
+            >
+              <AlertCircle size={18} />
+              {error}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-[11px] text-slate-500">
+            <ShieldCheck
+              size={16}
+              className="text-blue-600"
+            />
+            Customer information is stored in this browser.
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-white p-5 sm:flex-row sm:justify-end sm:px-8">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#102b53] px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-[#204678]"
+          >
+            <Save size={17} />
+
+            {customer
+              ? "Update Customer"
+              : "Create Customer"}
+
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* =========================================
+   CUSTOMER DETAILS MODAL
+   BOOKING INFORMATION REMOVED
+========================================= */
+
+function CustomerViewModal({
+  customer,
+  onClose,
+  onEdit,
+  onDelete,
+}) {
+  const details = [
+    {
+      label: "Gender",
+      value: customer.gender || "Not specified",
+      color: "text-[#326cff]",
+    },
+    {
+      label: "Language",
+      value: customer.language || "Not specified",
+      color: "text-[#d99400]",
+    },
+    {
+      label: "Location",
+      value: getCity(customer.address),
+      color: "text-[#ec5275]",
+    },
+    {
+      label: "Customer Source",
+      value: customer.source || "Not specified",
+      color: "text-[#059f79]",
+    },
+    {
+      label: "Customer Since",
+      value: formatDate(customer.createdAt),
+      color: "text-[#102b53]",
+    },
+    {
+      label: "Customer ID",
+      value: customer.id || "—",
+      color: "text-[#102b53]",
+    },
+  ];
+
+  return (
+    <Modal onClose={onClose} width="max-w-[680px]">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-8 sm:py-8">
+        <div className="flex items-center justify-between gap-4 border-b border-[#edf0f5] pb-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#102b53] to-[#3567a6] text-lg font-black text-white shadow-lg">
+              {initials(customer.name)}
+            </div>
+
+            <div className="min-w-0">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7990af]">
+                Customer Profile
+              </p>
+
+              <h2 className="truncate text-[22px] font-black tracking-tight text-[#102b53] sm:text-[25px]">
+                {customer.name}
+              </h2>
+
+              <p className="mt-1 text-[11px] font-medium text-[#8091a9]">
+                {customer.id}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e7edf5] bg-[#f8faff] text-[#536984] hover:bg-[#eaf1fa]"
           >
             <X size={19} />
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-6 sm:px-7">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-[#14233f]">
-                <UserRound
-                  size={18}
-                  className="text-blue-600"
-                />
-                Personal Information
-              </h3>
-            </div>
+        {/* CUSTOMER INFORMATION */}
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <FormField
-                label="Customer Name"
-                required
-              >
-                <input
-                  ref={nameRef}
-                  className={inputClass}
-                  placeholder="Enter full name"
-                  value={form.name}
-                  onChange={(event) =>
-                    updateField(
-                      "name",
-                      event.target.value
-                    )
-                  }
-                  required
-                />
-              </FormField>
+        <div className="mt-6 rounded-[22px] bg-[#f5f7fb] p-5 sm:p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <div className="h-5 w-1 rounded-full bg-[#326cff]" />
 
-              <FormField
-                label="Phone Number"
-                required
-              >
-                <input
-                  className={inputClass}
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="Enter 10-digit number"
-                  value={form.phone}
-                  onChange={(event) =>
-                    updateField(
-                      "phone",
-                      event.target.value.replace(
-                        /\D/g,
-                        ""
-                      )
-                    )
-                  }
-                  required
-                />
-              </FormField>
-
-              <FormField label="Email Address">
-                <input
-                  className={inputClass}
-                  type="email"
-                  placeholder="customer@example.com"
-                  value={form.email}
-                  onChange={(event) =>
-                    updateField(
-                      "email",
-                      event.target.value
-                    )
-                  }
-                />
-              </FormField>
-
-              <FormField label="Gender">
-                <div className="relative">
-                  <select
-                    className={`${inputClass} appearance-none pr-10`}
-                    value={form.gender}
-                    onChange={(event) => {
-                      playSound("click");
-                      updateField(
-                        "gender",
-                        event.target.value
-                      );
-                    }}
-                  >
-                    <option value="">
-                      Select gender
-                    </option>
-                    <option value="Male">
-                      Male
-                    </option>
-                    <option value="Female">
-                      Female
-                    </option>
-                    <option value="Other">
-                      Other
-                    </option>
-                  </select>
-
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                </div>
-              </FormField>
-
-              <FormField label="Preferred Language">
-                <div className="relative">
-                  <select
-                    className={`${inputClass} appearance-none pr-10`}
-                    value={form.language}
-                    onChange={(event) => {
-                      playSound("click");
-                      updateField(
-                        "language",
-                        event.target.value
-                      );
-                    }}
-                  >
-                    <option value="Tamil">
-                      Tamil
-                    </option>
-                    <option value="English">
-                      English
-                    </option>
-                    <option value="Tamil & English">
-                      Tamil & English
-                    </option>
-                  </select>
-
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                </div>
-              </FormField>
-
-              <FormField label="Customer Source">
-                <div className="relative">
-                  <select
-                    className={`${inputClass} appearance-none pr-10`}
-                    value={form.source}
-                    onChange={(event) => {
-                      playSound("click");
-                      updateField(
-                        "source",
-                        event.target.value
-                      );
-                    }}
-                  >
-                    <option value="">
-                      Select source
-                    </option>
-                    <option value="Instagram">
-                      Instagram
-                    </option>
-                    <option value="Facebook">
-                      Facebook
-                    </option>
-                    <option value="Referral">
-                      Referral
-                    </option>
-                    <option value="Walk-in">
-                      Walk-in
-                    </option>
-                    <option value="Website">
-                      Website
-                    </option>
-                    <option value="Other">
-                      Other
-                    </option>
-                  </select>
-
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                </div>
-              </FormField>
-
-              <FormField label="Address">
-                <input
-                  className={inputClass}
-                  placeholder="Enter address"
-                  value={form.address}
-                  onChange={(event) =>
-                    updateField(
-                      "address",
-                      event.target.value
-                    )
-                  }
-                />
-              </FormField>
-
-              <div className="sm:col-span-2">
-                <FormField label="Notes">
-                  <textarea
-                    className={`${inputClass} min-h-[100px] resize-y`}
-                    placeholder="Additional customer information..."
-                    value={form.notes}
-                    onChange={(event) =>
-                      updateField(
-                        "notes",
-                        event.target.value
-                      )
-                    }
-                    rows={3}
-                  />
-                </FormField>
-              </div>
-            </div>
-
-            {error && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
-              >
-                <AlertCircle
-                  size={18}
-                  className="shrink-0"
-                />
-                {error}
-              </div>
-            )}
+            <h3 className="text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+              Customer Information
+            </h3>
           </div>
 
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-6">
+            {details.map((detail) => (
+              <div
+                key={detail.label}
+                className="min-w-0"
+              >
+                <p className="mb-2 text-[11px] font-medium text-[#627695]">
+                  {detail.label}
+                </p>
+
+                <p
+                  className={`break-words text-[13px] font-extrabold sm:text-[15px] ${detail.color}`}
+                >
+                  {detail.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CONTACT INFORMATION */}
+
+        <div className="mt-4 rounded-[20px] border border-[#e3eaf4] bg-white p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <Phone
+              size={16}
+              className="text-[#326cff]"
+            />
+
+            <h3 className="text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+              Contact Information
+            </h3>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {customer.phone && (
+              <a
+                href={`tel:${customer.phone}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#e4f8f2] px-4 py-3 text-xs font-extrabold text-[#00a982]"
+              >
+                <Phone size={16} />
+                {customer.phone}
+              </a>
+            )}
+
+            {customer.email && (
+              <a
+                href={`mailto:${customer.email}`}
+                className="inline-flex max-w-full items-center gap-2 break-all rounded-xl bg-[#eaf2ff] px-4 py-3 text-xs font-extrabold text-[#4384f5]"
+              >
+                <Mail size={16} />
+                {customer.email}
+              </a>
+            )}
+
+            {!customer.phone && !customer.email && (
+              <p className="text-xs text-slate-400">
+                No contact information provided.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* CUSTOMER ADDRESS */}
+
+        <div className="mt-4 rounded-[20px] border border-[#e3eaf4] bg-white p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <MapPin
+              size={16}
+              className="text-[#ec5275]"
+            />
+
+            <h3 className="text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+              Customer Address
+            </h3>
+          </div>
+
+          <p className="text-[13px] leading-6 text-[#536984]">
+            {customer.address || "No address provided"}
+          </p>
+        </div>
+
+        {/* NOTES */}
+
+        <div className="mt-4 rounded-[20px] border border-[#e3eaf4] bg-white p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <FileText
+              size={16}
+              className="text-[#a268d9]"
+            />
+
+            <h3 className="text-xs font-extrabold uppercase tracking-wide text-[#102b53]">
+              Notes & Requirements
+            </h3>
+          </div>
+
+          <p className="whitespace-pre-wrap break-words text-[13px] leading-6 text-[#536984]">
+            {customer.notes || "No additional notes"}
+          </p>
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0f5] pt-5">
+          <button
+            type="button"
+            onClick={() => onDelete(customer)}
+            className="inline-flex items-center gap-2 rounded-xl px-3 py-3 text-[13px] font-semibold text-[#f43f5e] hover:bg-red-50"
+          >
+            <Trash2 size={17} />
+            Delete Customer
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onEdit(customer)}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-[13px] font-bold text-[#102b53] hover:bg-[#f5f8fc]"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              className="rounded-xl bg-[#102b53] px-7 py-3 text-[13px] font-bold text-white shadow-md hover:bg-[#204678]"
             >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#243a62] px-6 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#314e80]"
-            >
-              <Save size={17} />
-              {customer
-                ? "Update Customer"
-                : "Save Customer"}
+              Close
             </button>
           </div>
-        </form>
-      </section>
-    </div>,
-    document.body
+        </div>
+      </div>
+    </Modal>
   );
 }
 
-/* =====================================================
-   MAIN PAGE
-===================================================== */
+/* =========================================
+   DELETE CONFIRMATION
+========================================= */
+
+function DeleteCustomerModal({
+  customer,
+  onClose,
+  onConfirm,
+  linked,
+}) {
+  return (
+    <Modal onClose={onClose} width="max-w-[420px]">
+      <div className="p-7 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+          <Trash2 size={27} />
+        </div>
+
+        <h3 className="mt-5 text-xl font-extrabold text-[#102b53]">
+          Delete Customer?
+        </h3>
+
+        <p className="mt-3 text-sm leading-6 text-slate-500">
+          Are you sure you want to delete{" "}
+          <strong>{customer.name}</strong>?
+          This action cannot be undone.
+        </p>
+
+        {linked && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-xs leading-5 text-amber-800">
+            <AlertCircle
+              size={18}
+              className="shrink-0"
+            />
+
+            This customer has linked records.
+            Delete is blocked to protect existing data.
+          </div>
+        )}
+
+        <div className="mt-7 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={linked}
+            onClick={onConfirm}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-3 text-sm font-bold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 size={15} />
+            Delete
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* =========================================
+   MAIN CUSTOMERS PAGE
+========================================= */
 
 export default function Customers() {
+  const customerPageRef = useRef(null);
+
   const [customers, setCustomers] =
     useState(loadCustomers);
 
-  const [search, setSearch] = useState("");
-  const [modalOpen, setModalOpen] =
-    useState(false);
+  const [payments, setPayments] = useState(() =>
+    readStoredArray(PAYMENT_KEY)
+  );
 
+  const [bookings, setBookings] = useState(() =>
+    readStoredArray(BOOKING_KEY)
+  );
+
+  const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] =
+    useState("All");
+  const [page, setPage] = useState(1);
+
+  const [formOpen, setFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] =
     useState(null);
-
   const [viewCustomer, setViewCustomer] =
     useState(null);
+  const [deleteCustomer, setDeleteCustomer] =
+    useState(null);
 
-  const [notice, setNotice] = useState("");
+  const [toast, setToast] = useState("");
 
-  const {
-    enabled: soundEnabled,
-    toggle: toggleSound,
-    play,
-  } = useCustomerSounds();
+  /* SAVE CUSTOMERS */
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(customers)
-      );
+      const serialized = JSON.stringify(customers);
+
+      if (
+        localStorage.getItem(STORAGE_KEY) !== serialized
+      ) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          serialized
+        );
+
+        notifyDataUpdated();
+      }
     } catch (error) {
-      console.error(
-        "Unable to save customers:",
-        error
-      );
+      console.error("Customer save error:", error);
     }
   }, [customers]);
 
-  useEffect(() => {
-    if (!notice) return;
+  /* SYNC PAYMENTS, BOOKINGS & CUSTOMERS */
 
-    const timer = window.setTimeout(
-      () => setNotice(""),
-      3000
+  useEffect(() => {
+    const sync = (event) => {
+      const key =
+        event?.type === "storage"
+          ? event.key
+          : event?.detail?.key;
+
+      if (
+        key &&
+        ![
+          STORAGE_KEY,
+          PAYMENT_KEY,
+          BOOKING_KEY,
+        ].includes(key)
+      ) {
+        return;
+      }
+
+      if (!key || key === STORAGE_KEY) {
+        const latest = readStoredArray(STORAGE_KEY);
+
+        setCustomers((previous) =>
+          JSON.stringify(previous) ===
+          JSON.stringify(latest)
+            ? previous
+            : latest
+        );
+      }
+
+      if (!key || key === PAYMENT_KEY) {
+        const latest = readStoredArray(PAYMENT_KEY);
+
+        setPayments((previous) =>
+          JSON.stringify(previous) ===
+          JSON.stringify(latest)
+            ? previous
+            : latest
+        );
+      }
+
+      if (!key || key === BOOKING_KEY) {
+        const latest = readStoredArray(BOOKING_KEY);
+
+        setBookings((previous) =>
+          JSON.stringify(previous) ===
+          JSON.stringify(latest)
+            ? previous
+            : latest
+        );
+      }
+    };
+
+    window.addEventListener("storage", sync);
+    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener("focus", sync);
+
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
+  /* TOAST */
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(
+      () => setToast(""),
+      3500
     );
 
-    return () => window.clearTimeout(timer);
-  }, [notice]);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  /* SUMMARY */
+
+  const uniqueCities = useMemo(
+    () =>
+      new Set(
+        customers
+          .map((customer) =>
+            getCity(customer.address)
+          )
+          .filter((city) => city !== "Unknown")
+      ).size,
+    [customers]
+  );
+
+  const uniqueSources = useMemo(
+    () =>
+      new Set(
+        customers
+          .map((customer) => customer.source)
+          .filter(Boolean)
+      ).size,
+    [customers]
+  );
 
   const filteredCustomers = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = search.toLowerCase().trim();
 
-    return customers.filter((customer) =>
-      [
-        customer.name,
-        customer.id,
-        customer.phone,
-        customer.email,
-        customer.address,
-        customer.gender,
-        customer.language,
-        customer.source,
-        customer.notes,
-      ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(term)
-      )
-    );
-  }, [customers, search]);
+    return customers.filter((customer) => {
+      const matchesSource =
+        sourceFilter === "All" ||
+        customer.source === sourceFilter;
 
-  const uniqueCities = useMemo(() => {
-    const cities = customers
-      .map((customer) =>
-        String(customer.address || "")
-          .split(",")[0]
-          .trim()
-          .toLowerCase()
-      )
-      .filter(Boolean);
-
-    return new Set(cities).size;
-  }, [customers]);
-
-  const uniqueSources = useMemo(() => {
-    return new Set(
-      customers
-        .map((customer) =>
-          String(customer.source || "")
-            .trim()
+      const matchesSearch =
+        !term ||
+        [
+          customer.id,
+          customer.name,
+          customer.phone,
+          customer.email,
+          customer.address,
+          customer.source,
+          customer.notes,
+        ].some((value) =>
+          String(value || "")
             .toLowerCase()
-        )
-        .filter(Boolean)
-    ).size;
-  }, [customers]);
+            .includes(term)
+        );
+
+      return matchesSource && matchesSearch;
+    });
+  }, [customers, search, sourceFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, sourceFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredCustomers.length / PAGE_SIZE
+    )
+  );
+
+  const currentPage = Math.min(page, totalPages);
+
+  const visibleCustomers = filteredCustomers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  /* SCROLL ANIMATION */
+
+  useCustomerScrollAnimation(customerPageRef, [
+    currentPage,
+    search,
+    sourceFilter,
+    customers.length,
+  ]);
+
+  const currentViewCustomer =
+    customers.find(
+      (customer) =>
+        customer.id === viewCustomer?.id
+    ) || null;
+
+  const currentDeleteCustomer =
+    customers.find(
+      (customer) =>
+        customer.id === deleteCustomer?.id
+    ) || null;
+
+  const hasLinkedRecords = Boolean(
+    currentDeleteCustomer &&
+      hasCustomerLinkedRecords(
+        currentDeleteCustomer,
+        payments,
+        bookings
+      )
+  );
+
+  /* ACTIONS */
 
   const openAdd = () => {
-    play("open");
     setEditingCustomer(null);
-    setModalOpen(true);
+    setFormOpen(true);
   };
 
   const openEdit = (customer) => {
-    play("open");
     setViewCustomer(null);
     setEditingCustomer(customer);
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditingCustomer(null);
+    setFormOpen(true);
   };
 
   const saveCustomer = (form) => {
     const duplicate = customers.some(
       (customer) =>
-        customer.phone === form.phone &&
+        normalizePhone(customer.phone) ===
+          normalizePhone(form.phone) &&
         customer.id !== editingCustomer?.id
     );
 
-    if (duplicate) {
-      setNotice(
-        "This phone number already exists."
-      );
-      play("error");
-      return false;
-    }
+    if (duplicate) return false;
 
     if (editingCustomer) {
       setCustomers((previous) =>
@@ -1211,312 +1825,119 @@ export default function Customers() {
             ? {
                 ...customer,
                 ...form,
+                id: customer.id,
+                createdAt: customer.createdAt,
+                updatedAt: new Date().toISOString(),
               }
             : customer
         )
       );
 
-      setNotice(
-        "Customer updated successfully."
-      );
-      play("success");
-      return true;
+      setToast("Customer updated successfully.");
+    } else {
+      const newCustomer = {
+        ...form,
+        id: generateCustomerId(customers),
+        createdAt: todayLocal(),
+        updatedAt: new Date().toISOString(),
+        isDemo: false,
+      };
+
+      setCustomers((previous) => [
+        newCustomer,
+        ...previous,
+      ]);
+
+      setToast("Customer added successfully.");
+      setPage(1);
     }
 
-    const newCustomer = {
-      ...form,
-      id: `CUS${Date.now()}`,
-      createdAt: new Date()
-        .toISOString()
-        .slice(0, 10),
-    };
+    setFormOpen(false);
+    setEditingCustomer(null);
 
-    setCustomers((previous) => [
-      newCustomer,
-      ...previous,
-    ]);
-
-    setNotice(
-      "Customer added successfully."
-    );
-    play("success");
     return true;
   };
 
-  const deleteCustomer = (customer) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${customer.name}?`
-    );
+  const confirmDelete = () => {
+    if (!currentDeleteCustomer) return;
 
-    if (!confirmed) return;
+    const latestPayments =
+      readStoredArray(PAYMENT_KEY);
+
+    const latestBookings =
+      readStoredArray(BOOKING_KEY);
+
+    if (
+      hasCustomerLinkedRecords(
+        currentDeleteCustomer,
+        latestPayments,
+        latestBookings
+      )
+    ) {
+      setPayments(latestPayments);
+      setBookings(latestBookings);
+
+      setToast(
+        "Cannot delete customer with linked records."
+      );
+
+      return;
+    }
 
     setCustomers((previous) =>
       previous.filter(
-        (item) => item.id !== customer.id
+        (customer) =>
+          customer.id !== currentDeleteCustomer.id
       )
     );
 
-    setNotice(
-      "Customer deleted successfully."
-    );
-    play("delete");
-  };
+    setDeleteCustomer(null);
+    setViewCustomer(null);
 
-  const openView = (customer) => {
-    play("open");
-    setViewCustomer(customer);
+    setToast("Customer deleted successfully.");
   };
 
   return (
-    <div className="customer-page min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-transparent px-3 py-5 text-slate-800 sm:px-6 lg:px-8 lg:py-8">
-      <style>{`
-        @keyframes customerEnter {
-          from {
-            opacity: 0;
-            transform: translateY(20px) scale(.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
+    <div
+      ref={customerPageRef}
+      className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f8faff] px-3 py-5 sm:px-6 lg:px-8"
+    >
+      <CustomerAnimationStyles />
 
-        @keyframes customerBorderMove {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
+      <div className="mx-auto max-w-[1700px] space-y-6">
+        {/* TOAST */}
 
-        @keyframes customerProgress {
-          from {
-            transform: translateX(-110%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-
-        .customer-summary {
-          animation: customerEnter .65s ease both;
-          transition:
-            transform .35s ease,
-            box-shadow .35s ease;
-        }
-
-        .customer-summary:hover {
-          transform: translateY(-6px);
-          box-shadow:
-            0 15px 30px rgba(15,23,42,.07);
-        }
-
-        .customer-summary-icon {
-          transition: transform .4s ease;
-        }
-
-        .customer-summary:hover
-        .customer-summary-icon {
-          transform:
-            rotate(-8deg) scale(1.1);
-        }
-
-        .customer-progress {
-          animation:
-            customerProgress 1.2s ease both;
-        }
-
-        .customer-directory {
-          animation:
-            customerEnter .7s ease both;
-        }
-
-        .customer-border-blue {
-          --customer-border-a: #dbeafe;
-          --customer-border-b: #bfdbfe;
-        }
-
-        .customer-border-violet {
-          --customer-border-a: #ede9fe;
-          --customer-border-b: #ddd6fe;
-        }
-
-        .customer-border-rose {
-          --customer-border-a: #ffe4e6;
-          --customer-border-b: #fecdd3;
-        }
-
-        .customer-border-green {
-          --customer-border-a: #d1fae5;
-          --customer-border-b: #a7f3d0;
-        }
-
-        .customer-border-amber {
-          --customer-border-a: #fef3c7;
-          --customer-border-b: #fde68a;
-        }
-
-        .customer-border-cyan {
-          --customer-border-a: #cffafe;
-          --customer-border-b: #a5f3fc;
-        }
-
-        .customer-record {
-          position: relative;
-          isolation: isolate;
-          border: 1px solid
-            var(--customer-border-a, #e2e8f0);
-          transition:
-            transform .3s ease,
-            box-shadow .3s ease,
-            border-color .3s ease;
-        }
-
-        .customer-record::before {
-          content: "";
-          position: absolute;
-          inset: -1px;
-          z-index: -1;
-          border-radius: inherit;
-          background: linear-gradient(
-            115deg,
-            var(--customer-border-a),
-            var(--customer-border-b),
-            #ffffff,
-            var(--customer-border-a)
-          );
-          background-size: 300% 300%;
-          opacity: 0;
-          transition: opacity .3s ease;
-        }
-
-        .customer-record:hover {
-          transform: translateY(-5px);
-          box-shadow:
-            0 12px 28px rgba(15,23,42,.07);
-        }
-
-        .customer-record:hover::before {
-          opacity: 1;
-          animation:
-            customerBorderMove 4s linear infinite;
-        }
-
-        .customer-avatar {
-          transition:
-            transform .3s ease;
-        }
-
-        .customer-record:hover
-        .customer-avatar {
-          transform:
-            scale(1.1) rotate(-5deg);
-        }
-
-        .customer-action {
-          transition:
-            transform .2s ease,
-            background .2s ease;
-        }
-
-        .customer-action:hover {
-          transform:
-            translateY(-2px) scale(1.08);
-        }
-
-        .customer-detail-field {
-          transition:
-            transform .25s ease,
-            border-color .25s ease;
-        }
-
-        .customer-detail-field:hover {
-          transform: translateY(-2px);
-          border-color: #bfdbfe;
-        }
-
-        .customer-modal {
-          animation:
-            customerEnter .35s ease both;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .customer-summary,
-          .customer-directory,
-          .customer-modal,
-          .customer-progress,
-          .customer-record:hover::before {
-            animation: none !important;
-          }
-
-          .customer-record:hover,
-          .customer-summary:hover {
-            transform: none;
-          }
-        }
-      `}</style>
-
-      <div className="mx-auto w-full max-w-[1700px] space-y-6">
-        {/* NOTIFICATION */}
-
-        {notice && (
+        {toast && (
           <div
             role="status"
-            className="fixed right-3 top-3 z-[10000] flex max-w-[calc(100vw-24px)] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-[#14233f] shadow-xl sm:right-5 sm:top-5"
+            className="fixed right-4 top-4 z-[10000] flex max-w-sm items-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-[#102b53] shadow-xl"
           >
             <CheckCircle2
-              size={20}
-              className="shrink-0 text-emerald-600"
+              size={19}
+              className="shrink-0 text-emerald-500"
             />
 
-            <span>{notice}</span>
+            <span>{toast}</span>
 
             <button
               type="button"
-              onClick={() => setNotice("")}
-              className="text-slate-400 hover:text-slate-700"
-              aria-label="Dismiss notification"
+              onClick={() => setToast("")}
+              className="ml-2 text-slate-400"
             >
-              <X size={17} />
+              <X size={16} />
             </button>
           </div>
         )}
 
-        {/* TOP ACTIONS - NO EXTRA PAGE HEADING */}
+        {/* ADD CUSTOMER */}
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={toggleSound}
-            title={
-              soundEnabled
-                ? "Mute sounds"
-                : "Enable sounds"
-            }
-            aria-label={
-              soundEnabled
-                ? "Mute sounds"
-                : "Enable sounds"
-            }
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-          >
-            {soundEnabled ? (
-              <Volume2 size={19} />
-            ) : (
-              <VolumeX size={19} />
-            )}
-          </button>
-
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={openAdd}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#243a62] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#314e80] hover:shadow-lg"
+            className="customer-action-button flex items-center gap-2 rounded-xl bg-[#102b53] px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-[#204678]"
           >
-            <Plus size={18} />
+            <Plus size={19} />
             Add Customer
           </button>
         </div>
@@ -1527,438 +1948,474 @@ export default function Customers() {
           <SummaryCard
             title="Total Customers"
             value={customers.length}
+            subtitle="Registered customers"
             icon={Users}
             theme="blue"
-            index={0}
           />
 
           <SummaryCard
             title="Customer Records"
             value={filteredCustomers.length}
+            subtitle="Matching current filters"
             icon={ContactRound}
-            theme="violet"
-            index={1}
+            theme="purple"
           />
 
           <SummaryCard
             title="Customer Cities"
             value={uniqueCities}
+            subtitle="Customer locations"
             icon={MapPin}
-            theme="rose"
-            index={2}
+            theme="green"
           />
 
           <SummaryCard
             title="Customer Sources"
             value={uniqueSources}
-            icon={Camera}
-            theme="green"
-            index={3}
+            subtitle="Acquisition channels"
+            icon={HeartHandshake}
+            theme="orange"
+          />
+        </div>
+
+        {/* ANALYTICS */}
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <SourceDistribution customers={customers} />
+
+          <RecentCustomers
+            customers={customers}
+            onView={setViewCustomer}
           />
         </div>
 
         {/* CUSTOMER DIRECTORY */}
 
-        <section className="customer-directory min-w-0 overflow-hidden rounded-[24px] border border-[#e5eaf2] bg-white shadow-[0_8px_30px_rgba(15,23,42,.035)]">
-          <div className="flex flex-col gap-4 border-b border-[#edf0f5] p-5 xl:flex-row xl:items-center xl:justify-between xl:px-6">
+        <section className="customer-3d-reveal overflow-hidden rounded-[25px] border border-[#e5eaf2] bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                <ContactRound size={21} />
+              <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                <ContactRound size={22} />
               </div>
 
               <div>
-                <h2 className="text-lg font-bold text-[#14233f]">
+                <h2 className="text-base font-extrabold text-[#102b53]">
                   Customer Directory
                 </h2>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Search, view and manage customer records.
+                <p className="mt-1 text-xs text-slate-400">
+                  Click any customer to view details
                 </p>
               </div>
             </div>
 
-            <div className="relative w-full sm:w-[320px]">
-              <Search
-                size={17}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative sm:w-[260px]">
+                <Search
+                  size={17}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
 
-              <input
-                type="search"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search customers..."
-                className={`${inputClass} h-11 pl-10`}
-              />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search customers..."
+                  className="w-full rounded-xl border border-slate-200 bg-[#f9fbff] py-3 pl-10 pr-4 text-sm outline-none focus:border-blue-400"
+                />
+              </div>
+
+              <div className="relative sm:w-[165px]">
+                <Filter
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <select
+                  value={sourceFilter}
+                  onChange={(event) =>
+                    setSourceFilter(event.target.value)
+                  }
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-[#f9fbff] py-3 pl-9 pr-8 text-xs outline-none focus:border-blue-400"
+                >
+                  <option value="All">All Sources</option>
+
+                  {sources.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+
+                  <option value="Other">Other</option>
+                </select>
+
+                <ChevronDown
+                  size={15}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+              </div>
             </div>
           </div>
 
-          {/* DESKTOP CUSTOMER TABLE */}
+          {/* DESKTOP TABLE */}
 
-          <div className="hidden w-full lg:block">
-            <table className="w-full table-fixed border-collapse text-left">
-              <colgroup>
-                <col style={{ width: "23%" }} />
-                <col style={{ width: "29%" }} />
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "13%" }} />
-              </colgroup>
-
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full min-w-[850px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#e7ecf5] bg-[#f8faff]">
-                  {[
-                    "Customer",
-                    "Contact",
-                    "Added Date",
-                    "Location",
-                    "Actions",
-                  ].map((heading) => (
-                    <th
-                      key={heading}
-                      className={`px-3 py-4 text-[11px] font-bold uppercase tracking-[.04em] text-slate-500 xl:px-5 ${
-                        heading === "Actions"
-                          ? "text-center"
-                          : ""
-                      }`}
-                    >
-                      {heading}
-                    </th>
-                  ))}
+                <tr className="border-b border-slate-200 bg-[#f8faff] text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-4">
+                    Customer
+                  </th>
+
+                  <th className="px-5 py-4">
+                    Contact
+                  </th>
+
+                  <th className="px-5 py-4">
+                    Location
+                  </th>
+
+                  <th className="px-5 py-4">
+                    Source
+                  </th>
+
+                  <th className="px-5 py-4 text-center">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
-              <tbody>
-                {filteredCustomers.map(
-                  (customer, index) => {
-                    const themeIndex =
-                      index % borderThemes.length;
+              <tbody className="divide-y divide-slate-100">
+                {visibleCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View ${customer.name}`}
+                    onClick={() =>
+                      setViewCustomer(customer)
+                    }
+                    onKeyDown={(event) => {
+                      if (
+                        event.target === event.currentTarget &&
+                        (event.key === "Enter" ||
+                          event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        setViewCustomer(customer);
+                      }
+                    }}
+                    className="customer-table-row cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold ${avatarColor(
+                            customer.name
+                          )}`}
+                        >
+                          {initials(customer.name)}
+                        </div>
 
-                    return (
-                      <tr
-                        key={customer.id}
-                        className="border-b border-[#f0f3f8] transition-colors duration-300 hover:bg-[#fafcff]"
-                      >
-                        <td className="px-3 py-3 xl:px-5">
-                          <div
-                            className={`customer-record ${
-                              borderThemes[themeIndex]
-                            } flex min-w-0 items-center gap-3 rounded-2xl bg-white p-2.5`}
-                          >
-                            <div
-                              className={`customer-avatar flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ${
-                                avatarThemes[themeIndex]
-                              }`}
-                            >
-                              {getInitials(
-                                customer.name
-                              )}
-                            </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#102b53]">
+                            {customer.name}
+                          </p>
 
-                            <div className="min-w-0">
-                              <p
-                                className="truncate text-[13px] font-bold text-[#14233f]"
-                                title={customer.name}
-                              >
-                                {customer.name}
-                              </p>
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            {customer.id}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
 
-                              <p className="mt-1 truncate text-[11px] text-slate-400">
-                                {customer.id}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+                    <td className="px-5 py-4">
+                      <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                        <Phone
+                          size={13}
+                          className="text-slate-400"
+                        />
+                        {customer.phone}
+                      </p>
 
-                        <td className="px-3 py-4 xl:px-5">
-                          <div className="flex items-center gap-2 text-xs text-slate-600">
-                            <Phone
-                              size={14}
-                              className="shrink-0 text-slate-400"
-                            />
-                            <span>
-                              {customer.phone}
-                            </span>
-                          </div>
+                      <p className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+                        <Mail size={13} />
 
-                          {customer.email && (
-                            <div className="mt-2 flex min-w-0 items-center gap-2 text-xs text-slate-500">
-                              <Mail
-                                size={14}
-                                className="shrink-0 text-slate-400"
-                              />
+                        <span className="max-w-[190px] truncate">
+                          {customer.email || "—"}
+                        </span>
+                      </p>
+                    </td>
 
-                              <span
-                                className="truncate"
-                                title={customer.email}
-                              >
-                                {customer.email}
-                              </span>
-                            </div>
-                          )}
-                        </td>
+                    <td className="px-5 py-4">
+                      <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                        <MapPin
+                          size={14}
+                          className="text-blue-400"
+                        />
+                        {getCity(customer.address)}
+                      </p>
 
-                        <td className="px-3 py-4 xl:px-5">
-                          <div className="flex items-center gap-2 text-xs text-slate-600">
-                            <CalendarDays
-                              size={15}
-                              className="shrink-0 text-slate-400"
-                            />
+                      <p className="mt-2 text-[11px] text-slate-400">
+                        {formatDate(customer.createdAt)}
+                      </p>
+                    </td>
 
-                            {formatDate(
-                              customer.createdAt
-                            )}
-                          </div>
-                        </td>
+                    <td className="px-5 py-4">
+                      <SourceBadge source={customer.source} />
+                    </td>
 
-                        <td className="px-3 py-4 xl:px-5">
-                          <div className="flex min-w-0 items-center gap-2 text-xs text-slate-600">
-                            <MapPin
-                              size={15}
-                              className="shrink-0 text-slate-400"
-                            />
+                    <td className="px-5 py-4">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          type="button"
+                          title="Edit Customer"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEdit(customer);
+                          }}
+                          className="customer-action-button rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-blue-600 hover:bg-blue-100"
+                        >
+                          <Pencil size={16} />
+                        </button>
 
-                            <span
-                              className="truncate"
-                              title={customer.address}
-                            >
-                              {customer.address || "—"}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="px-2 py-4">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openView(customer)
-                              }
-                              title="View customer"
-                              aria-label={`View ${customer.name}`}
-                              className="customer-action rounded-xl p-2 text-slate-600 hover:bg-slate-100"
-                            >
-                              <Eye size={17} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEdit(customer)
-                              }
-                              title="Edit customer"
-                              aria-label={`Edit ${customer.name}`}
-                              className="customer-action rounded-xl p-2 text-blue-600 hover:bg-blue-50"
-                            >
-                              <Pencil size={16} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                deleteCustomer(customer)
-                              }
-                              title="Delete customer"
-                              aria-label={`Delete ${customer.name}`}
-                              className="customer-action rounded-xl p-2 text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-                )}
+                        <button
+                          type="button"
+                          title="Delete Customer"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeleteCustomer(customer);
+                          }}
+                          className="customer-action-button rounded-xl border border-red-100 bg-red-50 p-2.5 text-red-500 hover:bg-red-100"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-
-            {filteredCustomers.length === 0 && (
-              <div className="flex flex-col items-center py-16 text-slate-400">
-                <Search size={30} />
-                <p className="mt-3 text-sm">
-                  No customers found
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* MOBILE / TABLET CUSTOMER CARDS */}
+          {/* MOBILE CARDS */}
 
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">
-            {filteredCustomers.map(
-              (customer, index) => {
-                const themeIndex =
-                  index % borderThemes.length;
-
-                return (
-                  <article
-                    key={customer.id}
-                    className={`customer-record ${
-                      borderThemes[themeIndex]
-                    } min-w-0 rounded-[20px] bg-white p-4`}
+            {visibleCustomers.map((customer) => (
+              <div
+                key={customer.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`View ${customer.name}`}
+                onClick={() =>
+                  setViewCustomer(customer)
+                }
+                onKeyDown={(event) => {
+                  if (
+                    event.target === event.currentTarget &&
+                    (event.key === "Enter" ||
+                      event.key === " ")
+                  ) {
+                    event.preventDefault();
+                    setViewCustomer(customer);
+                  }
+                }}
+                className="customer-3d-reveal cursor-pointer rounded-[20px] border border-slate-200 bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${avatarColor(
+                      customer.name
+                    )}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`customer-avatar flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-extrabold ${
-                          avatarThemes[themeIndex]
-                        }`}
-                      >
-                        {getInitials(
-                          customer.name
-                        )}
-                      </div>
+                    {initials(customer.name)}
+                  </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-bold text-[#14233f]">
-                          {customer.name}
-                        </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-extrabold text-[#102b53]">
+                      {customer.name}
+                    </p>
 
-                        <p className="mt-1 text-xs text-slate-400">
-                          {customer.id}
-                        </p>
-                      </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {customer.id}
+                    </p>
+                  </div>
+                </div>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openView(customer)
-                        }
-                        className="rounded-xl bg-slate-50 p-2 text-slate-600"
-                        aria-label={`View ${customer.name}`}
-                      >
-                        <Eye size={17} />
-                      </button>
-                    </div>
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  <p className="flex items-center gap-2 text-xs text-slate-600">
+                    <Phone size={14} />
+                    {customer.phone}
+                  </p>
 
-                    <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                      <div className="flex items-center gap-3 text-xs text-slate-600">
-                        <Phone
-                          size={15}
-                          className="shrink-0 text-slate-400"
-                        />
+                  <p className="flex items-center gap-2 break-all text-xs text-slate-600">
+                    <Mail size={14} />
+                    {customer.email || "—"}
+                  </p>
 
-                        {customer.phone}
-                      </div>
+                  <p className="flex items-center gap-2 text-xs text-slate-600">
+                    <MapPin size={14} />
+                    {customer.address || "—"}
+                  </p>
 
-                      {customer.email && (
-                        <div className="flex items-center gap-3 text-xs text-slate-600">
-                          <Mail
-                            size={15}
-                            className="shrink-0 text-slate-400"
-                          />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-400">
+                      {formatDate(customer.createdAt)}
+                    </span>
 
-                          <span className="break-all">
-                            {customer.email}
-                          </span>
-                        </div>
-                      )}
+                    <SourceBadge source={customer.source} />
+                  </div>
+                </div>
 
-                      {customer.address && (
-                        <div className="flex items-start gap-3 text-xs text-slate-600">
-                          <MapPin
-                            size={15}
-                            className="mt-0.5 shrink-0 text-slate-400"
-                          />
+                <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openEdit(customer);
+                    }}
+                    className="rounded-xl bg-blue-50 p-2.5 text-blue-600"
+                    aria-label="Edit customer"
+                  >
+                    <Pencil size={16} />
+                  </button>
 
-                          <span className="break-words">
-                            {customer.address}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <CalendarDays
-                          size={15}
-                          className="shrink-0 text-slate-400"
-                        />
-
-                        {formatDate(
-                          customer.createdAt
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openView(customer)
-                        }
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                      >
-                        <Eye size={15} />
-                        View
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openEdit(customer)
-                        }
-                        className="rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-blue-600"
-                        aria-label={`Edit ${customer.name}`}
-                      >
-                        <Pencil size={16} />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          deleteCustomer(customer)
-                        }
-                        className="rounded-xl border border-red-100 bg-red-50 p-2.5 text-red-500"
-                        aria-label={`Delete ${customer.name}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </article>
-                );
-              }
-            )}
-
-            {filteredCustomers.length === 0 && (
-              <p className="col-span-full py-12 text-center text-sm text-slate-500">
-                No customers found
-              </p>
-            )}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleteCustomer(customer);
+                    }}
+                    className="rounded-xl bg-red-50 p-2.5 text-red-500"
+                    aria-label="Delete customer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* FOOTER */}
+          {!visibleCustomers.length && (
+            <div className="py-16 text-center">
+              <Search
+                size={32}
+                className="mx-auto text-slate-400"
+              />
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-5 py-4 text-xs text-slate-500">
-            <span>
-              Showing {filteredCustomers.length} of{" "}
-              {customers.length} customers
-            </span>
+              <p className="mt-3 text-sm font-bold text-[#102b53]">
+                No customers found
+              </p>
 
-            <span>
-              Studio Raw Picturez CRM
-            </span>
+              <p className="mt-2 text-xs text-slate-400">
+                Try another search or filter
+              </p>
+            </div>
+          )}
+
+          {/* PAGINATION */}
+
+          <div className="flex flex-col gap-4 border-t border-slate-100 bg-[#f9fbff] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-center text-xs text-slate-500 sm:text-left">
+              Showing{" "}
+              <strong>
+                {filteredCustomers.length
+                  ? (currentPage - 1) * PAGE_SIZE + 1
+                  : 0}
+                –
+                {Math.min(
+                  currentPage * PAGE_SIZE,
+                  filteredCustomers.length
+                )}
+              </strong>{" "}
+              of{" "}
+              <strong>
+                {filteredCustomers.length}
+              </strong>{" "}
+              customers
+            </p>
+
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setPage((previous) =>
+                    Math.max(1, previous - 1)
+                  )
+                }
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 disabled:opacity-40"
+              >
+                <ChevronLeft size={17} />
+              </button>
+
+              <span className="px-2 text-xs font-bold text-[#102b53]">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setPage((previous) =>
+                    Math.min(totalPages, previous + 1)
+                  )
+                }
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 disabled:opacity-40"
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* MODALS */}
-
-        <CustomerModal
-          open={modalOpen}
-          onClose={closeModal}
-          onSave={saveCustomer}
-          customer={editingCustomer}
-          playSound={play}
-        />
-
-        <CustomerDetailsModal
-          customer={viewCustomer}
-          onClose={() =>
-            setViewCustomer(null)
-          }
-          onEdit={openEdit}
-        />
+        <p className="flex items-center justify-center gap-2 pb-3 text-center text-[11px] text-slate-400">
+          <Camera size={14} />
+          Studio Raw Picturez · Customer Management
+        </p>
       </div>
+
+      {/* ADD / EDIT MODAL */}
+
+      {formOpen && (
+        <CustomerFormModal
+          key={editingCustomer?.id || "new"}
+          customer={editingCustomer}
+          onClose={() => {
+            setFormOpen(false);
+            setEditingCustomer(null);
+          }}
+          onSave={saveCustomer}
+        />
+      )}
+
+      {/* CUSTOMER DETAILS */}
+
+      {currentViewCustomer && (
+        <CustomerViewModal
+          customer={currentViewCustomer}
+          onClose={() => setViewCustomer(null)}
+          onEdit={openEdit}
+          onDelete={(customer) => {
+            setViewCustomer(null);
+            setDeleteCustomer(customer);
+          }}
+        />
+      )}
+
+      {/* DELETE CONFIRMATION */}
+
+      {currentDeleteCustomer && (
+        <DeleteCustomerModal
+          customer={currentDeleteCustomer}
+          linked={hasLinkedRecords}
+          onClose={() => setDeleteCustomer(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }
+
