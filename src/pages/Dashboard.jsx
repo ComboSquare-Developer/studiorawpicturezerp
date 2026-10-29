@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import {
   Users,
   MessageSquare,
@@ -1458,6 +1459,7 @@ function TimelinePanel({
 export default function Dashboard() {
   const [data, setData] = useState(getAllData);
   const [replay, setReplay] = useState(0);
+  const [backendStats, setBackendStats] = useState(null);
 
   /* ========================================
      ALL MODULES LIVE DATA REFRESH
@@ -1465,6 +1467,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     let lastSnapshot = "";
+
+    const fetchLiveStats = () => {
+      api.dashboard
+        .stats()
+        .then((res) => {
+          if (res && typeof res === "object") {
+            setBackendStats(res);
+          }
+        })
+        .catch((err) => {
+          console.warn("Using local statistics fallback:", err.message);
+        });
+    };
+
+    fetchLiveStats();
 
     const update = () => {
       try {
@@ -1481,6 +1498,7 @@ export default function Dashboard() {
       } catch {
         setData(getAllData());
       }
+      fetchLiveStats();
     };
 
     const handleVisibility = () => {
@@ -1500,7 +1518,7 @@ export default function Dashboard() {
       handleVisibility
     );
 
-    const interval = window.setInterval(update, 2000);
+    const interval = window.setInterval(update, 5000);
 
     return () => {
       window.removeEventListener("storage", update);
@@ -1518,6 +1536,14 @@ export default function Dashboard() {
 
   function refresh() {
     setData(getAllData());
+    api.dashboard
+      .stats()
+      .then((res) => {
+        if (res && typeof res === "object") {
+          setBackendStats(res);
+        }
+      })
+      .catch(() => {});
     setReplay((previous) => previous + 1);
   }
 
@@ -1544,6 +1570,35 @@ export default function Dashboard() {
       0
     );
 
+    const localDeliveriesPending = data.deliveries.filter(
+      (item) =>
+        ![
+          "delivered",
+          "cancelled",
+          "canceled",
+        ].includes(
+          String(item.status || "").toLowerCase()
+        )
+    ).length;
+
+    if (backendStats) {
+      return {
+        customers: backendStats.customers ?? data.customers.length,
+        enquiries: backendStats.enquiries ?? data.enquiries.length,
+        bookings: backendStats.bookings ?? data.bookings.length,
+        billed: roundMoney(
+          (backendStats.payments_received || 0) + (backendStats.pending_balance || 0)
+        ) || roundMoney(billed),
+        paid: roundMoney(backendStats.payments_received ?? paid),
+        pending: roundMoney(backendStats.pending_balance ?? pending),
+        deliveriesPending: backendStats.pending_deliveries ?? localDeliveriesPending,
+        weddingPhotography: backendStats.wedding_photography ?? 0,
+        weddingVideography: backendStats.wedding_videography ?? 0,
+        totalExpenses: backendStats.total_expenses ?? 0,
+        inventoryAlerts: backendStats.inventory_alerts ?? 0,
+      };
+    }
+
     return {
       customers: data.customers.length,
       enquiries: data.enquiries.length,
@@ -1553,18 +1608,13 @@ export default function Dashboard() {
       paid: roundMoney(paid),
       pending: roundMoney(pending),
 
-      deliveriesPending: data.deliveries.filter(
-        (item) =>
-          ![
-            "delivered",
-            "cancelled",
-            "canceled",
-          ].includes(
-            String(item.status || "").toLowerCase()
-          )
-      ).length,
+      deliveriesPending: localDeliveriesPending,
+      weddingPhotography: 0,
+      weddingVideography: 0,
+      totalExpenses: 0,
+      inventoryAlerts: 0,
     };
-  }, [data]);
+  }, [data, backendStats]);
 
   /* ========================================
      UPCOMING BOOKINGS

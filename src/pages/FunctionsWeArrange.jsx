@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   CalendarDays,
@@ -832,6 +833,43 @@ export default function FunctionsWeArrange() {
   const firstInputRef = useRef(null);
 
   /* =========================================
+     BACKEND API INTEGRATION
+  ========================================= */
+
+  useEffect(() => {
+    let isMounted = true;
+    api.functionsWeArrange
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setFunctions(
+            data.map((item) => ({
+              id: item.id,
+              customer: item.customer_name || "Customer",
+              phone: item.phone || "",
+              eventType: item.function_type || "Custom Package",
+              eventDate: item.event_date || "",
+              venue: item.location || "",
+              guests: Number(item.guest_count || 0),
+              amount: Number(item.total_amount || 0),
+              advance: Number(item.advance_amount || 0),
+              status: item.status || "Upcoming",
+              services: [],
+              notes: item.notes || "",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend functions we arrange load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /* =========================================
      LOCAL STORAGE
   ========================================= */
 
@@ -1015,7 +1053,7 @@ export default function FunctionsWeArrange() {
      SAVE FUNCTION
   ========================================= */
 
-  const saveFunction = (event) => {
+  const saveFunction = async (event) => {
     event.preventDefault();
 
     const customer = String(form.customer || "").trim();
@@ -1067,52 +1105,96 @@ export default function FunctionsWeArrange() {
       return;
     }
 
-    const record = {
-      ...form,
-      id:
-        editingId !== null
-          ? editingId
-          : globalThis.crypto?.randomUUID?.() ||
-            `FUNC-${Date.now()}`,
-      customer,
+    const payload = {
+      customer_name: customer,
       phone,
-      venue,
-      guests: Number(form.guests || 0),
-      amount,
-      advance,
-      services: Array.isArray(form.services)
-        ? form.services
-        : [],
+      function_type: form.eventType,
+      event_date: form.eventDate || null,
+      location: venue,
+      guest_count: Number(form.guests || 0),
+      total_amount: amount,
+      advance_amount: advance,
+      status: form.status || "Upcoming",
+      notes: form.notes || "",
     };
 
-    if (editingId !== null) {
-      setFunctions((previous) =>
-        previous.map((item) =>
-          item.id === editingId ? record : item
-        )
-      );
+    try {
+      if (editingId !== null) {
+        if (typeof editingId === "number") {
+          await api.functionsWeArrange.update(editingId, payload);
+        }
 
-      setNotice("Function updated successfully.");
-    } else {
-      setFunctions((previous) => [record, ...previous]);
-      setNotice("Function added successfully.");
+        const record = {
+          ...form,
+          id: editingId,
+          customer,
+          phone,
+          venue,
+          guests: Number(form.guests || 0),
+          amount,
+          advance,
+          services: Array.isArray(form.services) ? form.services : [],
+        };
+
+        setFunctions((previous) =>
+          previous.map((item) =>
+            item.id === editingId ? record : item
+          )
+        );
+
+        setNotice("Function updated successfully.");
+      } else {
+        let createdId = globalThis.crypto?.randomUUID?.() || `FUNC-${Date.now()}`;
+        try {
+          const res = await api.functionsWeArrange.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create function notice:", apiErr.message);
+        }
+
+        const record = {
+          ...form,
+          id: createdId,
+          customer,
+          phone,
+          venue,
+          guests: Number(form.guests || 0),
+          amount,
+          advance,
+          services: Array.isArray(form.services) ? form.services : [],
+        };
+
+        setFunctions((previous) => [record, ...previous]);
+        setNotice("Function added successfully.");
+      }
+
+      play("success");
+      closeForm();
+    } catch (err) {
+      console.error("Save function error:", err);
+      setError(err.message || "Failed to save function.");
     }
-
-    play("success");
-    closeForm();
   };
 
   /* =========================================
      DELETE FUNCTION
   ========================================= */
 
-  const deleteFunction = (item) => {
+  const deleteFunction = async (item) => {
     if (
       !window.confirm(
         `Delete ${item.customer}'s ${item.eventType} booking?`
       )
     ) {
       return;
+    }
+
+    try {
+      if (typeof item.id === "number") {
+        await api.functionsWeArrange.delete(item.id);
+      }
+    } catch (err) {
+      console.warn("Backend delete function notice:", err.message);
     }
 
     setFunctions((previous) =>
@@ -1127,7 +1209,15 @@ export default function FunctionsWeArrange() {
      UPDATE STATUS
   ========================================= */
 
-  const updateStatus = (id, status) => {
+  const updateStatus = async (id, status) => {
+    try {
+      if (typeof id === "number") {
+        await api.functionsWeArrange.update(id, { status });
+      }
+    } catch (err) {
+      console.warn("Backend status update notice:", err.message);
+    }
+
     setFunctions((previous) =>
       previous.map((item) =>
         item.id === id ? { ...item, status } : item

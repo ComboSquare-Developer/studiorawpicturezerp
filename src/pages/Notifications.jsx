@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Bell, BellRing, Plus, Search, X, Pencil, Trash2,
@@ -1064,7 +1065,35 @@ export default function Notifications() {
   }, [notifications]);
 
   useEffect(() => {
+    let isMounted = true;
+    api.notifications
+      .list()
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.results;
+        if (isMounted && Array.isArray(items) && items.length > 0) {
+          const mapped = items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            module: item.module || "Internal",
+            type: item.type || "Other",
+            channel: item.channel || "In-App",
+            status: item.status || "Pending",
+            priority: item.priority || "Medium",
+            customer: item.customer || "Studio Customer",
+            dueDate: item.due_date || today(),
+            createdAt: item.created_at ? item.created_at.slice(0, 10) : today(),
+            isRead: item.is_read,
+          }));
+          setNotifications(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using local notifications:", err.message);
+      });
+
     return () => {
+      isMounted = false;
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
@@ -1223,7 +1252,7 @@ export default function Notifications() {
     setError("");
   };
 
-  const saveNotification = (event) => {
+  const saveNotification = async (event) => {
     event.preventDefault();
 
     if (!form.title.trim()) {
@@ -1246,6 +1275,21 @@ export default function Notifications() {
     };
 
     if (editingId !== null) {
+      try {
+        await api.notifications.update(editingId, {
+          title: data.title,
+          message: data.message,
+          module: data.module,
+          channel: data.channel,
+          status: data.status,
+          priority: data.priority,
+          customer: data.customer,
+          due_date: data.dueDate || null,
+        });
+      } catch (err) {
+        console.warn("Backend update failed, saving locally:", err.message);
+      }
+
       setNotifications((current) =>
         current.map((item) =>
           item.id === editingId
@@ -1255,8 +1299,27 @@ export default function Notifications() {
       );
       showToast("Notification updated successfully.");
     } else {
+      let createdId = makeId();
+      try {
+        const remote = await api.notifications.create({
+          title: data.title,
+          message: data.message,
+          module: data.module,
+          channel: data.channel,
+          status: data.status,
+          priority: data.priority,
+          customer: data.customer,
+          due_date: data.dueDate || null,
+        });
+        if (remote && remote.id) {
+          createdId = remote.id;
+        }
+      } catch (err) {
+        console.warn("Backend create failed, saving locally:", err.message);
+      }
+
       setNotifications((current) => [
-        { ...data, id: makeId(), createdAt: today() },
+        { ...data, id: createdId, createdAt: today() },
         ...current,
       ]);
       showToast("Notification created successfully.");
@@ -1269,7 +1332,13 @@ export default function Notifications() {
     setError("");
   };
 
-  const updateStatus = (id, status) => {
+  const updateStatus = async (id, status) => {
+    try {
+      await api.notifications.update(id, { status });
+    } catch (err) {
+      console.warn("Backend status update notice:", err.message);
+    }
+
     setNotifications((current) =>
       current.map((item) =>
         item.id === id
@@ -1286,9 +1355,16 @@ export default function Notifications() {
     setDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    const idToDelete = deleteId;
+    try {
+      await api.notifications.delete(idToDelete);
+    } catch (err) {
+      console.warn("Backend delete notice:", err.message);
+    }
+
     setNotifications((current) =>
-      current.filter((item) => item.id !== deleteId)
+      current.filter((item) => item.id !== idToDelete)
     );
     setDeleteId(null);
     setViewingId(null);

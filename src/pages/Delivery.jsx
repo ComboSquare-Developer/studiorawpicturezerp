@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import { Plus, Search, X, Truck, Package, CheckCircle2, Clock3, Pencil, Trash2, CalendarDays, UserRound, MapPin, Save, Phone, Download, ChevronDown, AlertCircle, CreditCard, ClipboardList, Eye, Hash, FileText, Box, Building2, Filter, Images, Sparkles, RotateCcw, CalendarClock, Image as ImageIcon, Camera, BellRing, CircleCheck } from "lucide-react";
-
 const DELIVERY_KEY = "studioraw_deliveries";
 const SELECTION_KEY = "studioraw_photo_selections";
 const CUSTOMER_KEY = "studio_raw_customers";
@@ -108,7 +108,34 @@ export default function Delivery() {
   const [error, setError] = useState("");
   const [statusError, setStatusError] = useState("");
   const refresh = () => { setCustomers(readRecords(CUSTOMER_KEY, "studioraw_customers")); setBookings(readRecords(BOOKING_KEY, "studio_raw_bookings")); };
-  useEffect(() => { const onChange = () => refresh(); window.addEventListener("storage", onChange); window.addEventListener(UPDATE_EVENT, onChange); window.addEventListener("focus", onChange); return () => { window.removeEventListener("storage", onChange); window.removeEventListener(UPDATE_EVENT, onChange); window.removeEventListener("focus", onChange); }; }, []);
+  useEffect(() => {
+    let isMounted = true;
+    api.deliveries.list().then(res => {
+      const items = Array.isArray(res) ? res : res?.results;
+      if (isMounted && Array.isArray(items) && items.length > 0) {
+        const mapped = items.map(d => ({
+          id: d.id,
+          customerId: d.customer || "",
+          bookingId: d.booking || "",
+          customer: d.customer_name || "Customer",
+          phone: d.phone || "",
+          event: "Photography",
+          item: d.item_name || "Wedding Album",
+          quantity: d.quantity || 1,
+          deliveryMethod: "Home Delivery",
+          address: d.address || "",
+          trackingNumber: d.tracking_number || "",
+          deliveredDate: d.delivery_date || "",
+          expectedDate: d.delivery_date || "",
+          status: d.status || "Pending",
+          paymentStatus: d.payment_status || "Pending",
+          notes: d.notes || "",
+        }));
+        setDeliveries(mapped);
+      }
+    }).catch(err => console.warn("Using local deliveries fallback:", err.message));
+    const onChange = () => refresh(); window.addEventListener("storage", onChange); window.addEventListener(UPDATE_EVENT, onChange); window.addEventListener("focus", onChange); return () => { isMounted = false; window.removeEventListener("storage", onChange); window.removeEventListener(UPDATE_EVENT, onChange); window.removeEventListener("focus", onChange); };
+  }, []);
   useEffect(() => { localStorage.setItem(DELIVERY_KEY, JSON.stringify(deliveries)); window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: { key: DELIVERY_KEY } })); }, [deliveries]);
   useEffect(() => { localStorage.setItem(SELECTION_KEY, JSON.stringify(selections)); window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: { key: SELECTION_KEY } })); }, [selections]);
   useEffect(() => { if (!formType && !viewType) return; const old = document.body.style.overflow; document.body.style.overflow = "hidden"; const onKey = e => { if (e.key === "Escape") { setFormType(null); setViewType(null); } }; document.addEventListener("keydown", onKey); return () => { document.body.style.overflow = old; document.removeEventListener("keydown", onKey); }; }, [formType, viewType]);
@@ -133,19 +160,55 @@ export default function Delivery() {
   const openEdit = (kind, item) => { sound("open"); refresh(); const c = findExistingCustomer(item); const data = { ...(kind === "delivery" ? emptyDelivery() : emptySelection()), ...item, customerId: c ? String(c.id) : "", customer: c ? nameOf(c) : item.customer, phone: c ? phoneOf(c) : item.phone, email: c ? emailOf(c) : item.email || "", ...(kind === "delivery" && c ? { address: item.address || addressOf(c) } : {}) }; if (kind === "delivery") setDeliveryForm(data); else setSelectionForm(data); setEditingId(item.id); setViewType(null); setError(""); setFormType(kind); };
   const fail = msg => { setError(msg); sound("error"); };
   const registeredCustomer = id => customers.find(c => String(c.id) === String(id));
-  const saveDelivery = e => {
+  const saveDelivery = async e => {
     e.preventDefault();
     const c = registeredCustomer(deliveryForm.customerId);
     const customer = String(deliveryForm.customer || "").trim();
     const phone = phoneOf(deliveryForm.phone);
     if (!customer) return fail("Please enter customer name or select a registered customer.");
-    // Phone is optional; imported customer records may contain incomplete numbers.
-    // Keep the available digits without blocking delivery saving.
     const quantity = Number(deliveryForm.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) return fail("Quantity must be at least 1.");
     if (deliveryForm.status === "Delivered" && !deliveryForm.deliveredDate) return fail("Please select actual delivery date.");
     if (["Courier", "Home Delivery"].includes(deliveryForm.deliveryMethod) && !String(deliveryForm.address || "").trim()) return fail("Please enter delivery address.");
-    const record = { ...deliveryForm, id: editingId || makeId("DEL"), customerId: c ? String(c.id) : "", customer, phone, quantity, assignedTo: deliveryForm.assignedTo || "Not Assigned" };
+    
+    let recordId = editingId || makeId("DEL");
+    if (editingId) {
+      try {
+        await api.deliveries.update(editingId, {
+          customer_name: customer,
+          phone,
+          address: deliveryForm.address || "",
+          item_name: deliveryForm.item || "Album",
+          quantity,
+          delivery_date: deliveryForm.deliveredDate || deliveryForm.expectedDate || null,
+          status: deliveryForm.status || "Pending",
+          payment_status: deliveryForm.paymentStatus || "Pending",
+          tracking_number: deliveryForm.trackingNumber || "",
+          notes: deliveryForm.notes || "",
+        });
+      } catch (err) {
+        console.warn("Backend delivery update notice:", err.message);
+      }
+    } else {
+      try {
+        const remote = await api.deliveries.create({
+          customer_name: customer,
+          phone,
+          address: deliveryForm.address || "",
+          item_name: deliveryForm.item || "Album",
+          quantity,
+          delivery_date: deliveryForm.deliveredDate || deliveryForm.expectedDate || null,
+          status: deliveryForm.status || "Pending",
+          payment_status: deliveryForm.paymentStatus || "Pending",
+          tracking_number: deliveryForm.trackingNumber || "",
+          notes: deliveryForm.notes || "",
+        });
+        if (remote && remote.id) recordId = remote.id;
+      } catch (err) {
+        console.warn("Backend delivery create notice:", err.message);
+      }
+    }
+    const record = { ...deliveryForm, id: recordId, customerId: c ? String(c.id) : "", customer, phone, quantity, assignedTo: deliveryForm.assignedTo || "Not Assigned" };
     setDeliveries(p => editingId ? p.map(x => x.id === editingId ? record : x) : [record, ...p]);
     sound("success"); setFormType(null); setEditingId(null); setError(""); setStatusError("");
   };
@@ -155,7 +218,6 @@ export default function Delivery() {
     const customer = String(selectionForm.customer || "").trim();
     const phone = phoneOf(selectionForm.phone);
     if (!customer) return fail("Please enter customer name or select a registered customer.");
-    // Phone is optional; imported customer records may contain incomplete numbers.
     const total = Number(selectionForm.photoCount || 0), selected = Number(selectionForm.selectedCount || 0);
     if (!selectionForm.givenDate || !selectionForm.dueDate) return fail("Please select given date and return date.");
     if (selectionForm.dueDate < selectionForm.givenDate) return fail("Return date cannot be before given date.");
@@ -166,7 +228,18 @@ export default function Delivery() {
     setSelections(p => editingId ? p.map(x => x.id === editingId ? record : x) : [record, ...p]);
     sound("success"); setFormType(null); setEditingId(null); setError("");
   };
-  const deleteRecord = (kind, id) => { sound("click"); if (!window.confirm(`Delete this ${kind === "delivery" ? "delivery" : "photo selection"} record?`)) return; if (kind === "delivery") setDeliveries(p => p.filter(x => x.id !== id)); else setSelections(p => p.filter(x => x.id !== id)); if (viewId === id) setViewType(null); sound("delete"); };
+  const deleteRecord = async (kind, id) => {
+    sound("click");
+    if (!window.confirm(`Delete this ${kind === "delivery" ? "delivery" : "photo selection"} record?`)) return;
+    if (kind === "delivery") {
+      try { await api.deliveries.delete(id); } catch (err) { console.warn("Backend delivery delete notice:", err.message); }
+      setDeliveries(p => p.filter(x => x.id !== id));
+    } else {
+      setSelections(p => p.filter(x => x.id !== id));
+    }
+    if (viewId === id) setViewType(null);
+    sound("delete");
+  };
   const changeStatus = (item, status) => { setStatusError(""); if (status === item.status) return; if (status === "Delivered" && !item.deliveredDate) { setStatusError(`Confirm the actual delivery date for ${item.customer}.`); setDeliveryForm({ ...emptyDelivery(), ...item, status: "Delivered", deliveredDate: todayKey() }); setEditingId(item.id); setFormType("delivery"); sound("error"); return; } setDeliveries(p => p.map(d => d.id === item.id ? { ...d, status } : d)); sound("success"); };
   const markReturned = item => { sound("click"); if (!window.confirm(`Mark ${item.customer}'s photo selection as returned today?`)) return false; setSelections(p => p.map(s => s.id === item.id ? { ...s, returnedDate: todayKey() } : s)); sound("success"); return true; };
   const filteredD = useMemo(() => deliveries.filter(x => [x.id, x.customerId, x.bookingId, x.customer, x.phone, x.event, x.item, x.trackingNumber, x.assignedTo, x.courier, x.deliveryMethod, x.address].some(v => String(v ?? "").toLowerCase().includes(search.trim().toLowerCase())) && (filter === "All" || x.status === filter)), [deliveries, search, filter]);

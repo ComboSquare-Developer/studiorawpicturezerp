@@ -3,6 +3,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import GlobalSound from "./components/GlobalSound";
+import { apiRequest } from "./api/client";
 
 const files = import.meta.glob("./pages/*.jsx");
 
@@ -75,6 +76,7 @@ function Loader() {
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [activePage, setActivePage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -115,7 +117,43 @@ export default function App() {
     };
   }, []);
 
+  /* ==========================================
+     VERIFY DJANGO SESSION ON PAGE LOAD
+  ========================================== */
+
+  useEffect(() => {
+    let active = true;
+
+    const checkSession = async () => {
+      try {
+        await apiRequest("auth/me/");
+
+        if (active) {
+          setLoggedIn(true);
+        }
+      } catch {
+        if (active) {
+          setLoggedIn(false);
+        }
+      } finally {
+        if (active) {
+          setCheckingSession(false);
+        }
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const ActivePage = components[activePage];
+
+  /* ==========================================
+     LOGIN SUCCESS
+  ========================================== */
 
   const handleLogin = () => {
     setLoggedIn(true);
@@ -123,16 +161,66 @@ export default function App() {
     setSidebarOpen(false);
   };
 
-  const handleLogout = () => {
-    setLoggedIn(false);
-    setActivePage("dashboard");
-    setSidebarOpen(false);
+  /* ==========================================
+     DJANGO LOGOUT
+  ========================================== */
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("logout/", {
+        method: "POST",
+      });
+
+      setLoggedIn(false);
+      setActivePage("dashboard");
+      setSidebarOpen(false);
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert(
+        "Unable to log out securely. Please try again."
+      );
+    }
   };
 
   const handleNavigation = (page) => {
     setActivePage(page);
     setSidebarOpen(false);
   };
+
+  const handleForgotPassword = async ({ email }) => {
+    try {
+      const res = await apiRequest("auth/forgot-password/", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      return { success: true, message: res?.message };
+    } catch (err) {
+      return { success: false, message: err?.message };
+    }
+  };
+
+  const handleResetPassword = async ({ currentPassword, newPassword }) => {
+    try {
+      const res = await apiRequest("auth/change-password/", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      return { success: true, message: res?.message || "Password updated successfully." };
+    } catch (err) {
+      return { success: false, message: err?.message || "Failed to update password." };
+    }
+  };
+
+  if (checkingSession) {
+    return (
+      <>
+        <GlobalSound />
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
+          <Loader />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -142,16 +230,15 @@ export default function App() {
       {!loggedIn ? (
         <Suspense fallback={<Loader />}>
           {Login ? (
-            <Login onLogin={handleLogin} />
+            <Login
+              onLogin={handleLogin}
+              onForgotPassword={handleForgotPassword}
+            />
           ) : (
             <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb]">
-              <button
-                type="button"
-                onClick={handleLogin}
-                className="rounded-xl bg-[#10264d] px-6 py-3 font-semibold text-white"
-              >
-                Login
-              </button>
+              <p className="text-sm text-red-600">
+                Login page file not found.
+              </p>
             </div>
           )}
         </Suspense>
@@ -179,6 +266,7 @@ export default function App() {
               setSidebarOpen={setSidebarOpen}
               onNavigate={handleNavigation}
               onLogout={handleLogout}
+              onResetPassword={handleResetPassword}
             />
 
             {/* MAIN CONTENT */}

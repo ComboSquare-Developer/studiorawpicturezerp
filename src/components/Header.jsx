@@ -22,6 +22,7 @@ import {
   KeyRound,
   ShieldCheck,
 } from "lucide-react";
+import { api } from "../api/client";
 
 /* ==========================================
    CONSTANTS
@@ -1197,21 +1198,54 @@ export default function Header({
     setProfileOpen(false);
   }, [activePage]);
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
   useEffect(() => {
-    const syncProfile = () => {
-      setProfile(readProfile());
+    let active = true;
+
+    const fetchLiveAdmin = async () => {
+      try {
+        const user = await api.auth.me();
+        if (active && user) {
+          const loaded = {
+            name: user.name || user.username || "Admin",
+            role: user.role || (user.is_superuser ? "Administrator" : "Staff"),
+            email: user.email || "admin@studiorawpicturez.com",
+          };
+          setProfile(loaded);
+          try {
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(loaded));
+          } catch {}
+        }
+      } catch {
+        // Fallback to local profile
+      }
     };
 
-    window.addEventListener(
-      "storage",
-      syncProfile
-    );
+    const fetchUnread = async () => {
+      try {
+        const res = await api.notifications.unreadCount();
+        if (active && typeof res?.unread_count === "number") {
+          setUnreadCount(res.unread_count);
+        }
+      } catch {}
+    };
+
+    fetchLiveAdmin();
+    fetchUnread();
+
+    const syncProfile = () => {
+      setProfile(readProfile());
+      fetchUnread();
+    };
+
+    window.addEventListener("storage", syncProfile);
+    window.addEventListener("studioraw:data-updated", syncProfile);
 
     return () => {
-      window.removeEventListener(
-        "storage",
-        syncProfile
-      );
+      active = false;
+      window.removeEventListener("storage", syncProfile);
+      window.removeEventListener("studioraw:data-updated", syncProfile);
     };
   }, []);
 
@@ -1257,13 +1291,22 @@ export default function Header({
     setResetOpen(true);
   };
 
-  const saveProfile = (updatedProfile) => {
+  const saveProfile = async (updatedProfile) => {
     try {
       const cleanProfile = {
         name: updatedProfile.name,
         email: updatedProfile.email,
         role: updatedProfile.role,
       };
+
+      try {
+        await api.auth.updateProfile({
+          name: updatedProfile.name,
+          email: updatedProfile.email,
+        });
+      } catch (err) {
+        console.warn("Backend profile sync notice:", err);
+      }
 
       localStorage.setItem(
         PROFILE_KEY,
@@ -1497,7 +1540,13 @@ export default function Header({
             >
               <Bell size={19} />
 
-              <span className="sr-premium-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#315b99]" />
+              {unreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#315b99] px-1 text-[9px] font-black text-white shadow-sm">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              ) : (
+                <span className="sr-premium-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#315b99]" />
+              )}
             </button>
 
             {/* DIVIDER */}

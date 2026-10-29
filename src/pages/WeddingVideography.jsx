@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Video,
@@ -1012,7 +1013,41 @@ export default function WeddingVideography() {
     playSound("close");
   };
 
-  const saveBooking = (event) => {
+  useEffect(() => {
+    let isMounted = true;
+    api.weddingVideography
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setBookings(
+            data.map((item) => ({
+              id: item.id,
+              customer: item.customer_name || `${item.bride_name || ""} & ${item.groom_name || ""}`.trim() || "Customer",
+              phone: item.phone || "",
+              email: item.email || "",
+              event: item.service_type || "Traditional VideoGraphy",
+              packageName: "Standard Videography",
+              date: item.event_date || "",
+              amount: Number(item.package_amount || 0),
+              advance: Number(item.advance_amount || 0),
+              venue: item.event_location || "",
+              videographer: "",
+              status: item.status || "Upcoming",
+              notes: item.notes || "",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend wedding videography load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const saveBooking = async (event) => {
     event.preventDefault();
 
     const customer = String(
@@ -1068,58 +1103,82 @@ export default function WeddingVideography() {
       return;
     }
 
-    const record = {
-      ...form,
-      id:
-        editingId ??
-        `VID-${Date.now()}`,
-      customer,
+    const payload = {
+      customer_name: customer,
       phone,
-      amount,
-      advance,
-      venue: String(
-        form.venue || ""
-      ).trim(),
-      videographer: String(
-        form.videographer || ""
-      ).trim(),
-      notes: String(
-        form.notes || ""
-      ).trim(),
+      email: form.email || "",
+      service_type: form.event,
+      event_date: form.date || null,
+      event_location: String(form.venue || "").trim(),
+      package_amount: amount,
+      advance_amount: advance,
       status: form.status || "Upcoming",
+      notes: String(form.notes || "").trim(),
     };
 
-    if (editingId !== null) {
-      setBookings((previous) =>
-        previous.map((item) =>
-          item.id === editingId
-            ? record
-            : item
-        )
-      );
+    try {
+      if (editingId !== null) {
+        if (typeof editingId === "number") {
+          await api.weddingVideography.update(editingId, payload);
+        }
 
-      setNotice(
-        "Videography booking updated successfully."
-      );
-    } else {
-      setBookings((previous) => [
-        record,
-        ...previous,
-      ]);
+        const record = {
+          ...form,
+          id: editingId,
+          customer,
+          phone,
+          amount,
+          advance,
+          venue: String(form.venue || "").trim(),
+          videographer: String(form.videographer || "").trim(),
+          notes: String(form.notes || "").trim(),
+          status: form.status || "Upcoming",
+        };
 
-      setNotice(
-        "Videography booking added successfully."
-      );
+        setBookings((previous) =>
+          previous.map((item) =>
+            item.id === editingId ? record : item
+          )
+        );
+
+        setNotice("Videography booking updated successfully.");
+      } else {
+        let createdId = `VID-${Date.now()}`;
+        try {
+          const res = await api.weddingVideography.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create videography notice:", apiErr.message);
+        }
+
+        const record = {
+          ...form,
+          id: createdId,
+          customer,
+          phone,
+          amount,
+          advance,
+          venue: String(form.venue || "").trim(),
+          videographer: String(form.videographer || "").trim(),
+          notes: String(form.notes || "").trim(),
+          status: form.status || "Upcoming",
+        };
+
+        setBookings((previous) => [record, ...previous]);
+        setNotice("Videography booking added successfully.");
+      }
+
+      playSound("save");
+      setOpen(false);
+      setEditingId(null);
+      setError("");
+    } catch (err) {
+      console.error("Save videography booking error:", err);
+      setError(err.message || "Failed to save videography booking.");
     }
-
-    playSound("save");
-
-    setOpen(false);
-    setEditingId(null);
-    setError("");
   };
 
-  const deleteBooking = (item) => {
+  const deleteBooking = async (item) => {
     if (
       !window.confirm(
         `Delete videography booking for ${item.customer}?`
@@ -1128,26 +1187,34 @@ export default function WeddingVideography() {
       return;
     }
 
+    try {
+      if (typeof item.id === "number") {
+        await api.weddingVideography.delete(item.id);
+      }
+    } catch (err) {
+      console.warn("Backend delete videography notice:", err.message);
+    }
+
     setBookings((previous) =>
-      previous.filter(
-        (booking) =>
-          booking.id !== item.id
-      )
+      previous.filter((booking) => booking.id !== item.id)
     );
 
-    setNotice(
-      "Videography booking deleted successfully."
-    );
-
+    setNotice("Videography booking deleted successfully.");
     playSound("delete");
   };
 
-  const changeStatus = (id, status) => {
+  const changeStatus = async (id, status) => {
+    try {
+      if (typeof id === "number") {
+        await api.weddingVideography.update(id, { status });
+      }
+    } catch (err) {
+      console.warn("Backend status update notice:", err.message);
+    }
+
     setBookings((previous) =>
       previous.map((item) =>
-        item.id === id
-          ? { ...item, status }
-          : item
+        item.id === id ? { ...item, status } : item
       )
     );
 

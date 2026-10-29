@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   CalendarDays,
@@ -1007,6 +1008,48 @@ export default function EventManagement() {
   };
 
   /* =========================================
+     BACKEND API INTEGRATION
+  ========================================= */
+
+  useEffect(() => {
+    let isMounted = true;
+    api.eventManagement
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setEvents(
+            data.map((item) => ({
+              id: item.id,
+              eventName: item.event_name || "Event",
+              customer: item.customer_name || "Customer",
+              phone: item.phone || "",
+              eventType: item.event_type || "Custom Package",
+              eventDate: item.event_date || "",
+              startTime: "",
+              endTime: "",
+              venue: item.venue || "",
+              coordinator: "Not Assigned",
+              guests: Number(item.guest_count || 0),
+              services: [],
+              amount: Number(item.total_amount || item.budget || 0),
+              advance: Number(item.advance_amount || 0),
+              status: item.status || "Planning",
+              priority: "Medium",
+              notes: item.notes || "",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend event management load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /* =========================================
      LOCAL STORAGE
   ========================================= */
 
@@ -1264,7 +1307,7 @@ export default function EventManagement() {
      SAVE EVENT
   ========================================= */
 
-  const saveEvent = (event) => {
+  const saveEvent = async (event) => {
     event.preventDefault();
 
     const customer = String(
@@ -1362,71 +1405,86 @@ export default function EventManagement() {
       return;
     }
 
-    const record = {
-      ...form,
-
-      id:
-        editingId !== null
-          ? editingId
-          : globalThis.crypto
-              ?.randomUUID?.() ||
-            `EVENT-${Date.now()}`,
-
-      eventName,
-      customer,
+    const payload = {
+      customer_name: customer,
       phone,
+      event_name: eventName,
+      event_type: form.eventType,
+      event_date: form.eventDate || null,
       venue,
-
-      guests: Number(
-        form.guests || 0
-      ),
-
-      amount,
-      advance,
-
-      services: Array.isArray(
-        form.services
-      )
-        ? form.services
-        : [],
+      guest_count: Number(form.guests || 0),
+      total_amount: amount,
+      advance_amount: advance,
+      budget: amount,
+      status: form.status || "Planning",
+      notes: form.notes || "",
     };
 
-    if (
-      editingId !== null
-    ) {
-      setEvents((previous) =>
-        previous.map(
-          (item) =>
-            item.id ===
-            editingId
-              ? record
-              : item
-        )
-      );
+    try {
+      if (editingId !== null) {
+        if (typeof editingId === "number") {
+          await api.eventManagement.update(editingId, payload);
+        }
 
-      setNotice(
-        "Event updated successfully."
-      );
-    } else {
-      setEvents((previous) => [
-        record,
-        ...previous,
-      ]);
+        const record = {
+          ...form,
+          id: editingId,
+          eventName,
+          customer,
+          phone,
+          venue,
+          guests: Number(form.guests || 0),
+          amount,
+          advance,
+          services: Array.isArray(form.services) ? form.services : [],
+        };
 
-      setNotice(
-        "Event added successfully."
-      );
+        setEvents((previous) =>
+          previous.map((item) =>
+            item.id === editingId ? record : item
+          )
+        );
+
+        setNotice("Event updated successfully.");
+      } else {
+        let createdId = globalThis.crypto?.randomUUID?.() || `EVENT-${Date.now()}`;
+        try {
+          const res = await api.eventManagement.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create event notice:", apiErr.message);
+        }
+
+        const record = {
+          ...form,
+          id: createdId,
+          eventName,
+          customer,
+          phone,
+          venue,
+          guests: Number(form.guests || 0),
+          amount,
+          advance,
+          services: Array.isArray(form.services) ? form.services : [],
+        };
+
+        setEvents((previous) => [record, ...previous]);
+        setNotice("Event added successfully.");
+      }
+
+      sound("success");
+      closeForm();
+    } catch (err) {
+      console.error("Save event error:", err);
+      setError(err.message || "Failed to save event.");
     }
-
-    sound("success");
-    closeForm();
   };
 
   /* =========================================
      DELETE EVENT
   ========================================= */
 
-  const deleteEvent = (item) => {
+  const deleteEvent = async (item) => {
     if (
       !window.confirm(
         `Delete "${item.eventName}" event?`
@@ -1435,44 +1493,43 @@ export default function EventManagement() {
       return;
     }
 
+    try {
+      if (typeof item.id === "number") {
+        await api.eventManagement.delete(item.id);
+      }
+    } catch (err) {
+      console.warn("Backend delete event notice:", err.message);
+    }
+
     setEvents((previous) =>
-      previous.filter(
-        (record) =>
-          record.id !== item.id
-      )
+      previous.filter((record) => record.id !== item.id)
     );
 
     sound("delete");
-
-    setNotice(
-      "Event deleted successfully."
-    );
+    setNotice("Event deleted successfully.");
   };
 
   /* =========================================
      UPDATE STATUS
   ========================================= */
 
-  const updateStatus = (
-    id,
-    status
-  ) => {
+  const updateStatus = async (id, status) => {
+    try {
+      if (typeof id === "number") {
+        await api.eventManagement.update(id, { status });
+      }
+    } catch (err) {
+      console.warn("Backend event status update notice:", err.message);
+    }
+
     setEvents((previous) =>
       previous.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status,
-            }
-          : item
+        item.id === id ? { ...item, status } : item
       )
     );
 
     sound("click");
-
-    setNotice(
-      "Event status updated."
-    );
+    setNotice("Event status updated.");
   };
 
   return (

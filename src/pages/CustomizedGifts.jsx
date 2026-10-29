@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Gift,
@@ -508,6 +509,46 @@ export default function CustomizedGifts() {
     }
   });
 
+  /* =========================================
+     BACKEND API INTEGRATION
+  ========================================= */
+
+  useEffect(() => {
+    let isMounted = true;
+    api.customizedGifts
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setGifts(
+            data.map((item) => ({
+              id: item.id,
+              customer: item.customer_name || "Customer",
+              phone: item.phone || "",
+              giftType: item.gift_type || item.gift_name || "Custom Package",
+              occasion: item.gift_name || "",
+              quantity: Number(item.quantity || 1),
+              orderDate: item.order_date || today(),
+              deliveryDate: item.delivery_date || "",
+              customization: item.customization_details || "",
+              size: item.delivery_address || "Standard",
+              amount: Number(item.total_amount || 0),
+              advance: Number(item.advance_amount || 0),
+              paymentMode: "Cash",
+              status: item.status || "Pending",
+              notes: item.notes || "",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend customized gifts load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(gifts));
@@ -649,7 +690,7 @@ export default function CustomizedGifts() {
     setError("");
   };
 
-  const saveGift = (event) => {
+  const saveGift = async (event) => {
     event.preventDefault();
 
     const customer = String(form.customer || "").trim();
@@ -700,37 +741,91 @@ export default function CustomizedGifts() {
       return;
     }
 
-    const record = {
-      ...form,
-      id:
-        editingId !== null
-          ? editingId
-          : `GIFT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      customer,
+    const payload = {
+      customer_name: customer,
       phone,
-      quantity: Number(form.quantity),
-      amount: Number(form.amount),
-      advance: Number(form.advance),
+      gift_name: form.giftType || "Customized Gift",
+      gift_type: form.giftType,
+      quantity: Number(form.quantity || 1),
+      order_date: form.orderDate || null,
+      delivery_date: form.deliveryDate || null,
+      delivery_address: form.size || "",
+      total_amount: Number(form.amount || 0),
+      advance_amount: Number(form.advance || 0),
+      status: form.status || "Pending",
+      payment_status:
+        Number(form.advance) >= Number(form.amount)
+          ? "Paid"
+          : Number(form.advance) > 0
+          ? "Partial"
+          : "Pending",
+      customization_details: form.customization || "",
+      notes: form.notes || "",
     };
 
-    if (editingId !== null) {
-      setGifts((previous) =>
-        previous.map((gift) =>
-          gift.id === editingId ? record : gift
-        )
-      );
-      setNotice("Gift order updated successfully.");
-    } else {
-      setGifts((previous) => [record, ...previous]);
-      setNotice("Gift order added successfully.");
-    }
+    try {
+      if (editingId !== null) {
+        if (typeof editingId === "number") {
+          await api.customizedGifts.update(editingId, payload);
+        }
 
-    playSound("save", soundEnabled);
-    closeForm();
+        const record = {
+          ...form,
+          id: editingId,
+          customer,
+          phone,
+          quantity: Number(form.quantity),
+          amount: Number(form.amount),
+          advance: Number(form.advance),
+        };
+
+        setGifts((previous) =>
+          previous.map((gift) =>
+            gift.id === editingId ? record : gift
+          )
+        );
+        setNotice("Gift order updated successfully.");
+      } else {
+        let createdId = `GIFT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        try {
+          const res = await api.customizedGifts.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create gift notice:", apiErr.message);
+        }
+
+        const record = {
+          ...form,
+          id: createdId,
+          customer,
+          phone,
+          quantity: Number(form.quantity),
+          amount: Number(form.amount),
+          advance: Number(form.advance),
+        };
+
+        setGifts((previous) => [record, ...previous]);
+        setNotice("Gift order added successfully.");
+      }
+
+      playSound("save", soundEnabled);
+      closeForm();
+    } catch (err) {
+      console.error("Save gift error:", err);
+      setError(err.message || "Failed to save gift order.");
+    }
   };
 
-  const deleteGift = (id) => {
+  const deleteGift = async (id) => {
     if (!window.confirm("Delete this gift order?")) return;
+
+    try {
+      if (typeof id === "number") {
+        await api.customizedGifts.delete(id);
+      }
+    } catch (err) {
+      console.warn("Backend delete gift notice:", err.message);
+    }
 
     setGifts((previous) =>
       previous.filter((gift) => gift.id !== id)

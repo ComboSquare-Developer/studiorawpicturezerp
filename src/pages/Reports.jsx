@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { api } from "../api/client";
 
 import {
   BarChart3,
@@ -1348,11 +1349,30 @@ export default function Reports() {
   );
 
   const [data, setData] = useState(loadAllData);
+  const [backendSummary, setBackendSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  useEffect(() => {
+    let isMounted = true;
+    api.reports
+      .summary({ month: selectedMonth })
+      .then((res) => {
+        if (isMounted && res) {
+          setBackendSummary(res);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using local report calculations:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMonth]);
 
   /* LIVE MODULE CONNECTION */
 
@@ -1371,7 +1391,13 @@ export default function Reports() {
   const manualRefresh = () => {
     setLoading(true);
     loadReports();
-    setLoading(false);
+    api.reports
+      .summary({ month: selectedMonth })
+      .then((res) => {
+        if (res) setBackendSummary(res);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {

@@ -3,10 +3,12 @@
 import os
 import sys
 
+import quopri
 
+print(quopri.decodestring("reset_uid=3DMw&reset_token=3D").decode())
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'studioraw_backend.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

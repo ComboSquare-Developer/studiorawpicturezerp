@@ -1,5 +1,5 @@
-
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Wallet,
@@ -1296,6 +1296,38 @@ export default function Expenses() {
     (item) => item.id === viewId
   );
 
+  /* ---------------- BACKEND API INTEGRATION ---------------- */
+
+  useEffect(() => {
+    let isMounted = true;
+    api.expenses
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setExpenses(
+            data.map((item) => ({
+              id: item.id,
+              title: item.expense_title || "Expense",
+              category: item.category || "Other",
+              amount: Number(item.amount || 0),
+              date: item.expense_date || localDate(),
+              paymentMode: item.payment_method || "Cash",
+              paidTo: item.paid_to || "",
+              notes: item.notes || "",
+              updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend expenses load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   /* ---------------- SAVE STORAGE ---------------- */
 
   useEffect(() => {
@@ -1447,7 +1479,7 @@ export default function Expenses() {
     }
   };
 
-  const saveExpense = (event) => {
+  const saveExpense = async (event) => {
     event.preventDefault();
 
     const amount = Number(form.amount);
@@ -1465,38 +1497,82 @@ export default function Expenses() {
       return;
     }
 
-    const record = {
-      ...form,
-      id: editingId || createId(),
-      title: form.title.trim(),
+    const payload = {
+      expense_title: form.title.trim(),
+      category: form.category || "Other",
       amount,
-      updatedAt: new Date().toISOString(),
+      expense_date: form.date || null,
+      paid_to: form.paidTo || "",
+      payment_method: form.paymentMode || "Cash",
+      status: "Paid",
+      notes: form.notes || "",
     };
 
-    if (editingId) {
-      setExpenses((previous) =>
-        previous.map((item) =>
-          item.id === editingId
-            ? record
-            : item
-        )
-      );
-    } else {
-      setExpenses((previous) => [
-        record,
-        ...previous,
-      ]);
-    }
+    try {
+      if (editingId) {
+        if (typeof editingId === "number") {
+          await api.expenses.update(editingId, payload);
+        }
 
-    closeForm();
+        const record = {
+          ...form,
+          id: editingId,
+          title: form.title.trim(),
+          amount,
+          updatedAt: new Date().toISOString(),
+        };
+
+        setExpenses((previous) =>
+          previous.map((item) =>
+            item.id === editingId
+              ? record
+              : item
+          )
+        );
+      } else {
+        let createdId = createId();
+        try {
+          const res = await api.expenses.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create expense notice:", apiErr.message);
+        }
+
+        const record = {
+          ...form,
+          id: createdId,
+          title: form.title.trim(),
+          amount,
+          updatedAt: new Date().toISOString(),
+        };
+
+        setExpenses((previous) => [
+          record,
+          ...previous,
+        ]);
+      }
+
+      closeForm();
+    } catch (err) {
+      console.error("Save expense error:", err);
+      setError(err.message || "Failed to save expense.");
+    }
   };
 
-  const deleteExpense = (item) => {
+  const deleteExpense = async (item) => {
     const confirmed = window.confirm(
       `Delete "${item.title}"?`
     );
 
     if (!confirmed) return;
+
+    try {
+      if (typeof item.id === "number") {
+        await api.expenses.delete(item.id);
+      }
+    } catch (err) {
+      console.warn("Backend delete expense notice:", err.message);
+    }
 
     setExpenses((previous) =>
       previous.filter(

@@ -83,6 +83,7 @@ const menuGroups = [
   {
     title: "MANAGEMENT",
     items: [
+      { id: "staff", label: "Staff", icon: Users },
       { id: "branches", label: "Branches", icon: Building2 },
       { id: "reports", label: "Reports", icon: BarChart3 },
       { id: "notifications", label: "Notifications", icon: Bell },

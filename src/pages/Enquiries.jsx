@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -984,6 +985,10 @@ function AddEnquiryModal({
         "Enter a valid 10-digit phone number.";
     }
 
+    if (!form.eventDate) {
+      nextErrors.eventDate = "Event date is required for booking sync.";
+    }
+
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
       return;
@@ -1566,30 +1571,37 @@ export default function Enquiries() {
   ========================================= */
 
   useEffect(() => {
-    try {
-      const existing = loadEnquiries();
-      const updated = existing.map((item) => {
-        try {
-          return syncEnquiryToModules(item);
-        } catch (error) {
-          console.error(
-            "Enquiry sync failed:",
-            item.id,
-            error
-          );
-          return item;
+    let isMounted = true;
+    api.enquiries
+      .list()
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res?.results;
+        if (isMounted && Array.isArray(items)) {
+          const mapped = items.map((e) => ({
+            id: e.id,
+            name: e.name,
+            email: e.email || "",
+            number: e.phone || "",
+            mainEvent: e.event_type || "Wedding",
+            eventDate: e.event_date || "",
+            city: e.location || "",
+            weddingCoverage: "Full Day",
+            notes: e.notes || "",
+            status: e.status || "New",
+            budget: e.budget ? `₹${Number(e.budget).toLocaleString("en-IN")}` : "Not specified",
+          }));
+          setEnquiries(mapped);
         }
+      })
+      .catch((err) => {
+        console.warn("Using local enquiries fallback:", err.message);
       });
 
-      setEnquiries(updated);
+    // Do not auto-create Customers / Bookings from demo or cached enquiries.
 
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(updated)
-      );
-    } catch (error) {
-      console.error("Initial enquiry sync failed:", error);
-    }
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   /* =========================================
@@ -1725,113 +1737,171 @@ export default function Enquiries() {
     setCityFilter("All");
   };
 
-  const saveEnquiry = (data) => {
-    const nextId =
-      Math.max(
-        0,
-        ...enquiries.map((item) =>
-          Number(item.id) || 0
-        )
-      ) + 1;
+  // Django is the source of truth. Keep localStorage in sync only for
+  // older Customer/Booking pages that still read local records.
+  const unwrap = (response) =>
+    Array.isArray(response) ? response : Array.isArray(response?.results) ? response.results : [];
 
-    const newData = {
-      ...cleanEnquiry(data),
-      id: nextId,
+  const mapRemoteEnquiry = (e) => ({
+    id: e.id,
+    name: e.name || "",
+    email: e.email || "",
+    number: e.phone || "",
+    mainEvent: e.event_type || "Wedding",
+    eventDate: e.event_date || "",
+    city: e.location || "",
+    weddingCoverage: "Full Day",
+    notes: e.notes || "",
+    status: e.status || "New",
+    budget: formatBudget(e.budget),
+  });
+
+  const syncRemoteRelations = async (enquiry) => {
+    const phone = normalizePhone(enquiry.number || enquiry.phone);
+    if (!enquiry.name?.trim() || phone.length !== 10) {
+      throw new Error("Customer name and valid 10-digit phone number required.");
+    }
+
+    const customers = unwrap(await api.customers.list());
+    const linkedCustomerId = enquiry.customerId;
+    const customerMatch = customers.find((c) =>
+      (linkedCustomerId != null && String(c.id) === String(linkedCustomerId)) ||
+      normalizePhone(c.phone || c.mobile) === phone
+    );
+
+    const customerPayload = {
+      name: enquiry.name.trim(),
+      phone,
+      email: enquiry.email || "",
+      address: enquiry.city || "",
+      event_type: enquiry.mainEvent || "Wedding",
+      notes: enquiry.notes || "",
     };
 
-    let savedEnquiry;
-
-    try {
-      savedEnquiry = syncEnquiryToModules(newData);
-    } catch (error) {
-      console.error("Enquiry sync failed:", error);
-      setToast(
-        "Unable to sync Customer and Booking. Please try again."
-      );
-      return;
+    // Existing customers are reused. Do not overwrite unrelated customer
+    // information just because the same phone number is used in an enquiry.
+    let customer = customerMatch;
+    if (!customer) {
+      customer = await api.customers.create(customerPayload);
+    } else if (linkedCustomerId != null && String(customer.id) === String(linkedCustomerId)) {
+      customer = await api.customers.update(customer.id, customerPayload);
     }
+    if (!customer?.id) throw new Error("Customer was not saved. Check Customers API.");
 
-    const updatedEnquiries = [
-      savedEnquiry,
-      ...enquiries,
-    ];
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(updatedEnquiries)
-      );
-    } catch (error) {
-      console.error("Enquiry save failed:", error);
-      setToast("Unable to save enquiry.");
-      return;
-    }
-
-    setEnquiries(updatedEnquiries);
-    notifyDataChanged(STORAGE_KEY, "enquiries");
-
-    setAddOpen(false);
-
-    setToast(
-      "Enquiry, Customer & Booking added successfully."
+    const eventDate = normalizeDate(enquiry.eventDate);
+    // Bookings require an event date; never invent one.
+    if (!eventDate) throw new Error("Event Date is required to create a booking.");
+    const eventType = enquiry.mainEvent || "Wedding";
+    const bookings = unwrap(await api.bookings.list());
+    const existingBooking = bookings.find((b) =>
+      (enquiry.bookingId != null && String(b.id) === String(enquiry.bookingId)) ||
+      (b.enquiry_id != null && String(b.enquiry_id) === String(enquiry.id)) ||
+      (b.enquiry != null && String(b.enquiry?.id ?? b.enquiry) === String(enquiry.id)) ||
+      (normalizePhone(b.phone) === phone &&
+       normalizeDate(b.event_date || b.date) === eventDate &&
+       String(b.event_type || "").toLowerCase() === eventType.toLowerCase())
     );
+
+    const bookingPayload = {
+      customer: customer.id,
+      customer_name: enquiry.name.trim(),
+      phone,
+      event_type: eventType,
+      event_date: eventDate,
+      location: enquiry.city || "",
+      total_amount: parseAmount(enquiry.budget).toFixed(2),
+      advance_amount: existingBooking?.advance_amount ?? "0.00",
+      status: String(enquiry.status || "").toLowerCase() === "confirmed"
+        ? "Confirmed" : "Pending",
+      notes: [enquiry.notes || "", enquiry.weddingCoverage ? `Coverage: ${enquiry.weddingCoverage}` : ""]
+        .filter(Boolean).join("\n"),
+    };
+
+    const booking = existingBooking
+      ? await api.bookings.update(existingBooking.id, bookingPayload)
+      : await api.bookings.create(bookingPayload);
+    if (!booking?.id) throw new Error("Booking was not saved. Check Bookings API.");
+
+    const linked = syncEnquiryToModules({
+      ...enquiry,
+      customerId: customer.id,
+      bookingId: booking.id,
+    });
+    return { ...linked, customerId: customer.id, bookingId: booking.id };
   };
 
-  const updateEnquiry = (data) => {
+  const enquiryPayload = (data) => ({
+    name: data.name.trim(),
+    phone: normalizePhone(data.number || data.phone),
+    email: data.email || "",
+    event_type: data.mainEvent || "Wedding",
+    event_date: normalizeDate(data.eventDate) || null,
+    location: data.city || "",
+    budget: parseAmount(data.budget).toFixed(2),
+    status: data.status || "New",
+    notes: data.notes || "",
+  });
+
+  const saveEnquiry = async (data) => {
+    if (!data.eventDate) {
+      setToast("Event Date is required for automatic booking creation.");
+      return;
+    }
+    let remote;
+    try {
+      remote = await api.enquiries.create(enquiryPayload(data));
+      if (!remote?.id) throw new Error("Enquiry API did not return an ID.");
+      const saved = await syncRemoteRelations({ ...data, id: remote.id });
+      setEnquiries((prev) => [saved, ...prev.filter((e) => String(e.id) !== String(saved.id))]);
+      notifyDataChanged(STORAGE_KEY, "enquiries");
+      setAddOpen(false);
+      setToast("Enquiry, Customer and Booking saved to PostgreSQL.");
+    } catch (error) {
+      console.error("Enquiry auto-sync failed:", error);
+      if (remote?.id) {
+        setEnquiries((prev) => [mapRemoteEnquiry(remote), ...prev]);
+        setAddOpen(false);
+        setToast(`Enquiry #${remote.id} saved, but linked Customer/Booking failed: ${error.message}`);
+      } else {
+        setToast(`Enquiry save failed: ${error.message}`);
+      }
+    }
+  };
+
+  const updateEnquiry = async (data) => {
     if (!editing) return;
-
-    const newData = {
-      ...editing,
-      ...cleanEnquiry(data),
-      id: editing.id,
-    };
-
-    let updated;
-
-    try {
-      updated = syncEnquiryToModules(newData);
-    } catch (error) {
-      console.error("Enquiry update sync failed:", error);
-      setToast(
-        "Unable to sync Customer and Booking. Please try again."
-      );
+    if (!data.eventDate) {
+      setToast("Event Date is required for automatic booking sync.");
       return;
     }
-
-    const updatedEnquiries = enquiries.map((item) =>
-      String(item.id) === String(editing.id)
-        ? updated
-        : item
-    );
-
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(updatedEnquiries)
-      );
+      await api.enquiries.update(editing.id, enquiryPayload(data));
+      const saved = await syncRemoteRelations({ ...editing, ...data, id: editing.id });
+      setEnquiries((prev) => prev.map((e) => String(e.id) === String(saved.id) ? saved : e));
+      notifyDataChanged(STORAGE_KEY, "enquiries");
+      setEditing(null);
+      setSelected(null);
+      setToast("Enquiry, Customer and Booking updated successfully.");
     } catch (error) {
-      console.error("Enquiry update failed:", error);
-      setToast("Unable to update enquiry.");
-      return;
+      console.error("Enquiry update/sync failed:", error);
+      setToast(`Update/sync failed: ${error.message}`);
     }
-
-    setEnquiries(updatedEnquiries);
-    notifyDataChanged(STORAGE_KEY, "enquiries");
-
-    setEditing(null);
-    setSelected(null);
-
-    setToast(
-      "Enquiry, Customer & Booking updated successfully."
-    );
   };
 
-  const deleteEnquiry = (id) => {
+  const deleteEnquiry = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this enquiry?"
     );
 
     if (!confirmed) return;
+
+    try {
+      await api.enquiries.delete(id);
+    } catch (err) {
+      console.error("Backend enquiry delete failed:", err);
+      setToast(`Unable to delete enquiry in Django: ${err.message}`);
+      return;
+    }
 
     const updatedEnquiries = enquiries.filter(
       (item) => String(item.id) !== String(id)

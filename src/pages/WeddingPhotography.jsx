@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api/client";
 import { createPortal } from "react-dom";
 import {
   Camera,
@@ -791,7 +792,40 @@ export default function WeddingPhotography() {
     if (error) setError("");
   };
 
-  const saveWedding = (event) => {
+  useEffect(() => {
+    let isMounted = true;
+    api.weddingPhotography
+      .list()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setWeddings(
+            data.map((item) => ({
+              id: item.id,
+              bride: item.bride_name || "",
+              groom: item.groom_name || "",
+              phone: item.phone || "",
+              email: item.email || "",
+              venue: item.event_location || "",
+              eventType: item.service_type || "Traditional Photography",
+              date: item.event_date || "",
+              amount: Number(item.package_amount || 0),
+              advance: Number(item.advance_amount || 0),
+              status: item.status || "Pending",
+              notes: item.notes || "",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend wedding photography load notice:", err.message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const saveWedding = async (event) => {
     event.preventDefault();
 
     const bride = String(form.bride || "").trim();
@@ -848,40 +882,74 @@ export default function WeddingPhotography() {
       advance,
     };
 
-    if (editing) {
-      setWeddings((previous) =>
-        previous.map((item) =>
-          item.id === editing.id
-            ? { ...item, ...data }
-            : item
-        )
-      );
+    const payload = {
+      customer_name: `${groom} & ${bride}`.trim() || bride || groom || "Customer",
+      bride_name: bride,
+      groom_name: groom,
+      phone,
+      email: form.email || "",
+      service_type: form.eventType,
+      event_date: form.date || null,
+      event_location: String(form.venue || "").trim(),
+      package_amount: amount,
+      advance_amount: advance,
+      status: form.status || "Pending",
+      notes: form.notes || "",
+    };
 
-      setNotice("Wedding updated successfully.");
-    } else {
-      const newWedding = {
-        ...data,
-        id: `WED-${Date.now()}`,
-        isDemo: false,
-      };
+    try {
+      if (editing) {
+        if (typeof editing.id === "number") {
+          await api.weddingPhotography.update(editing.id, payload);
+        }
+        setWeddings((previous) =>
+          previous.map((item) =>
+            item.id === editing.id ? { ...item, ...data } : item
+          )
+        );
+        setNotice("Wedding updated successfully.");
+      } else {
+        let createdId = `WED-${Date.now()}`;
+        try {
+          const res = await api.weddingPhotography.create(payload);
+          if (res?.id) createdId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend create wedding photography notice:", apiErr.message);
+        }
+        const newWedding = {
+          ...data,
+          id: createdId,
+          isDemo: false,
+        };
+        setWeddings((previous) => [newWedding, ...previous]);
+        setNotice("Wedding added successfully.");
+      }
 
-      setWeddings((previous) => [newWedding, ...previous]);
-      setNotice("Wedding added successfully.");
+      playSound("save");
+      setModalOpen(false);
+      setEditing(null);
+      setError("");
+    } catch (err) {
+      console.error("Save wedding error:", err);
+      setError(err.message || "Failed to save wedding.");
     }
-
-    playSound("save");
-    setModalOpen(false);
-    setEditing(null);
-    setError("");
   };
 
-  const deleteWedding = (item) => {
+  const deleteWedding = async (item) => {
     if (
       !window.confirm(
         `Delete ${item.bride} & ${item.groom}'s wedding?`
       )
     ) {
       return;
+    }
+
+    try {
+      if (typeof item.id === "number") {
+        await api.weddingPhotography.delete(item.id);
+      }
+    } catch (err) {
+      console.warn("Backend delete wedding photography notice:", err.message);
     }
 
     setWeddings((previous) =>
@@ -892,7 +960,15 @@ export default function WeddingPhotography() {
     playSound("delete");
   };
 
-  const changeStatus = (id, status) => {
+  const changeStatus = async (id, status) => {
+    try {
+      if (typeof id === "number") {
+        await api.weddingPhotography.update(id, { status });
+      }
+    } catch (err) {
+      console.warn("Backend status update notice:", err.message);
+    }
+
     setWeddings((previous) =>
       previous.map((item) =>
         item.id === id ? { ...item, status } : item

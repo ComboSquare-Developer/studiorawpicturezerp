@@ -16,6 +16,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import { api, apiRequest, initializeCSRF } from "../api/client";
+
 /* ==========================================
    RESPONSIVE STUDIO LOGO
 ========================================== */
@@ -83,10 +85,11 @@ export default function Login({
   onLogin,
   onForgotPassword,
 }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("prathi");
+  const [password, setPassword] = useState("prathi");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState("");
@@ -94,22 +97,119 @@ export default function Login({
   const [recoverySuccess, setRecoverySuccess] = useState(false);
   const [sending, setSending] = useState(false);
 
+  const [resetParams, setResetParams] = useState(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const uid = p.get("reset_uid");
+      const token = p.get("reset_token");
+      return uid && token ? { uid, token } : null;
+    } catch {
+      return null;
+    }
+  });
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setResetError("");
+    setResetMessage("");
+
+    if (newPassword.length < 8) {
+      setResetError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError("Passwords do not match.");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const res = await api.auth.resetPassword({
+        uidb64: resetParams.uid,
+        token: resetParams.token,
+        new_password: newPassword,
+      });
+      setResetMessage(res?.message || "Password reset successful! You can now sign in.");
+      setTimeout(() => {
+        setResetParams(null);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 2000);
+    } catch (err) {
+      setResetError(err.message || "Unable to reset password. Link may be expired.");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   /* ==========================================
-     LOGIN
+     DJANGO LOGIN
   ========================================== */
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
+    const username = email.trim();
+
+    if (!username || !password.trim()) {
       setError("Please enter your email and password.");
       return;
     }
 
-    setError("");
+    if (loggingIn) return;
 
-    if (typeof onLogin === "function") {
-      onLogin();
+    setError("");
+    setLoggingIn(true);
+
+    try {
+      await initializeCSRF();
+
+      const result = await apiRequest("login/", {
+        method: "POST",
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+
+      if (result?.message !== "Login successful") {
+        throw new Error("Unable to sign in. Please try again.");
+      }
+
+      if (typeof onLogin === "function") {
+        await onLogin(result.user);
+      }
+    } catch (err) {
+      const message = err?.message || "";
+
+      if (
+        message.includes("401") ||
+        message.includes("Invalid username or password")
+      ) {
+        setError("Invalid username or password.");
+      } else if (
+        message.includes("403") ||
+        message.toLowerCase().includes("csrf")
+      ) {
+        setError(
+          "Security verification failed. Please refresh and try again."
+        );
+      } else if (
+        message.includes("Failed to fetch") ||
+        message.includes("NetworkError")
+      ) {
+        setError(
+          "Unable to connect to the server. Please check if Django is running."
+        );
+      } else {
+        setError(message || "Login failed. Please try again.");
+      }
+    } finally {
+      setLoggingIn(false);
     }
   };
 
@@ -211,6 +311,7 @@ export default function Login({
                 </p>
               </div>
             </div>
+
           </div>
 
           {/* MAIN CONTENT */}
@@ -334,7 +435,87 @@ export default function Login({
               }}
             >
 
-              {!forgotOpen ? (
+              {resetParams ? (
+                <>
+                  {/* SET NEW PASSWORD FORM */}
+                  <div className="mb-6">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#eef3fa] text-[#10264d]">
+                      <LockKeyhole size={23} />
+                    </div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b19464]">
+                      Security Reset
+                    </p>
+                    <h2 className="text-[28px] font-bold tracking-[-0.035em] text-[#10264d] sm:text-[34px]">
+                      Set New Password
+                    </h2>
+                    <p className="mt-2 text-[13px] leading-relaxed text-[#8793a6]">
+                      Choose a secure new password of at least 8 characters.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-[12px] font-semibold text-[#34445f]">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] px-4 py-3.5 text-sm !text-[#10264d] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-[12px] font-semibold text-[#34445f]">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] px-4 py-3.5 text-sm !text-[#10264d] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
+                      />
+                    </div>
+
+                    {resetError && (
+                      <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+                        <AlertCircle size={16} />
+                        {resetError}
+                      </div>
+                    )}
+
+                    {resetMessage && (
+                      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+                        <CheckCircle2 size={16} />
+                        {resetMessage}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={resettingPassword}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#10264d] py-3.5 text-sm font-bold text-white shadow-md hover:bg-[#1f487e] disabled:opacity-50"
+                    >
+                      {resettingPassword ? "Updating Password..." : "Save New Password"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetParams(null)}
+                      className="w-full py-2 text-center text-xs font-semibold text-[#10264d] hover:underline"
+                    >
+                      Back to Login
+                    </button>
+                  </form>
+                </>
+              ) : !forgotOpen ? (
                 <>
                   {/* LOGIN HEADING */}
 
@@ -367,14 +548,14 @@ export default function Login({
                     className="space-y-5"
                   >
 
-                    {/* EMAIL */}
+                    {/* EMAIL OR USERNAME */}
 
                     <div>
                       <label
                         htmlFor="login-email"
                         className="mb-2 block text-[12px] font-semibold text-[#34445f]"
                       >
-                        Email Address
+                        Email Address or Username
                       </label>
 
                       <div className="relative">
@@ -385,13 +566,13 @@ export default function Login({
 
                         <input
                           id="login-email"
-                          type="email"
+                          type="text"
                           value={email}
                           onChange={(e) => {
                             setEmail(e.target.value);
                             if (error) setError("");
                           }}
-                          placeholder="name@studio.com"
+                          placeholder="Username or email (e.g. prathi or admin)"
                           autoComplete="username"
                           required
                           className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
@@ -450,6 +631,24 @@ export default function Login({
                       </div>
                     </div>
 
+                    {/* QUICK PREFILL CREDENTIALS */}
+                    <div className="flex items-center justify-between rounded-xl border border-[#d6e4f7] bg-[#f0f6ff] px-3.5 py-2.5 text-xs text-[#204374]">
+                      <span className="font-medium">
+                        Admin Login: <strong className="font-bold text-[#102b53]">prathi</strong> / <strong className="font-bold text-[#102b53]">prathi</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail("prathi");
+                          setPassword("prathi");
+                          if (error) setError("");
+                        }}
+                        className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[#102b53] shadow-sm hover:bg-[#e4effd]"
+                      >
+                        Reset to prathi
+                      </button>
+                    </div>
+
                     {/* FORGOT PASSWORD BUTTON */}
 
                     <div className="flex justify-end">
@@ -477,9 +676,12 @@ export default function Login({
 
                     <button
                       type="submit"
-                      className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)]"
+                      disabled={loggingIn}
+                      className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#102b53] px-5 py-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(16,43,83,0.14)] transition-all duration-300 hover:bg-[#1b4380] hover:shadow-[0_12px_25px_rgba(16,43,83,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Sign In to Dashboard
+                      {loggingIn
+                        ? "Signing In..."
+                        : "Sign In to Dashboard"}
 
                       <ArrowRight
                         size={18}

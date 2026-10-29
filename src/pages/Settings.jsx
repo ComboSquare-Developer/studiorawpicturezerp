@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
+import { api } from "../api/client";
 import {
   Building2,
   Save,
@@ -203,7 +204,25 @@ export default function Settings() {
   const toastTimer = useRef(null);
 
   useEffect(() => {
+    let isMounted = true;
+    api.settings
+      .get()
+      .then((data) => {
+        if (isMounted && data && typeof data === "object") {
+          setStudio((prev) => ({ ...prev, ...data }));
+          try {
+            localStorage.setItem(STUDIO_KEY, JSON.stringify(data));
+          } catch {
+            // cache ignore
+          }
+        }
+      })
+      .catch((fetchError) => {
+        console.warn("Using cached studio settings:", fetchError.message);
+      });
+
     return () => {
+      isMounted = false;
       if (toastTimer.current) {
         clearTimeout(toastTimer.current);
       }
@@ -232,7 +251,7 @@ export default function Settings() {
     }, 3000);
   };
 
-  const saveStudio = (event) => {
+  const saveStudio = async (event) => {
     event.preventDefault();
 
     setError("");
@@ -276,6 +295,12 @@ export default function Settings() {
             ]
           )
         );
+
+      try {
+        await api.settings.update(updatedStudio);
+      } catch (apiErr) {
+        console.warn("Backend settings update notice:", apiErr.message);
+      }
 
       localStorage.setItem(
         STUDIO_KEY,
