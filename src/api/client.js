@@ -8,26 +8,14 @@ const API_BASE_URL = (
   .trim()
   .replace(/\/+$/, "");
 
-// Cookie helper
-export function getCookie(name) {
-  const cookies = document.cookie.split(";");
-
-  for (const cookie of cookies) {
-    const [key, ...value] = cookie.trim().split("=");
-
-    if (key === name) {
-      return decodeURIComponent(value.join("="));
-    }
-  }
-
-  return null;
-}
-
+// CSRF token received from the backend
 let inMemoryCsrfToken = null;
 
 // Normalize API endpoint
 function getApiUrl(endpoint = "") {
-  let cleanEndpoint = String(endpoint).trim().replace(/^\/+/, "");
+  let cleanEndpoint = String(endpoint)
+    .trim()
+    .replace(/^\/+/, "");
 
   // Avoid duplicate /api/api/
   if (cleanEndpoint.startsWith("api/")) {
@@ -39,12 +27,13 @@ function getApiUrl(endpoint = "") {
     : `${API_BASE_URL}/`;
 }
 
-// Initialize CSRF
+// Get CSRF token from Django backend
 export async function initializeCSRF() {
   try {
     const response = await fetch(getApiUrl("csrf/"), {
       method: "GET",
       credentials: "include",
+      cache: "no-store",
       headers: {
         Accept: "application/json",
       },
@@ -58,9 +47,13 @@ export async function initializeCSRF() {
 
     const data = await response.json();
 
-    if (data?.csrfToken) {
-      inMemoryCsrfToken = data.csrfToken;
+    if (!data?.csrfToken) {
+      throw new Error(
+        "CSRF token was not returned by the backend."
+      );
     }
+
+    inMemoryCsrfToken = data.csrfToken;
 
     return data;
   } catch (error) {
@@ -73,29 +66,37 @@ export async function initializeCSRF() {
 export async function apiRequest(endpoint, options = {}) {
   const method = (options.method || "GET").toUpperCase();
 
+  const isWriteRequest = ![
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "TRACE",
+  ].includes(method);
+
+  const isFormData =
+    typeof FormData !== "undefined" &&
+    options.body instanceof FormData;
+
   const headers = {
     Accept: "application/json",
-    ...(options.body && !(options.body instanceof FormData)
+    ...(options.body && !isFormData
       ? { "Content-Type": "application/json" }
       : {}),
     ...options.headers,
   };
 
-  // CSRF protection for write requests
-  if (!["GET", "HEAD", "OPTIONS", "TRACE"].includes(method)) {
-    let csrfToken =
-      getCookie("csrftoken") || inMemoryCsrfToken;
+  // Always obtain a fresh backend CSRF token for write requests.
+  if (isWriteRequest) {
+    const csrfData = await initializeCSRF();
+
+    const csrfToken =
+      csrfData?.csrfToken || inMemoryCsrfToken;
 
     if (!csrfToken) {
-      await initializeCSRF();
-
-      csrfToken =
-        getCookie("csrftoken") || inMemoryCsrfToken;
+      throw new Error("Unable to obtain Django CSRF token.");
     }
 
-    if (csrfToken) {
-      headers["X-CSRFToken"] = csrfToken;
-    }
+    headers["X-CSRFToken"] = csrfToken;
   }
 
   const response = await fetch(getApiUrl(endpoint), {
@@ -121,11 +122,17 @@ export async function apiRequest(endpoint, options = {}) {
           errorMessage = errorData.error;
         } else if (errorData.detail) {
           errorMessage = errorData.detail;
+        } else if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors.join(", ");
         } else {
           errorMessage = JSON.stringify(errorData);
         }
       } else {
-        errorMessage = await response.text();
+        const text = await response.text();
+
+        if (text) {
+          errorMessage = text;
+        }
       }
     } catch {
       // Keep original HTTP error
