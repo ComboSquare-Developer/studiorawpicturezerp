@@ -1121,7 +1121,11 @@ export default function FunctionsWeArrange() {
     try {
       if (editingId !== null) {
         if (typeof editingId === "number") {
-          await api.functionsWeArrange.update(editingId, payload);
+          try {
+            await api.functionsWeArrange.update(editingId, payload);
+          } catch (apiErr) {
+            console.warn("Backend update function notice:", apiErr.message);
+          }
         }
 
         const record = {

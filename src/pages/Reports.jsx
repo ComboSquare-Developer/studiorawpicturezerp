@@ -42,7 +42,7 @@ const STORAGE = {
   expenses: ["studioraw_expenses", "studio_raw_expenses"],
   bookings: ["studioraw_bookings", "studio_raw_bookings"],
   customers: ["studio_raw_customers", "studioraw_customers"],
-  enquiries: ["studio_raw_enquiries", "studioraw_enquiries"],
+  enquiries: ["studioraw_enquiries", "studio_raw_enquiries"],
   photography: [
     "studioraw_wedding_photography",
     "studio_raw_wedding_photography",
@@ -202,6 +202,13 @@ function getDate(item) {
     item?.payment_date ||
     item?.expenseDate ||
     item?.expense_date ||
+    item?.eventDate ||
+    item?.event_date ||
+    item?.shootDate ||
+    item?.shoot_date ||
+    item?.orderDate ||
+    item?.order_date ||
+    item?.deliveryDate ||
     item?.date ||
     item?.bookingDate ||
     item?.booking_date ||
@@ -219,10 +226,17 @@ function getDate(item) {
 function getBookingDate(item) {
   return (
     item?.eventDate ||
+    item?.event_date ||
     item?.shootDate ||
+    item?.shoot_date ||
+    item?.orderDate ||
+    item?.order_date ||
     item?.date ||
     item?.bookingDate ||
     item?.booking_date ||
+    item?.deliveryDate ||
+    item?.createdAt ||
+    item?.created_at ||
     ""
   );
 }
@@ -232,6 +246,11 @@ function getMonth(item) {
 }
 
 function getName(item) {
+  if (item?.bride || item?.groom) {
+    if (item.bride && item.groom) return `${item.bride} & ${item.groom}`;
+    return item.bride || item.groom;
+  }
+
   const customer =
     typeof item?.customer === "string"
       ? item.customer
@@ -244,6 +263,7 @@ function getName(item) {
     item?.client_name,
     customer,
     item?.name,
+    item?.fullName,
     item?.title,
     item?.projectName,
     item?.eventName,
@@ -268,7 +288,23 @@ function getBookingEvent(item) {
     item?.service ||
     item?.eventType ||
     item?.event_type ||
-    "Service Not Specified"
+    item?.giftType ||
+    item?.gift_type ||
+    item?.mainEvent ||
+    item?.main_event ||
+    item?.packageName ||
+    item?.package ||
+    "Booking / Service"
+  );
+}
+
+function getLocation(item) {
+  return (
+    item?.location ||
+    item?.venue ||
+    item?.city ||
+    item?.address ||
+    "—"
   );
 }
 
@@ -612,27 +648,49 @@ function getPaymentDetails(payment, selectedMonth) {
   };
 }
 
-function getBookingFinancials(booking, payments) {
-  const linked = payments.filter(
+function getBookingFinancials(booking, payments = []) {
+  const linked = (payments || []).filter(
     (payment) =>
       payment.bookingId &&
-      String(payment.bookingId) === String(booking.id)
+      String(payment.bookingId) === String(booking?.id)
   );
 
-  const billed = round(
+  let billed = round(
     linked.reduce(
       (sum, payment) => sum + getPaymentTotal(payment),
       0
     )
   );
 
-  const received = round(
+  let received = round(
     linked.reduce(
       (sum, payment) =>
         sum + getPaymentDetails(payment, "").allReceived,
       0
     )
   );
+
+  const directTotal = firstAmount(booking, [
+    "totalAmount",
+    "total_amount",
+    "total",
+    "amount",
+    "grandTotal",
+    "price",
+  ]);
+
+  const directAdvance = firstAmount(booking, [
+    "advance",
+    "advanceAmount",
+    "advance_amount",
+    "paidAmount",
+    "received",
+  ]);
+
+  if (!linked.length && directTotal > 0) {
+    billed = directTotal;
+    received = Math.min(directTotal, directAdvance);
+  }
 
   const pending = Math.max(
     0,
@@ -641,7 +699,7 @@ function getBookingFinancials(booking, payments) {
 
   let status = "Not Invoiced";
 
-  if (linked.length) {
+  if (linked.length || directTotal > 0) {
     if (billed > 0 && pending === 0) {
       status = "Paid";
     } else if (received > 0) {
@@ -1231,6 +1289,7 @@ function DataTable({
   rows,
   empty,
   count,
+  extraRight,
 }) {
   return (
     <Panel>
@@ -1240,9 +1299,12 @@ function DataTable({
           subtitle={subtitle}
           icon={icon}
           right={
-            <span className="rounded-xl bg-[#e3f0ff] px-3 py-2 text-xs font-bold text-[#2d6bac]">
-              {count} records
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {extraRight}
+              <span className="rounded-xl bg-[#e3f0ff] px-3 py-2 text-xs font-bold text-[#2d6bac]">
+                {count} records
+              </span>
+            </div>
           }
         />
       </div>
@@ -1352,6 +1414,9 @@ export default function Reports() {
   const [backendSummary, setBackendSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [bookingFilterScope, setBookingFilterScope] = useState("all");
+  const [enquiryFilterScope, setEnquiryFilterScope] = useState("all");
+  const [customerFilterScope, setCustomerFilterScope] = useState("all");
 
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -1420,6 +1485,128 @@ export default function Reports() {
     };
   }, [loadReports]);
 
+  /* UNIFIED ALL BOOKINGS ACROSS MODULES */
+
+  const allBookings = useMemo(() => {
+    const result = [];
+    const seen = new Set();
+
+    const add = (item, moduleSource) => {
+      if (!item || typeof item !== "object") return;
+      const key = String(
+        item.id ||
+          `${getName(item)}-${getBookingDate(item)}-${getBookingEvent(item)}`
+      );
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const amount = firstAmount(item, [
+        "totalAmount",
+        "total_amount",
+        "total",
+        "amount",
+        "grandTotal",
+        "price",
+      ]);
+
+      const advance = firstAmount(item, [
+        "advance",
+        "advanceAmount",
+        "advance_amount",
+        "paidAmount",
+        "received",
+      ]);
+
+      result.push({
+        ...item,
+        id: item.id || `BK-${result.length + 1}`,
+        _module: moduleSource,
+        _normalizedName: getName(item),
+        _normalizedDate: toDate(getBookingDate(item)),
+        _normalizedEvent: getBookingEvent(item),
+        _normalizedLocation: getLocation(item),
+        _normalizedAmount: amount,
+        _normalizedAdvance: advance,
+        _normalizedPhone:
+          item.phone || item.number || item.customerPhone || "",
+        _normalizedStatus: item.status || "Pending",
+      });
+    };
+
+    (data.bookings || []).forEach((item) => add(item, "Calendar"));
+    (data.photography || []).forEach((item) => add(item, "Photography"));
+    (data.videography || []).forEach((item) => add(item, "Videography"));
+    (data.events || []).forEach((item) => add(item, "Events"));
+    (data.functions || []).forEach((item) => add(item, "Functions"));
+    (data.gifts || []).forEach((item) => add(item, "Gifts"));
+
+    return result;
+  }, [data]);
+
+  /* UNIFIED ALL ENQUIRIES */
+
+  const allEnquiries = useMemo(() => {
+    return (data.enquiries || []).map((item, idx) => ({
+      ...item,
+      id: item.id || `ENQ-${idx + 1}`,
+      _module: "Enquiries",
+      _normalizedName: getName(item),
+      _normalizedPhone: item.number || item.phone || "",
+      _normalizedEmail: item.email || "",
+      _normalizedEvent:
+        item.mainEvent || item.event || item.eventType || "Enquiry",
+      _normalizedDate: toDate(getDate(item)),
+      _normalizedLocation:
+        item.city || item.location || item.address || "—",
+      _normalizedCoverage:
+        item.weddingCoverage || item.coverage || item.notes || "—",
+      _normalizedBudget:
+        item.budget || (item.amount ? money(item.amount) : "—"),
+      _normalizedStatus: item.status || "New",
+    }));
+  }, [data.enquiries]);
+
+  /* UNIFIED ALL CUSTOMERS */
+
+  const allCustomers = useMemo(() => {
+    const result = [];
+    const seen = new Set();
+
+    const add = (c, sourceModule) => {
+      if (!c) return;
+      const phoneDigits = String(c.phone || c.number || "").replace(/\D/g, "").slice(-10);
+      const name = getName(c);
+      if (!name || name === "Not Specified") return;
+      const identifier =
+        phoneDigits && phoneDigits.length === 10
+          ? `p:${phoneDigits}`
+          : `n:${name.toLowerCase().trim()}`;
+      if (seen.has(identifier)) return;
+      seen.add(identifier);
+
+      result.push({
+        id: c.id || `CUS-${result.length + 1}`,
+        name,
+        phone: c.phone || c.number || "",
+        email: c.email || "",
+        address: c.address || c.city || c.location || c.venue || "Tamil Nadu",
+        source: c.source || sourceModule || "Direct",
+        createdAt: toDate(getDate(c)) || toDate(new Date()),
+        notes: c.notes || "",
+        gender: c.gender || "",
+        language: c.language || "Tamil",
+      });
+    };
+
+    (data.customers || []).forEach((c) => add(c, c.source || "Customer Directory"));
+    allBookings.forEach((b) => add(b, b._module || "Booking"));
+    allEnquiries
+      .filter((e) => String(e.status || e._normalizedStatus || "").trim().toLowerCase() === "confirmed")
+      .forEach((e) => add(e, "Enquiry"));
+
+    return result;
+  }, [data.customers, allBookings, allEnquiries]);
+
   /* MONTHLY RECORDS */
 
   const monthly = useMemo(() => {
@@ -1430,13 +1617,15 @@ export default function Reports() {
 
     return {
       expenses: filter(data.expenses),
-      bookings: data.bookings.filter(
-        (booking) =>
-          toDate(getBookingDate(booking)).slice(0, 7) ===
-          selectedMonth
+      bookings: allBookings.filter(
+        (b) => b._normalizedDate && b._normalizedDate.slice(0, 7) === selectedMonth
       ),
-      customers: filter(data.customers),
-      enquiries: filter(data.enquiries),
+      customers: allCustomers.filter(
+        (c) => c.createdAt && toDate(c.createdAt).slice(0, 7) === selectedMonth
+      ),
+      enquiries: allEnquiries.filter(
+        (e) => e._normalizedDate && e._normalizedDate.slice(0, 7) === selectedMonth
+      ),
       photography: filter(data.photography),
       videography: filter(data.videography),
       events: filter(data.events),
@@ -1444,7 +1633,7 @@ export default function Reports() {
       gifts: filter(data.gifts),
       deliveries: filter(data.deliveries),
     };
-  }, [data, selectedMonth]);
+  }, [data, allBookings, allCustomers, allEnquiries, selectedMonth]);
 
   /* PAYMENT SUMMARY */
 
@@ -1499,7 +1688,7 @@ export default function Reports() {
   const bookingFinancials = useMemo(() => {
     const map = new Map();
 
-    data.bookings.forEach((booking) => {
+    allBookings.forEach((booking) => {
       map.set(
         String(booking.id),
         getBookingFinancials(booking, data.payments)
@@ -1507,7 +1696,7 @@ export default function Reports() {
     });
 
     return map;
-  }, [data.bookings, data.payments]);
+  }, [allBookings, data.payments]);
 
   /* EXPENSE SUMMARY */
 
@@ -1528,16 +1717,18 @@ export default function Reports() {
 
   /* BOOKING SUMMARY */
 
-  const confirmedBookings = monthly.bookings.filter(
+  const confirmedBookings = allBookings.filter(
     (item) =>
-      ["confirmed", "completed", "booked"].includes(
+      ["confirmed", "completed", "booked", "delivered"].includes(
         getStatus(item)
       )
   ).length;
 
-  const pendingBookings = monthly.bookings.filter(
+  const pendingBookings = allBookings.filter(
     (item) =>
-      ["pending", "new"].includes(getStatus(item))
+      ["pending", "new", "upcoming", "in progress"].includes(
+        getStatus(item)
+      )
   ).length;
 
   /* EXPENSE CATEGORIES */
@@ -1669,31 +1860,29 @@ export default function Reports() {
     },
     {
       title: "Total Bookings",
-      value: data.bookings.length,
-      subtitle: `${monthly.bookings.length} events in ${monthLabel(
-        selectedMonth
-      )}`,
+      value: allBookings.length,
+      subtitle: `${monthly.bookings.length} in ${monthLabel(selectedMonth)}`,
       icon: CalendarCheck2,
       color: "cyan",
     },
     {
-      title: "New Customers",
-      value: monthly.customers.length,
-      subtitle: "Customers added this month",
+      title: "Total Customers",
+      value: allCustomers.length,
+      subtitle: `${monthly.customers.length} registered in ${monthLabel(selectedMonth)}`,
       icon: Users,
       color: "blue",
     },
     {
-      title: "Enquiries",
-      value: monthly.enquiries.length,
-      subtitle: "Monthly enquiry records",
+      title: "Total Enquiries",
+      value: allEnquiries.length,
+      subtitle: `${monthly.enquiries.length} in ${monthLabel(selectedMonth)}`,
       icon: ClipboardList,
       color: "amber",
     },
     {
       title: "Pending Bookings",
       value: pendingBookings,
-      subtitle: "Monthly bookings awaiting confirmation",
+      subtitle: "Awaiting confirmation across studio",
       icon: Clock3,
       color: "purple",
     },
@@ -1702,6 +1891,21 @@ export default function Reports() {
   /* MODULE OVERVIEW */
 
   const moduleStats = [
+    {
+      title: "All Bookings",
+      value: allBookings.length,
+      icon: CalendarCheck2,
+    },
+    {
+      title: "All Enquiries",
+      value: allEnquiries.length,
+      icon: ClipboardList,
+    },
+    {
+      title: "Total Customers",
+      value: allCustomers.length,
+      icon: Users,
+    },
     {
       title: "Wedding Photography",
       value: data.photography.length,
@@ -1752,61 +1956,113 @@ export default function Reports() {
       value: data.deliveries.length,
       icon: Package,
     },
-    {
-      title: "Total Customers",
-      value: data.customers.length,
-      icon: Users,
-    },
   ];
 
   /* SEARCH */
 
-  const matchesSearch = (item) => {
-    const query = search.trim().toLowerCase();
+  const matchesSearch = useCallback(
+    (item) => {
+      const query = search.trim().toLowerCase();
 
-    if (!query) return true;
+      if (!query) return true;
 
-    return [
-      getName(item),
-      item?.customer,
-      item?.phone,
-      item?.category,
-      item?.status,
-      item?.paymentStatus,
-      item?.service,
-      item?.event,
-      item?.eventType,
-      item?.location,
-      item?.method,
-      item?.invoice,
-      item?.bookingId,
-    ].some((value) =>
-      String(value || "").toLowerCase().includes(query)
-    );
-  };
+      return [
+        getName(item),
+        item?._normalizedName,
+        item?.name,
+        item?.customer,
+        item?.bride,
+        item?.groom,
+        item?.phone,
+        item?.number,
+        item?._normalizedPhone,
+        item?.email,
+        item?._normalizedEmail,
+        item?.category,
+        item?.status,
+        item?._normalizedStatus,
+        item?.paymentStatus,
+        item?.service,
+        item?.event,
+        item?.eventType,
+        item?.mainEvent,
+        item?.giftType,
+        item?._normalizedEvent,
+        item?._module,
+        item?.location,
+        item?.venue,
+        item?.city,
+        item?.address,
+        item?._normalizedLocation,
+        item?.notes,
+        item?._normalizedCoverage,
+        item?.method,
+        item?.invoice,
+        item?.bookingId,
+        item?.id,
+      ].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      );
+    },
+    [search]
+  );
 
-  const recentPayments = [...paymentSummary.entries]
-    .filter(matchesSearch)
-    .sort((a, b) =>
-      String(b.date).localeCompare(String(a.date))
-    )
-    .slice(0, 8);
-
-  const recentExpenses = [...monthly.expenses]
-    .filter(matchesSearch)
-    .sort((a, b) =>
-      toDate(getDate(b)).localeCompare(toDate(getDate(a)))
-    )
-    .slice(0, 8);
-
-  const recentBookings = [...monthly.bookings]
-    .filter(matchesSearch)
-    .sort((a, b) =>
-      toDate(getBookingDate(b)).localeCompare(
-        toDate(getBookingDate(a))
+  const recentPayments = useMemo(() => {
+    return [...paymentSummary.entries]
+      .filter(matchesSearch)
+      .sort((a, b) =>
+        String(b.date).localeCompare(String(a.date))
       )
-    )
-    .slice(0, 10);
+      .slice(0, 8);
+  }, [paymentSummary.entries, matchesSearch]);
+
+  const recentExpenses = useMemo(() => {
+    return [...monthly.expenses]
+      .filter(matchesSearch)
+      .sort((a, b) =>
+        toDate(getDate(b)).localeCompare(toDate(getDate(a)))
+      )
+      .slice(0, 8);
+  }, [monthly.expenses, matchesSearch]);
+
+  const displayBookings = useMemo(() => {
+    const list =
+      bookingFilterScope === "month" ? monthly.bookings : allBookings;
+
+    return [...list]
+      .filter(matchesSearch)
+      .sort((a, b) =>
+        String(b._normalizedDate || "").localeCompare(
+          String(a._normalizedDate || "")
+        )
+      );
+  }, [bookingFilterScope, monthly.bookings, allBookings, matchesSearch]);
+
+  const displayEnquiries = useMemo(() => {
+    const list =
+      enquiryFilterScope === "month" ? monthly.enquiries : allEnquiries;
+
+    return [...list]
+      .filter(matchesSearch)
+      .sort((a, b) =>
+        String(b._normalizedDate || "").localeCompare(
+          String(a._normalizedDate || "")
+        )
+      );
+  }, [enquiryFilterScope, monthly.enquiries, allEnquiries, matchesSearch]);
+
+  const displayCustomers = useMemo(() => {
+    const list =
+      customerFilterScope === "month" ? monthly.customers : allCustomers;
+
+    return [...list]
+      .filter(matchesSearch)
+      .sort((a, b) =>
+        String(b.createdAt || "").localeCompare(
+          String(a.createdAt || "")
+        )
+      );
+  }, [customerFilterScope, monthly.customers, allCustomers, matchesSearch]);
 
   /* CSV EXPORT */
 
@@ -1825,13 +2081,16 @@ export default function Reports() {
       ["All Invoice Received", paymentSummary.allReceived],
       ["All Invoice Pending", paymentSummary.pending],
       [],
-      ["BOOKING SUMMARY"],
-      ["All Bookings", data.bookings.length],
+      ["BOOKINGS, ENQUIRIES & CUSTOMERS SUMMARY"],
+      ["Metric", "Count"],
+      ["All Bookings", allBookings.length],
       ["Monthly Bookings", monthly.bookings.length],
       ["Confirmed Bookings", confirmedBookings],
       ["Pending Bookings", pendingBookings],
-      ["New Customers", monthly.customers.length],
-      ["Enquiries", monthly.enquiries.length],
+      ["All Customers", allCustomers.length],
+      ["Monthly Customers", monthly.customers.length],
+      ["All Enquiries", allEnquiries.length],
+      ["Monthly Enquiries", monthly.enquiries.length],
       [],
       ["ALL MODULE RECORDS"],
       ["Module", "Total"],
@@ -1867,21 +2126,22 @@ export default function Reports() {
         getExpenseAmount(item),
       ]),
       [],
-      ["BOOKINGS"],
+      ["ALL BOOKINGS REPORT"],
       [
-        "Event Date",
+        "Booking Date",
+        "Source Module",
         "Customer",
         "Phone",
-        "Event",
+        "Event / Service",
         "Location",
         "Booking Status",
         "Booking Amount",
-        "Invoice Billed",
+        "Billed",
         "Received",
         "Pending",
         "Payment Status",
       ],
-      ...monthly.bookings.map((item) => {
+      ...allBookings.map((item) => {
         const financials = bookingFinancials.get(
           String(item.id)
         ) || {
@@ -1892,23 +2152,64 @@ export default function Reports() {
         };
 
         return [
-          toDate(getBookingDate(item)),
-          getName(item),
-          item.phone || "",
-          getBookingEvent(item),
-          item.location || "",
-          item.status || "Pending",
-          firstAmount(item, [
-            "totalAmount",
-            "total",
-            "amount",
-          ]),
+          item._normalizedDate,
+          item._module,
+          item._normalizedName,
+          item._normalizedPhone,
+          item._normalizedEvent,
+          item._normalizedLocation,
+          item._normalizedStatus,
+          item._normalizedAmount,
           financials.billed,
           financials.received,
           financials.pending,
           financials.status,
         ];
       }),
+      [],
+      ["ENQUIRIES REPORT"],
+      [
+        "Enquiry / Event Date",
+        "Customer",
+        "Phone",
+        "Email",
+        "Event Type",
+        "City / Location",
+        "Budget",
+        "Coverage / Requirements",
+        "Status",
+      ],
+      ...allEnquiries.map((item) => [
+        item._normalizedDate,
+        item._normalizedName,
+        item._normalizedPhone,
+        item._normalizedEmail,
+        item._normalizedEvent,
+        item._normalizedLocation,
+        item._normalizedBudget,
+        item._normalizedCoverage,
+        item._normalizedStatus,
+      ]),
+      [],
+      ["CUSTOMER DIRECTORY REPORT"],
+      [
+        "Customer ID",
+        "Name",
+        "Phone",
+        "Email",
+        "Address / City",
+        "Acquisition Source",
+        "Registered Date",
+      ],
+      ...allCustomers.map((item) => [
+        item.id,
+        item.name,
+        item.phone,
+        item.email,
+        item.address,
+        item.source,
+        formatDate(item.createdAt),
+      ]),
     ];
 
     const escapeCSV = (value) => {
@@ -2223,13 +2524,45 @@ export default function Reports() {
 
         <DataTable
           title="Booking Report"
-          subtitle={`Photography and event bookings - ${monthLabel(
-            selectedMonth
-          )}`}
+          subtitle={
+            bookingFilterScope === "all"
+              ? "All photography, videography, functions and event bookings"
+              : `Photography and event bookings - ${monthLabel(selectedMonth)}`
+          }
           icon={Camera}
-          count={monthly.bookings.length}
-          empty="No booking records for this month. Select another month to view bookings."
-          rows={recentBookings}
+          count={displayBookings.length}
+          extraRight={
+            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+              <button
+                type="button"
+                onClick={() => setBookingFilterScope("all")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  bookingFilterScope === "all"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                All ({allBookings.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBookingFilterScope("month")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  bookingFilterScope === "month"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                {monthLabel(selectedMonth)} ({monthly.bookings.length})
+              </button>
+            </div>
+          }
+          empty={
+            bookingFilterScope === "month"
+              ? "No booking records for this month. Click 'All' to view all bookings."
+              : "No booking records found matching search."
+          }
+          rows={displayBookings}
           columns={[
             {
               key: "customer",
@@ -2237,12 +2570,26 @@ export default function Reports() {
               render: (row) => (
                 <div>
                   <p className="font-extrabold text-[#173f74]">
-                    {getName(row)}
+                    {row._normalizedName || getName(row)}
                   </p>
 
                   <p className="mt-1 text-xs text-[#8aa0b8]">
-                    {row.phone || "—"}
+                    {row._normalizedPhone || row.phone || "—"}
                   </p>
+                </div>
+              ),
+            },
+            {
+              key: "event",
+              label: "Event & Module",
+              render: (row) => (
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-[#285a99]">
+                    {row._normalizedEvent || getBookingEvent(row)}
+                  </span>
+                  <span className="inline-flex w-fit items-center rounded-md bg-[#edf5ff] px-2 py-0.5 text-[10px] font-bold text-[#356ca6]">
+                    {row._module || "Booking"}
+                  </span>
                 </div>
               ),
             },
@@ -2250,33 +2597,25 @@ export default function Reports() {
               key: "date",
               label: "Booking Date",
               render: (row) =>
-                formatDate(getBookingDate(row)),
-            },
-            {
-              key: "event",
-              label: "Event / Service",
-              render: (row) => (
-                <span className="font-semibold text-[#285a99]">
-                  {getBookingEvent(row)}
-                </span>
-              ),
+                formatDate(row._normalizedDate || getBookingDate(row)),
             },
             {
               key: "location",
               label: "Location",
               render: (row) =>
-                row.location || "—",
+                row._normalizedLocation || row.location || row.venue || "—",
             },
             {
               key: "bookingAmount",
               label: "Booking Amount",
               render: (row) =>
                 money(
-                  firstAmount(row, [
-                    "totalAmount",
-                    "total",
-                    "amount",
-                  ])
+                  row._normalizedAmount ||
+                    firstAmount(row, [
+                      "totalAmount",
+                      "total",
+                      "amount",
+                    ])
                 ),
             },
             {
@@ -2330,8 +2669,222 @@ export default function Reports() {
               key: "status",
               label: "Booking Status",
               render: (row) => (
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row._normalizedStatus || row.status} />
               ),
+            },
+          ]}
+        />
+
+        {/* ENQUIRIES REPORT */}
+
+        <DataTable
+          title="Enquiries Report"
+          subtitle={
+            enquiryFilterScope === "all"
+              ? "All customer enquiries and service requests"
+              : `Customer enquiries - ${monthLabel(selectedMonth)}`
+          }
+          icon={ClipboardList}
+          count={displayEnquiries.length}
+          extraRight={
+            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+              <button
+                type="button"
+                onClick={() => setEnquiryFilterScope("all")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  enquiryFilterScope === "all"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                All ({allEnquiries.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setEnquiryFilterScope("month")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  enquiryFilterScope === "month"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                {monthLabel(selectedMonth)} ({monthly.enquiries.length})
+              </button>
+            </div>
+          }
+          empty={
+            enquiryFilterScope === "month"
+              ? "No enquiries found for this month. Click 'All' to view all enquiry records."
+              : "No enquiries found matching search."
+          }
+          rows={displayEnquiries}
+          columns={[
+            {
+              key: "name",
+              label: "Customer & Contact",
+              render: (row) => (
+                <div>
+                  <p className="font-extrabold text-[#173f74]">
+                    {row._normalizedName || getName(row)}
+                  </p>
+                  <p className="mt-1 text-xs text-[#8aa0b8]">
+                    {row._normalizedPhone || row.phone || row.number || "—"}
+                    {row._normalizedEmail || row.email ? ` · ${row._normalizedEmail || row.email}` : ""}
+                  </p>
+                </div>
+              ),
+            },
+            {
+              key: "event",
+              label: "Enquiry Event",
+              render: (row) => (
+                <span className="font-semibold text-[#285a99]">
+                  {row._normalizedEvent || row.mainEvent || row.event || "Enquiry"}
+                </span>
+              ),
+            },
+            {
+              key: "date",
+              label: "Event Date",
+              render: (row) =>
+                formatDate(row._normalizedDate || getDate(row)),
+            },
+            {
+              key: "city",
+              label: "Location",
+              render: (row) =>
+                row._normalizedLocation || row.city || row.location || "—",
+            },
+            {
+              key: "budget",
+              label: "Budget",
+              render: (row) => (
+                <span className="font-extrabold text-[#168368]">
+                  {row._normalizedBudget || row.budget || "—"}
+                </span>
+              ),
+            },
+            {
+              key: "coverage",
+              label: "Coverage / Requirements",
+              render: (row) => (
+                <span
+                  className="inline-block max-w-[200px] truncate text-xs text-[#627d99]"
+                  title={row._normalizedCoverage || row.weddingCoverage || row.notes || "—"}
+                >
+                  {row._normalizedCoverage || row.weddingCoverage || row.notes || "—"}
+                </span>
+              ),
+            },
+            {
+              key: "status",
+              label: "Status",
+              render: (row) => (
+                <StatusBadge status={row._normalizedStatus || row.status} />
+              ),
+            },
+          ]}
+        />
+
+        {/* CUSTOMER DIRECTORY REPORT */}
+
+        <DataTable
+          title="Customer Directory Report"
+          subtitle={
+            customerFilterScope === "all"
+              ? "All registered studio customers & acquired clients"
+              : `Customers registered in ${monthLabel(selectedMonth)}`
+          }
+          icon={Users}
+          count={displayCustomers.length}
+          extraRight={
+            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+              <button
+                type="button"
+                onClick={() => setCustomerFilterScope("all")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  customerFilterScope === "all"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                All ({allCustomers.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomerFilterScope("month")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                  customerFilterScope === "month"
+                    ? "bg-[#1f5697] text-white shadow-sm"
+                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                }`}
+              >
+                {monthLabel(selectedMonth)} ({monthly.customers.length})
+              </button>
+            </div>
+          }
+          empty={
+            customerFilterScope === "month"
+              ? "No customer records for this month. Click 'All' to view all customers."
+              : "No customer records found matching search."
+          }
+          rows={displayCustomers}
+          columns={[
+            {
+              key: "name",
+              label: "Customer Name & ID",
+              render: (row) => (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e5efff] text-xs font-black text-[#265e9e]">
+                    {String(row.name || "C").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-[#173f74]">
+                      {row.name}
+                    </p>
+                    <p className="text-[11px] font-semibold text-[#8aa0b8]">
+                      {row.id}
+                    </p>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: "contact",
+              label: "Contact Info",
+              render: (row) => (
+                <div>
+                  <p className="text-xs font-bold text-[#1a4473]">
+                    {row.phone || "—"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#8aa0b8]">
+                    {row.email || "No email"}
+                  </p>
+                </div>
+              ),
+            },
+            {
+              key: "address",
+              label: "Location / Address",
+              render: (row) => (
+                <span className="text-xs text-[#52708f]">
+                  {row.address || "Tamil Nadu"}
+                </span>
+              ),
+            },
+            {
+              key: "source",
+              label: "Acquisition Channel",
+              render: (row) => (
+                <span className="inline-flex rounded-full bg-[#eaf4ff] px-3 py-1 text-[11px] font-bold text-[#2a68ab]">
+                  {row.source || "Direct"}
+                </span>
+              ),
+            },
+            {
+              key: "createdAt",
+              label: "Registered Date",
+              render: (row) => formatDate(row.createdAt),
             },
           ]}
         />

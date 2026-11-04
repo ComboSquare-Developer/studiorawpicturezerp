@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import {
@@ -1306,11 +1305,11 @@ function TimelinePanel({
               </div>
 
               <div className="min-w-0">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">
+                <p className="sr-timeline-eyebrow mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white">
                   {eyebrow}
                 </p>
 
-                <h3 className="text-lg font-black text-white sm:text-xl">
+                <h3 className="sr-timeline-heading text-lg font-black text-white sm:text-xl">
                   {title}
                 </h3>
 
@@ -2027,6 +2026,18 @@ export default function Dashboard() {
               #102f62 55%,
               #235a9c
             );
+        }
+
+        html[data-theme="light"] main .sr-timeline-header h3,
+        html[data-theme="light"] main .sr-timeline-header .sr-timeline-heading,
+        html[data-theme="light"] main .sr-timeline-header .sr-timeline-eyebrow,
+        html[data-theme="dark"] main .sr-timeline-header h3,
+        html[data-theme="dark"] main .sr-timeline-header .sr-timeline-heading,
+        html[data-theme="dark"] main .sr-timeline-header .sr-timeline-eyebrow,
+        .sr-timeline-header h3,
+        .sr-timeline-header .sr-timeline-heading,
+        .sr-timeline-header .sr-timeline-eyebrow {
+          color: #FFFFFF !important;
         }
 
         /* ANIMATIONS - NO AUTOMATIC SOUND */

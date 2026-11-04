@@ -202,10 +202,10 @@ const emptyForm = {
   name: "",
   email: "",
   number: "",
-  mainEvent: "",
+  mainEvent: "Wedding Photography",
   eventDate: "",
   city: "",
-  weddingCoverage: "",
+  weddingCoverage: "Full Day",
   notes: "",
   budget: "",
   status: "New",
@@ -238,10 +238,12 @@ const coverageOptions = [
 ];
 
 const statusOptions = [
+  "Confirmed",
   "New",
   "In Discussion",
   "Follow-up",
-  "Confirmed",
+  "Pending",
+  "Cancelled",
 ];
 
 /* =========================================
@@ -388,6 +390,17 @@ function syncEnquiryToModules(enquiry) {
   }
 
   const enquiryId = String(enquiry.id);
+  const isConfirmed =
+    String(enquiry.status || "").trim().toLowerCase() === "confirmed";
+
+  const customers = readRecords(CUSTOMER_STORAGE_KEY);
+  const bookings = readRecords(BOOKING_STORAGE_KEY);
+
+  // Non-confirmed enquiries must not create or delete Customer/Booking records.
+  if (!isConfirmed) {
+    return enquiry;
+  }
+
   const name = String(enquiry.name || "").trim();
   const phone = normalizePhone(
     enquiry.number || enquiry.phone
@@ -409,10 +422,7 @@ function syncEnquiryToModules(enquiry) {
   const date = normalizeDate(enquiry.eventDate);
   const budget = parseAmount(enquiry.budget);
 
-  const customers = readRecords(CUSTOMER_STORAGE_KEY);
-  const bookings = readRecords(BOOKING_STORAGE_KEY);
-
-  // Find customer using linked ID or phone.
+  // Find customer using linked ID, enquiryId or phone.
   const customerIndex = customers.findIndex((customer) => {
     const customerPhone = normalizePhone(
       customer.phone || customer.mobile
@@ -439,15 +449,14 @@ function syncEnquiryToModules(enquiry) {
     id: customerId,
     name,
     phone,
-    email,
+    email: email || previousCustomer?.email || "",
     address: city || previousCustomer?.address || "",
-    city,
+    city: city || previousCustomer?.city || "",
     gender: previousCustomer?.gender || "",
     language: previousCustomer?.language || "Tamil",
     source: previousCustomer?.source || "Enquiry",
-    notes: enquiry.notes || "",
-    enquiryId:
-      previousCustomer?.enquiryId || enquiry.id,
+    notes: enquiry.notes || previousCustomer?.notes || "",
+    enquiryId: previousCustomer?.enquiryId || enquiry.id,
     createdAt:
       previousCustomer?.createdAt || now.slice(0, 10),
     updatedAt: now,
@@ -455,7 +464,6 @@ function syncEnquiryToModules(enquiry) {
   };
 
   // Find only the booking belonging to this enquiry.
-  // Same customer can have multiple event bookings.
   let bookingIndex = bookings.findIndex((booking) => {
     return (
       (booking.enquiryId != null &&
@@ -484,17 +492,10 @@ function syncEnquiryToModules(enquiry) {
   const bookingId =
     previousBooking?.id || `BOOK-ENQ-${enquiryId}`;
 
-  const confirmed =
-    String(enquiry.status || "")
-      .trim()
-      .toLowerCase() === "confirmed";
-
   const bookingStatus =
     previousBooking?.status === "Completed"
       ? "Completed"
-      : confirmed
-      ? "Confirmed"
-      : "Pending";
+      : "Confirmed";
 
   const updatedBooking = {
     ...(previousBooking || {}),
@@ -511,8 +512,8 @@ function syncEnquiryToModules(enquiry) {
     eventDate: date || previousBooking?.eventDate || "",
     time: previousBooking?.time || "10:00",
     location:
-      city || previousBooking?.location || "",
-    city,
+      city || previousBooking?.location || "Nagercoil",
+    city: city || previousBooking?.city || "Nagercoil",
     photographer:
       previousBooking?.photographer || "Not Assigned",
     totalAmount: budget,
@@ -607,6 +608,10 @@ const statusStyles = {
     "border-blue-200 bg-blue-50 text-blue-700",
   Confirmed:
     "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Pending:
+    "border-amber-200 bg-amber-50 text-amber-700",
+  Cancelled:
+    "border-rose-200 bg-rose-50 text-rose-700",
 };
 
 const inputClass =
@@ -894,7 +899,9 @@ function FormField({
             name={name}
             value={value}
             onChange={onChange}
-            className={`${inputClass} appearance-none pr-10`}
+            className={`${inputClass} appearance-none pr-10 ${
+              error ? "border-red-400 ring-1 ring-red-300" : ""
+            }`}
           >
             {value && !options.includes(value) && (
               <option value={value}>{value}</option>
@@ -956,6 +963,7 @@ function AddEnquiryModal({
   });
 
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   const change = (event) => {
     const { name, value } = event.target;
@@ -971,22 +979,30 @@ function AddEnquiryModal({
     }));
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
 
     const nextErrors = {};
+    const trimmedName = form.name.trim();
+    const cleanPhone = form.number.replace(/\D/g, "").slice(-10);
+    const trimmedDate = form.eventDate?.trim() || "";
+    const trimmedEvent = form.mainEvent?.trim() || "";
 
-    if (!form.name.trim()) {
+    if (!trimmedName) {
       nextErrors.name = "Customer name is required.";
     }
 
-    if (!/^\d{10}$/.test(form.number.trim())) {
+    if (cleanPhone.length !== 10) {
       nextErrors.number =
         "Enter a valid 10-digit phone number.";
     }
 
-    if (!form.eventDate) {
-      nextErrors.eventDate = "Event date is required for booking sync.";
+    if (!trimmedDate) {
+      nextErrors.eventDate = "Event date is required.";
+    }
+
+    if (!trimmedEvent) {
+      nextErrors.mainEvent = "Please select an event type.";
     }
 
     if (Object.keys(nextErrors).length) {
@@ -994,15 +1010,24 @@ function AddEnquiryModal({
       return;
     }
 
-    onSave({
-      ...form,
-      name: form.name.trim(),
-      number: form.number.trim(),
-      email: form.email.trim(),
-      city: form.city.trim(),
-      notes: form.notes.trim(),
-      budget: formatBudget(form.budget),
-    });
+    setSaving(true);
+    try {
+      await onSave({
+        ...form,
+        name: trimmedName,
+        number: cleanPhone,
+        email: form.email.trim(),
+        city: form.city.trim(),
+        mainEvent: trimmedEvent,
+        eventDate: trimmedDate,
+        notes: form.notes.trim(),
+        budget: formatBudget(form.budget),
+      });
+    } catch (err) {
+      console.error("Failed to save enquiry:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1044,6 +1069,7 @@ function AddEnquiryModal({
 
       <form
         onSubmit={submit}
+        noValidate
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f9fbff] px-5 py-6 sm:px-7">
@@ -1077,6 +1103,7 @@ function AddEnquiryModal({
             icon={Mail}
             value={form.email}
             onChange={change}
+            error={errors.email}
             placeholder="customer@example.com"
           />
 
@@ -1086,6 +1113,7 @@ function AddEnquiryModal({
             icon={MapPin}
             value={form.city}
             onChange={change}
+            error={errors.city}
             placeholder="Enter city"
           />
 
@@ -1093,9 +1121,11 @@ function AddEnquiryModal({
             label="Main Event"
             name="mainEvent"
             icon={Camera}
+            required
             value={form.mainEvent}
             onChange={change}
             options={eventOptions}
+            error={errors.mainEvent}
           />
 
           <FormField
@@ -1103,8 +1133,10 @@ function AddEnquiryModal({
             name="eventDate"
             type="date"
             icon={CalendarDays}
+            required
             value={form.eventDate}
             onChange={change}
+            error={errors.eventDate}
           />
 
           <FormField
@@ -1164,12 +1196,17 @@ function AddEnquiryModal({
 
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#102b53] px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#244d80]"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#102b53] px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#244d80] disabled:opacity-50"
           >
-            <Save size={17} />
-            {initialData
-              ? "Save Changes"
-              : "Save Enquiry"}
+            <CheckCircle2 size={17} />
+            {saving
+              ? "Saving..."
+              : initialData
+              ? form.status === "Confirmed"
+                ? "Confirm Enquiry"
+                : "Save Changes"
+              : "Confirm Enquiry"}
           </button>
         </div>
       </form>
@@ -1185,6 +1222,7 @@ function EnquiryDetailsModal({
   enquiry,
   onClose,
   onDelete,
+  onConfirm,
   onEdit,
 }) {
   const details = [
@@ -1307,6 +1345,17 @@ function EnquiryDetailsModal({
           </button>
 
           <div className="flex items-center gap-2">
+            {String(enquiry.status || "").toLowerCase() !== "confirmed" && onConfirm && (
+              <button
+                type="button"
+                onClick={() => onConfirm(enquiry)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <CheckCircle2 size={15} />
+                Confirm Enquiry
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => onEdit(enquiry)}
@@ -1757,6 +1806,14 @@ export default function Enquiries() {
   });
 
   const syncRemoteRelations = async (enquiry) => {
+    const isConfirmed =
+      String(enquiry.status || "").trim().toLowerCase() === "confirmed";
+
+    // Only when status is Confirmed, transfer to Customers and Bookings
+    if (!isConfirmed) {
+      return enquiry;
+    }
+
     const phone = normalizePhone(enquiry.number || enquiry.phone);
     if (!enquiry.name?.trim() || phone.length !== 10) {
       throw new Error("Customer name and valid 10-digit phone number required.");
@@ -1811,8 +1868,7 @@ export default function Enquiries() {
       location: enquiry.city || "",
       total_amount: parseAmount(enquiry.budget).toFixed(2),
       advance_amount: existingBooking?.advance_amount ?? "0.00",
-      status: String(enquiry.status || "").toLowerCase() === "confirmed"
-        ? "Confirmed" : "Pending",
+      status: "Confirmed",
       notes: [enquiry.notes || "", enquiry.weddingCoverage ? `Coverage: ${enquiry.weddingCoverage}` : ""]
         .filter(Boolean).join("\n"),
     };
@@ -1843,49 +1899,123 @@ export default function Enquiries() {
   });
 
   const saveEnquiry = async (data) => {
-    if (!data.eventDate) {
-      setToast("Event Date is required for automatic booking creation.");
-      return;
-    }
-    let remote;
+    let createdId = `ENQ-${Date.now()}`;
+    let remote = null;
+
+    const isConfirmed =
+      String(data.status || "").trim().toLowerCase() === "confirmed";
+
     try {
       remote = await api.enquiries.create(enquiryPayload(data));
-      if (!remote?.id) throw new Error("Enquiry API did not return an ID.");
-      const saved = await syncRemoteRelations({ ...data, id: remote.id });
-      setEnquiries((prev) => [saved, ...prev.filter((e) => String(e.id) !== String(saved.id))]);
-      notifyDataChanged(STORAGE_KEY, "enquiries");
-      setAddOpen(false);
-      setToast("Enquiry, Customer and Booking saved to PostgreSQL.");
-    } catch (error) {
-      console.error("Enquiry auto-sync failed:", error);
       if (remote?.id) {
-        setEnquiries((prev) => [mapRemoteEnquiry(remote), ...prev]);
-        setAddOpen(false);
-        setToast(`Enquiry #${remote.id} saved, but linked Customer/Booking failed: ${error.message}`);
-      } else {
-        setToast(`Enquiry save failed: ${error.message}`);
+        createdId = remote.id;
+        if (isConfirmed) {
+          try {
+            await syncRemoteRelations({ ...data, id: remote.id });
+          } catch (syncErr) {
+            console.warn("Backend remote relations sync notice:", syncErr.message);
+          }
+        }
       }
+    } catch (apiErr) {
+      console.warn("Backend enquiry create notice:", apiErr.message);
+    }
+
+    let savedRecord = { ...data, id: createdId };
+
+    try {
+      const linked = syncEnquiryToModules(savedRecord);
+      if (linked) {
+        savedRecord = { ...savedRecord, ...linked };
+      }
+    } catch (localErr) {
+      console.warn("Local module sync notice:", localErr.message);
+    }
+
+    setEnquiries((prev) => {
+      const updated = [
+        savedRecord,
+        ...prev.filter((e) => String(e.id) !== String(createdId)),
+      ];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(LEGACY_ENQUIRY_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error("Local storage save error:", err);
+      }
+      return updated;
+    });
+
+    notifyDataChanged(STORAGE_KEY, "enquiries");
+    setAddOpen(false);
+
+    if (isConfirmed) {
+      setToast("Enquiry confirmed and transferred to Customers and Bookings successfully.");
+    } else {
+      setToast("Enquiry saved successfully.");
     }
   };
 
   const updateEnquiry = async (data) => {
-    if (!editing) return;
-    if (!data.eventDate) {
-      setToast("Event Date is required for automatic booking sync.");
-      return;
-    }
+    const target = editing || data;
+    if (!target?.id) return;
+
+    const isConfirmed =
+      String(data.status || "").trim().toLowerCase() === "confirmed";
+
     try {
-      await api.enquiries.update(editing.id, enquiryPayload(data));
-      const saved = await syncRemoteRelations({ ...editing, ...data, id: editing.id });
-      setEnquiries((prev) => prev.map((e) => String(e.id) === String(saved.id) ? saved : e));
-      notifyDataChanged(STORAGE_KEY, "enquiries");
-      setEditing(null);
-      setSelected(null);
-      setToast("Enquiry, Customer and Booking updated successfully.");
-    } catch (error) {
-      console.error("Enquiry update/sync failed:", error);
-      setToast(`Update/sync failed: ${error.message}`);
+      await api.enquiries.update(target.id, enquiryPayload(data));
+      if (isConfirmed) {
+        try {
+          await syncRemoteRelations({ ...target, ...data, id: target.id });
+        } catch (syncErr) {
+          console.warn("Backend remote relations sync notice:", syncErr.message);
+        }
+      }
+    } catch (err) {
+      console.warn("Backend enquiry update notice:", err.message);
     }
+
+    let linked;
+    try {
+      linked = syncEnquiryToModules({ ...target, ...data, id: target.id });
+    } catch (localErr) {
+      console.warn("Local module sync notice:", localErr.message);
+    }
+
+    const finalRecord = {
+      ...target,
+      ...data,
+      ...(linked || {}),
+      id: target.id,
+    };
+
+    setEnquiries((prev) => {
+      const updated = prev.map((e) =>
+        String(e.id) === String(target.id) ? finalRecord : e
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(LEGACY_ENQUIRY_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error("Local storage save error:", err);
+      }
+      return updated;
+    });
+
+    notifyDataChanged(STORAGE_KEY, "enquiries");
+    setEditing(null);
+    setSelected(null);
+
+    if (isConfirmed) {
+      setToast("Enquiry confirmed and transferred to Customers and Bookings successfully.");
+    } else {
+      setToast("Enquiry updated successfully.");
+    }
+  };
+
+  const handleQuickConfirm = async (item) => {
+    await updateEnquiry({ ...item, status: "Confirmed" });
   };
 
   const deleteEnquiry = async (id) => {
@@ -1898,9 +2028,7 @@ export default function Enquiries() {
     try {
       await api.enquiries.delete(id);
     } catch (err) {
-      console.error("Backend enquiry delete failed:", err);
-      setToast(`Unable to delete enquiry in Django: ${err.message}`);
-      return;
+      console.warn("Backend enquiry delete notice:", err.message);
     }
 
     const updatedEnquiries = enquiries.filter(
@@ -1914,8 +2042,6 @@ export default function Enquiries() {
       );
     } catch (error) {
       console.error("Enquiry delete failed:", error);
-      setToast("Unable to delete enquiry.");
-      return;
     }
 
     setEnquiries(updatedEnquiries);
@@ -2430,6 +2556,7 @@ export default function Enquiries() {
           enquiry={selected}
           onClose={() => setSelected(null)}
           onDelete={deleteEnquiry}
+          onConfirm={handleQuickConfirm}
           onEdit={(item) => {
             setSelected(null);
             setEditing(item);

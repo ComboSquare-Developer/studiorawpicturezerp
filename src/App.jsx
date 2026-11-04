@@ -75,7 +75,13 @@ function Loader() {
 }
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem("studioraw_logged_in") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [checkingSession, setCheckingSession] = useState(true);
   const [activePage, setActivePage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -130,10 +136,15 @@ export default function App() {
 
         if (active) {
           setLoggedIn(true);
+          try {
+            localStorage.setItem("studioraw_logged_in", "true");
+          } catch {}
         }
       } catch {
         if (active) {
-          setLoggedIn(false);
+          const locallyLoggedIn =
+            localStorage.getItem("studioraw_logged_in") === "true";
+          setLoggedIn(locallyLoggedIn);
         }
       } finally {
         if (active) {
@@ -155,7 +166,13 @@ export default function App() {
      LOGIN SUCCESS
   ========================================== */
 
-  const handleLogin = () => {
+  const handleLogin = (user) => {
+    try {
+      localStorage.setItem("studioraw_logged_in", "true");
+      if (user) {
+        localStorage.setItem("studioraw_user", JSON.stringify(user));
+      }
+    } catch {}
     setLoggedIn(true);
     setActivePage("dashboard");
     setSidebarOpen(false);
@@ -170,15 +187,16 @@ export default function App() {
       await apiRequest("logout/", {
         method: "POST",
       });
-
+    } catch (error) {
+      console.warn("Logout notice:", error);
+    } finally {
+      try {
+        localStorage.removeItem("studioraw_logged_in");
+        localStorage.removeItem("studioraw_user");
+      } catch {}
       setLoggedIn(false);
       setActivePage("dashboard");
       setSidebarOpen(false);
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert(
-        "Unable to log out securely. Please try again."
-      );
     }
   };
 

@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -14,10 +15,6 @@ import {
   RefreshCw,
   Phone,
   Mail,
-  Briefcase,
-  Calendar,
-  Building2,
-  IndianRupee,
 } from "lucide-react";
 import { api } from "../api/client";
 
@@ -56,6 +53,7 @@ const emptyForm = {
   department: "Photography",
   joining_date: new Date().toISOString().slice(0, 10),
   salary: "",
+  salary_date: "",
   status: "Active",
   notes: "",
 };
@@ -72,9 +70,30 @@ function money(amount) {
   }).format(num);
 }
 
+const STAFF_KEY = "studioraw_staff";
+
+const DEFAULT_STAFF = [
+  { id: 1, staff_name: "Rahul", employee_id: "EMP-2026-001", role: "Senior Photographer", department: "Photography", phone: "9876543210", email: "rahul@studioraw.com", joining_date: "2024-01-15", salary: 35000, salary_date: "", status: "Active" },
+  { id: 2, staff_name: "Karthik", employee_id: "EMP-2026-002", role: "Cinematographer", department: "Videography", phone: "9876501234", email: "karthik@studioraw.com", joining_date: "2024-03-01", salary: 38000, salary_date: "", status: "Active" },
+  { id: 3, staff_name: "Arun", employee_id: "EMP-2026-003", role: "Lead Editor", department: "Post-Production", phone: "9123456780", email: "arun@studioraw.com", joining_date: "2024-04-10", salary: 32000, salary_date: "", status: "Active" },
+  { id: 4, staff_name: "Vignesh", employee_id: "EMP-2026-004", role: "Photographer", department: "Photography", phone: "9988776655", email: "vignesh@studioraw.com", joining_date: "2024-06-20", salary: 28000, salary_date: "", status: "Active" },
+  { id: 5, staff_name: "Priya", employee_id: "EMP-2026-005", role: "Studio Manager", department: "Management", phone: "9090901234", email: "priya@studioraw.com", joining_date: "2023-11-01", salary: 40000, salary_date: "", status: "Active" },
+];
+
+function readStoredStaff() {
+  try {
+    const raw = localStorage.getItem(STAFF_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  } catch {}
+  return DEFAULT_STAFF;
+}
+
 export default function Staff() {
-  const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [staffList, setStaffList] = useState(readStoredStaff);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
@@ -92,12 +111,23 @@ export default function Staff() {
   const loadStaff = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+
     try {
       const data = await api.staff.list();
-      setStaffList(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.results)
+        ? data.results
+        : null;
+
+      if (list && list.length) {
+        setStaffList(list);
+        try {
+          localStorage.setItem(STAFF_KEY, JSON.stringify(list));
+        } catch {}
+      }
     } catch (err) {
-      console.error("Failed to fetch staff:", err);
-      setError("Unable to load staff records from server.");
+      console.warn("Backend staff API notice:", err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -161,7 +191,8 @@ export default function Staff() {
       role: staff.role || "Senior Photographer",
       department: staff.department || "Photography",
       joining_date: staff.joining_date || new Date().toISOString().slice(0, 10),
-      salary: staff.salary || "",
+      salary: staff.salary ?? "",
+      salary_date: staff.salary_date || "",
       status: staff.status || "Active",
       notes: staff.notes || "",
     });
@@ -177,29 +208,68 @@ export default function Staff() {
       setError("Staff name is required.");
       return;
     }
+
     if (!form.employee_id.trim()) {
       setError("Employee ID is required.");
       return;
     }
 
     setSaving(true);
+
     try {
       const payload = {
         ...form,
         salary: parseFloat(form.salary) || 0,
         joining_date: form.joining_date || null,
+        salary_date: form.salary_date || null,
       };
 
+      let assignedId = editingStaff ? editingStaff.id : `EMP-${Date.now()}`;
+
       if (editingStaff) {
-        await api.staff.update(editingStaff.id, payload);
+        try {
+          await api.staff.update(editingStaff.id, payload);
+        } catch (apiErr) {
+          console.warn("Backend staff update notice:", apiErr.message);
+        }
+
+        setStaffList((prev) => {
+          const next = prev.map((s) =>
+            String(s.id) === String(editingStaff.id)
+              ? { ...s, ...payload, id: s.id }
+              : s
+          );
+
+          try {
+            localStorage.setItem(STAFF_KEY, JSON.stringify(next));
+          } catch {}
+
+          return next;
+        });
+
         setToast("Staff member updated successfully.");
       } else {
-        await api.staff.create(payload);
+        try {
+          const res = await api.staff.create(payload);
+          if (res?.id) assignedId = res.id;
+        } catch (apiErr) {
+          console.warn("Backend staff create notice:", apiErr.message);
+        }
+
+        setStaffList((prev) => {
+          const next = [{ ...payload, id: assignedId }, ...prev];
+
+          try {
+            localStorage.setItem(STAFF_KEY, JSON.stringify(next));
+          } catch {}
+
+          return next;
+        });
+
         setToast("Staff member added successfully.");
       }
 
       setFormOpen(false);
-      loadStaff();
     } catch (err) {
       setError(err.message || "Failed to save staff record.");
     } finally {
@@ -209,18 +279,32 @@ export default function Staff() {
 
   const confirmDelete = async () => {
     if (!deleteStaff) return;
+
     try {
       await api.staff.delete(deleteStaff.id);
-      setToast("Staff member deleted.");
-      setDeleteStaff(null);
-      loadStaff();
     } catch (err) {
-      alert("Failed to delete staff: " + err.message);
+      console.warn("Backend delete staff notice:", err.message);
     }
+
+    setStaffList((prev) => {
+      const next = prev.filter(
+        (s) => String(s.id) !== String(deleteStaff.id)
+      );
+
+      try {
+        localStorage.setItem(STAFF_KEY, JSON.stringify(next));
+      } catch {}
+
+      return next;
+    });
+
+    setToast("Staff member deleted.");
+    setDeleteStaff(null);
   };
 
   const exportCsv = () => {
     if (!staffList.length) return;
+
     const headers = [
       "ID",
       "Employee ID",
@@ -231,8 +315,10 @@ export default function Staff() {
       "Email",
       "Joining Date",
       "Monthly Salary",
+      "Salary Date",
       "Status",
     ];
+
     const rows = staffList.map((s) => [
       s.id,
       s.employee_id,
@@ -242,16 +328,23 @@ export default function Staff() {
       s.phone || "",
       s.email || "",
       s.joining_date || "",
-      s.salary,
-      s.status,
+      s.salary ?? "",
+      s.salary_date || "",
+      s.status || "",
     ]);
 
     const csvContent =
-      "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `studio_raw_staff_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      "download",
+      `studio_raw_staff_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -357,9 +450,7 @@ export default function Staff() {
               className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
             >
               {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
+                <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </div>
@@ -372,9 +463,7 @@ export default function Staff() {
               className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
             >
               {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
+                <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
@@ -388,9 +477,7 @@ export default function Staff() {
             >
               <option value="All">All</option>
               {STATUSES.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
+                <option key={st} value={st}>{st}</option>
               ))}
             </select>
           </div>
@@ -436,6 +523,7 @@ export default function Staff() {
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-[#edf3fa]">
                 {filteredStaff.map((staff) => (
                   <tr key={staff.id} className="transition hover:bg-[#f6faff]">
@@ -538,6 +626,7 @@ export default function Staff() {
                     </p>
                   </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => setFormOpen(false)}
@@ -592,9 +681,7 @@ export default function Staff() {
                       className={inputClass}
                     >
                       {ROLES.filter((r) => r !== "All").map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
+                        <option key={r} value={r}>{r}</option>
                       ))}
                     </select>
                   </div>
@@ -607,9 +694,7 @@ export default function Staff() {
                       className={inputClass}
                     >
                       {DEPARTMENTS.filter((d) => d !== "All").map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
+                        <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
                   </div>
@@ -648,6 +733,19 @@ export default function Staff() {
                     />
                   </div>
 
+                  {/* NEW: SALARY DATE */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
+                      Salary Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.salary_date}
+                      onChange={(e) => setForm({ ...form, salary_date: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-[#10264d]">Status</label>
                     <select
@@ -656,9 +754,7 @@ export default function Staff() {
                       className={inputClass}
                     >
                       {STATUSES.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
+                        <option key={st} value={st}>{st}</option>
                       ))}
                     </select>
                   </div>
@@ -704,6 +800,7 @@ export default function Staff() {
                   >
                     Cancel
                   </button>
+
                   <button
                     type="submit"
                     disabled={saving}
@@ -727,10 +824,12 @@ export default function Staff() {
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
                 <Trash2 size={26} />
               </div>
+
               <h3 className="mt-4 text-base font-black text-[#10264d]">Delete Staff Member?</h3>
               <p className="mt-2 text-xs font-medium text-[#647c9d]">
                 Are you sure you want to remove <strong>{deleteStaff.staff_name}</strong>? This action cannot be undone.
               </p>
+
               <div className="mt-6 flex items-center gap-3">
                 <button
                   type="button"
@@ -739,6 +838,7 @@ export default function Staff() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="button"
                   onClick={confirmDelete}

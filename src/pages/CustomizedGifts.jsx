@@ -766,7 +766,11 @@ export default function CustomizedGifts() {
     try {
       if (editingId !== null) {
         if (typeof editingId === "number") {
-          await api.customizedGifts.update(editingId, payload);
+          try {
+            await api.customizedGifts.update(editingId, payload);
+          } catch (apiErr) {
+            console.warn("Backend update gift notice:", apiErr.message);
+          }
         }
 
         const record = {

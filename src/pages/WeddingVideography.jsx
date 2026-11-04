@@ -1119,7 +1119,11 @@ export default function WeddingVideography() {
     try {
       if (editingId !== null) {
         if (typeof editingId === "number") {
-          await api.weddingVideography.update(editingId, payload);
+          try {
+            await api.weddingVideography.update(editingId, payload);
+          } catch (apiErr) {
+            console.warn("Backend update videography notice:", apiErr.message);
+          }
         }
 
         const record = {

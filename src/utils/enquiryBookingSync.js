@@ -40,10 +40,34 @@ export function syncEnquiriesToBookings() {
   let bookingsAdded = 0;
 
   for (const enquiry of enquiries) {
+    const isConfirmed = String(enquiry.status || "").trim().toLowerCase() === "confirmed";
+    const id = String(enquiry.id);
+
+    // If enquiry is NOT confirmed, ensure it does NOT appear in Bookings or Customers
+    if (!isConfirmed) {
+      const bIdx = bookings.findIndex((b) =>
+        (b.enquiryId != null && String(b.enquiryId) === id) ||
+        (enquiry.bookingId && String(b.id) === String(enquiry.bookingId))
+      );
+      if (bIdx >= 0) {
+        bookings.splice(bIdx, 1);
+        bookingsChanged = true;
+      }
+      const cIdx = customers.findIndex((c) =>
+        ((c.enquiryId != null && String(c.enquiryId) === id) ||
+         (enquiry.customerId && String(c.id) === String(enquiry.customerId))) &&
+        c.source === "Enquiry"
+      );
+      if (cIdx >= 0) {
+        customers.splice(cIdx, 1);
+        customersChanged = true;
+      }
+      continue;
+    }
+
     const name = String(enquiry.name || "").trim();
     const phone = phoneOf(enquiry.number || enquiry.phone);
     if (!name || phone.length !== 10) continue;
-    const id = String(enquiry.id);
     const date = dateOf(enquiry.eventDate);
     const now = new Date().toISOString();
     const existingCustomerIndex = customers.findIndex((c) =>
@@ -80,7 +104,7 @@ export function syncEnquiriesToBookings() {
         String(b.event || "").trim().toLowerCase() === eventName.toLowerCase())
     );
     const old = bookings[bookingIndex];
-    const status = String(enquiry.status || "").toLowerCase() === "confirmed" ? "Confirmed" : "Pending";
+    const status = "Confirmed";
     const nextBooking = {
       ...(old || {}), id: old?.id || `BOOK-ENQ-${id}`, enquiryId: enquiry.id,
       customerId, customer: name, phone, event: eventName, date,

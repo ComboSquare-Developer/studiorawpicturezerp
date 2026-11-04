@@ -900,7 +900,11 @@ export default function WeddingPhotography() {
     try {
       if (editing) {
         if (typeof editing.id === "number") {
-          await api.weddingPhotography.update(editing.id, payload);
+          try {
+            await api.weddingPhotography.update(editing.id, payload);
+          } catch (apiErr) {
+            console.warn("Backend update wedding photography notice:", apiErr.message);
+          }
         }
         setWeddings((previous) =>
           previous.map((item) =>

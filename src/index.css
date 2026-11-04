@@ -137,6 +137,10 @@ html[data-theme="light"] main :is(h1, h2, h3, h4, h5, h6) {
   color: #10264d !important;
 }
 
+html[data-theme="light"] main .sr-timeline-header :is(h1, h2, h3, h4, h5, h6, .sr-timeline-heading, .sr-timeline-eyebrow) {
+  color: #FFFFFF !important;
+}
+
 html[data-theme="light"] main :is(
   .text-black,
   .text-gray-900,
@@ -1218,6 +1222,10 @@ html[data-theme="light"] .studio-dashboard h1,
 html[data-theme="light"] .studio-dashboard h2,
 html[data-theme="light"] .studio-dashboard h3 {
   color: #10264d !important;
+}
+
+html[data-theme="light"] .studio-dashboard .sr-timeline-header :is(h1, h2, h3, h4, h5, h6, .sr-timeline-heading, .sr-timeline-eyebrow) {
+  color: #FFFFFF !important;
 }
 
 html[data-theme="light"] .studio-dashboard

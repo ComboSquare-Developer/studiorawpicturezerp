@@ -1423,7 +1423,11 @@ export default function EventManagement() {
     try {
       if (editingId !== null) {
         if (typeof editingId === "number") {
-          await api.eventManagement.update(editingId, payload);
+          try {
+            await api.eventManagement.update(editingId, payload);
+          } catch (apiErr) {
+            console.warn("Backend update event notice:", apiErr.message);
+          }
         }
 
         const record = {

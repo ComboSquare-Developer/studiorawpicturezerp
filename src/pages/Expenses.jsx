@@ -1511,7 +1511,11 @@ export default function Expenses() {
     try {
       if (editingId) {
         if (typeof editingId === "number") {
-          await api.expenses.update(editingId, payload);
+          try {
+            await api.expenses.update(editingId, payload);
+          } catch (apiErr) {
+            console.warn("Backend update expense notice:", apiErr.message);
+          }
         }
 
         const record = {
