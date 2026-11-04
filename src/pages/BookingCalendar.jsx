@@ -15,6 +15,7 @@ const STORAGE_KEY = "studioraw_bookings";
 const CUSTOMER_KEY = "studio_raw_customers";
 
 const PAYMENT_KEY = "studioraw_payments";
+const STAFF_KEY = "studioraw_staff";
 
 const ENQUIRY_KEYS = ["studioraw_enquiries", "studio_raw_enquiries"];
 
@@ -31,7 +32,6 @@ const serviceEventTypes = {
 
 const statuses = ["Confirmed", "Pending", "Completed", "Cancelled"];
 
-const photographers = ["Rahul", "Karthik", "Arun", "Vignesh", "Sanjay", "Priya", "Divya", "Not Assigned"];
 
 const locations = ["Nagercoil", "Marthandam", "Kanyakumari", "Chennai", "Tirunelveli", "Trivandrum", "Madurai", "Coimbatore", "Other"];
 
@@ -56,6 +56,32 @@ const money = v => new Intl.NumberFormat("en-IN", { style: "currency", currency:
 const normalizePhone = v => String(v || "").replace(/\D/g, "").slice(-10);
 
 function readArray(key) { try { const p = JSON.parse(localStorage.getItem(key) || "[]"); if (Array.isArray(p)) return p; for (const k of ["data", "records", "items", "list", "customers", "bookings", "payments", "enquiries"]) if (Array.isArray(p?.[k])) return p[k]; } catch {} return []; }
+
+function readStaffMembers() {
+  const staff = readArray(STAFF_KEY);
+  return staff.filter(member => {
+    const status = String(member.status || "Active").trim().toLowerCase();
+    return status === "active";
+  });
+}
+
+function getStaffForService(service, staffMembers) {
+  const rules = {
+    "Wedding Photography": { departments: ["photography"], roles: ["photographer", "candid", "traditional", "pre-wedding", "photography"] },
+    "Wedding Videography": { departments: ["videography"], roles: ["videographer", "cinematographer", "video editor", "drone pilot", "videography"] },
+    "Functions We Arrange": { departments: ["photography", "videography", "operations"], roles: ["photographer", "videographer", "cinematographer", "drone pilot", "coordinator"] },
+    "Event Management": { departments: ["management", "operations"], roles: ["manager", "event", "production assistant", "coordinator", "lighting technician"] },
+    "Customer Gifts": { departments: ["post-production", "operations"], roles: ["album designer", "designer", "gift", "customer support"] },
+  };
+  const rule = rules[service] || rules["Wedding Photography"];
+  return staffMembers.filter(member => {
+    const department = String(member.department || "").trim().toLowerCase();
+    const role = String(member.role || member.designation || "").trim().toLowerCase();
+    return rule.departments.includes(department) || rule.roles.some(keyword => role.includes(keyword));
+  });
+}
+
+const staffDisplayName = member => String(member.name || member.fullName || member.employeeName || member.staffName || "").trim();
 
 function notify(key) { window.dispatchEvent(new CustomEvent(UPDATE_EVENT, { detail: { key, module: "bookings" } })); }
 
@@ -125,10 +151,27 @@ function BookingModal({ booking, customers, payments, onClose, onSave }) {
   const allowedEvents = serviceEventTypes[initial.service] || serviceEventTypes["Wedding Photography"];
   if (!allowedEvents.includes(initial.event)) initial.event = allowedEvents[0];
   const [form, setForm] = useState(initial);
+  const [staffMembers, setStaffMembers] = useState(() => readStaffMembers());
   const [error, setError] = useState("");
+  useEffect(() => {
+    const refreshStaff = () => setStaffMembers(readStaffMembers());
+    refreshStaff();
+    window.addEventListener("storage", refreshStaff);
+    window.addEventListener(UPDATE_EVENT, refreshStaff);
+    return () => {
+      window.removeEventListener("storage", refreshStaff);
+      window.removeEventListener(UPDATE_EVENT, refreshStaff);
+    };
+  }, []);
+  const staffOptions = useMemo(() => {
+    const matchingStaff = getStaffForService(form.service, staffMembers)
+      .map(staffDisplayName)
+      .filter(Boolean);
+    return ["Not Assigned", ...new Set(matchingStaff)];
+  }, [form.service, staffMembers]);
   const financials = booking?.id ? financialsFor(booking, payments) : null;
   const update = (key, value) => { setForm(p => ({ ...p, [key]: value })); setError(""); };
-  const changeService = service => setForm(p => ({ ...p, service, event: (serviceEventTypes[service] || [])[0] || "" }));
+  const changeService = service => setForm(p => ({ ...p, service, event: (serviceEventTypes[service] || [])[0] || "", photographer: "Not Assigned" }));
   const selectCustomer = id => { const c = customers.find(x => String(x.id) === String(id)); setForm(p => ({ ...p, customerId: c ? String(c.id) : "", ...(c ? { customer: customerName(c), phone: customerPhone(c) } : {}) })); };
   const submit = e => {
     e.preventDefault();
@@ -141,7 +184,7 @@ function BookingModal({ booking, customers, payments, onClose, onSave }) {
     const match = customers.find(c => String(c.id) === String(form.customerId) && form.customerId) || customers.find(c => customerPhone(c) === phone);
     onSave({ ...form, customerId: match ? String(match.id) : "", customer: name, phone, totalAmount: amount(form.totalAmount), advance: amount(form.advance) });
   };
-  const fields = [["Customer Name", "customer", UserRound, "text"], ["Phone Number", "phone", Phone, "tel"], ["Booking Date", "date", CalendarDays, "date"], ["Booking Time", "time", Clock3, "time"], ["Location", "location", MapPin, locations], ["Photographer", "photographer", Camera, photographers], ["Booking Status", "status", CheckCircle2, statuses]];
+  const fields = [["Customer Name", "customer", UserRound, "text"], ["Phone Number", "phone", Phone, "tel"], ["Booking Date", "date", CalendarDays, "date"], ["Booking Time", "time", Clock3, "time"], ["Location", "location", MapPin, locations], ["Assigned Staff Member", "photographer", Camera, staffOptions], ["Booking Status", "status", CheckCircle2, statuses]];
   return <ModalShell title={booking?.id ? "Edit Booking" : "New Booking"} subtitle="Booking details and invoice form" icon={CalendarPlus} onClose={onClose}>
     <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#f8fbff] px-5 py-6 sm:px-7">
@@ -182,7 +225,7 @@ function InvoicePreview({ booking, invoice, onClose }) {
 
 function DateBookingsModal({ date, bookings, financialMap, onClose, onEdit, onNew }) { return <ModalShell title="Booked Customer Details" subtitle={`${formatDate(date)} · ${bookings.length} bookings`} icon={CalendarCheck2} onClose={onClose}><div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f8fbff] p-4 sm:p-6">{bookings.map((b, i) => <div key={b.id} className="rounded-2xl border border-[#dce8f8] bg-white p-4"><div className="flex items-center justify-between gap-2"><div><p className="text-[10px] font-extrabold text-[#8a9fba]">BOOKING {i + 1}</p><h3 className="mt-1 font-black text-[#173f74]">{b.customer}</h3></div><StatusBadge status={b.status}/></div><div className="mt-4 space-y-2">{[["Phone", b.phone], ["Event", b.event], ["Date", formatDate(b.date)], ["Time", formatTime(b.time)], ["Location", b.location], ["Photographer", b.photographer]].map(([label, value]) => <div key={label} className="flex justify-between gap-4 border-b border-[#e5edf8] py-2 text-xs"><span className="text-[#7890ac]">{label}</span><strong className="text-right text-[#173f74]">{value || "—"}</strong></div>)}</div><PaymentSummary booking={b} financials={financialMap.get(String(b.id))}/><button type="button" onClick={() => onEdit(b)} className={`${buttonClass} mt-4 w-full`}><Pencil size={16}/>Edit Booking</button></div>)}</div><div className="flex justify-end gap-2 border-t bg-white p-4"><button type="button" onClick={onClose} className="rounded-xl border px-5 py-3 text-sm font-bold">Close</button><button type="button" onClick={onNew} className={buttonClass}><Plus size={17}/>Add Another Booking</button></div></ModalShell>; }
 
-function mapBooking(b) { return { id: b.id, customerId: b.customer ?? b.customerId ?? "", customer: b.customer_name || b.customerName || (typeof b.customer === "string" && !/^\d+$/.test(b.customer) ? b.customer : "") || "Customer", phone: b.phone || "", event: b.event_type || b.event || "Wedding Photography", date: b.event_date || b.date || "", time: b.time || "10:00", location: b.location || "Nagercoil", photographer: b.photographer || "Not Assigned", totalAmount: amount(b.total_amount ?? b.totalAmount), status: b.status || "Pending", createdAt: b.created_at || b.createdAt || "", updatedAt: b.updated_at || b.updatedAt || "" }; }
+function mapBooking(b) { return { id: b.id, customerId: b.customer ?? b.customerId ?? "", customer: b.customer_name || b.customerName || (typeof b.customer === "string" && !/^\d+$/.test(b.customer) ? b.customer : "") || "Customer", phone: b.phone || "", service: b.service || b.service_type || "Wedding Photography", event: b.event_type || b.event || "Wedding Photography", date: b.event_date || b.date || "", time: b.time || "10:00", location: b.location || "Nagercoil", photographer: b.photographer || "Not Assigned", totalAmount: amount(b.total_amount ?? b.totalAmount), status: b.status || "Pending", createdAt: b.created_at || b.createdAt || "", updatedAt: b.updated_at || b.updatedAt || "" }; }
 
 export default function BookingCalendar() {
 
