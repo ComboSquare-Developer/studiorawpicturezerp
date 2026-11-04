@@ -20,11 +20,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  Camera,
-  Film,
-  PartyPopper,
-  Gift,
-  Bell,
 } from "lucide-react";
 import studioLogo from "../assets/favicon.png";
 
@@ -43,11 +38,6 @@ const menuGroups = [
     title: "SHOOT BOOKINGS & EVENTS",
     items: [
       { id: "bookings", label: "Bookings", icon: CalendarDays },
-      { id: "wedding-photography", label: "Wedding Photography", icon: Camera },
-      { id: "wedding-videography", label: "Wedding Videography", icon: Film },
-      { id: "functions-we-arrange", label: "Functions We Arrange", icon: PartyPopper },
-      { id: "event-management", label: "Event Management", icon: Sparkles },
-      { id: "customized-gifts", label: "Customized Gifts", icon: Gift },
     ],
   },
   {
@@ -66,7 +56,6 @@ const menuGroups = [
       { id: "staff", label: "Staff", icon: Users },
       { id: "branches", label: "Branches", icon: Building2 },
       { id: "reports", label: "Reports", icon: BarChart3 },
-      { id: "notifications", label: "Notifications", icon: Bell },
       { id: "settings", label: "Settings", icon: Settings },
     ],
   },
