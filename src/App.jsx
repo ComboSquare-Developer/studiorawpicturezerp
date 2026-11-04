@@ -1,5 +1,12 @@
 
 import { useEffect, useState, lazy, Suspense } from "react";
+import {
+  LayoutDashboard,
+  MessageSquare,
+  CalendarDays,
+  Users,
+  Menu,
+} from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import GlobalSound from "./components/GlobalSound";
@@ -288,7 +295,7 @@ export default function App() {
             />
 
             {/* MAIN CONTENT */}
-            <main className="min-w-0 flex-1">
+            <main className="min-w-0 flex-1 pb-20 lg:pb-0">
               <Suspense fallback={<Loader />}>
                 {ActivePage ? (
                   <ActivePage />
@@ -319,6 +326,56 @@ export default function App() {
                 )}
               </Suspense>
             </main>
+
+            {/* MOBILE BOTTOM NAVIGATION DOCK */}
+            <nav
+              aria-label="Mobile quick navigation"
+              className="fixed bottom-0 inset-x-0 z-40 flex h-16 items-center justify-around border-t border-[#dce5f2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_25px_rgba(16,38,77,0.08)] backdrop-blur-xl lg:hidden"
+            >
+              {[
+                { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+                { id: "enquiries", label: "Enquiries", icon: MessageSquare },
+                { id: "bookings", label: "Bookings", icon: CalendarDays },
+                { id: "customers", label: "Customers", icon: Users },
+              ].map((item) => {
+                const Icon = item.icon;
+                const active = activePage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleNavigation(item.id)}
+                    className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 transition-all ${
+                      active
+                        ? "text-[#10264d] font-black"
+                        : "text-[#627794] font-medium hover:text-[#10264d]"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-8 w-11 items-center justify-center rounded-full transition-all ${
+                        active
+                          ? "bg-[#10264d] text-white shadow-sm"
+                          : "text-inherit"
+                      }`}
+                    >
+                      <Icon size={18} strokeWidth={active ? 2.4 : 1.9} />
+                    </div>
+                    <span className="text-[10px] tracking-tight">{item.label}</span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[#627794] font-medium hover:text-[#10264d]"
+              >
+                <div className="flex h-8 w-11 items-center justify-center rounded-full text-inherit">
+                  <Menu size={18} strokeWidth={2} />
+                </div>
+                <span className="text-[10px] tracking-tight">Menu</span>
+              </button>
+            </nav>
           </div>
         </div>
       )}

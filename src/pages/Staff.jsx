@@ -510,96 +510,187 @@ export default function Staff() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-[#e7eef7] bg-[#f8fbff] text-[11px] font-extrabold uppercase tracking-wider text-[#526b8b]">
-                  <th className="px-5 py-4">Staff Member</th>
-                  <th className="px-4 py-4">Role & Dept</th>
-                  <th className="px-4 py-4">Contact</th>
-                  <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4 text-right">Monthly Salary</th>
-                  <th className="px-4 py-4">Joining Date</th>
-                  <th className="px-5 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-[#edf3fa]">
-                {filteredStaff.map((staff) => (
-                  <tr key={staff.id} className="transition hover:bg-[#f6faff]">
-                    <td className="px-5 py-4">
-                      <div className="font-extrabold text-[#10264d]">{staff.staff_name}</div>
-                      <div className="mt-0.5 font-mono text-[11px] font-semibold text-[#6d84a3]">
+          <>
+            {/* MOBILE CARDS VIEW */}
+            <div className="grid grid-cols-1 gap-3.5 p-3.5 sm:p-5 lg:hidden">
+              {filteredStaff.map((staff) => (
+                <div
+                  key={staff.id}
+                  className="rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-3 border-b border-[#edf3fa] pb-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-extrabold text-[#10264d]">
+                        {staff.staff_name}
+                      </h3>
+                      <p className="mt-0.5 font-mono text-xs font-semibold text-[#6d84a3]">
                         ID: {staff.employee_id}
-                      </div>
-                    </td>
+                      </p>
+                    </div>
 
-                    <td className="px-4 py-4">
-                      <div className="font-extrabold text-[#10264d]">{staff.role || "Photographer"}</div>
-                      <div className="mt-0.5 text-[11px] text-[#6d84a3]">{staff.department || "Photography"}</div>
-                    </td>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
+                        staff.status === "Active"
+                          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : staff.status === "On Leave"
+                          ? "border border-amber-200 bg-amber-50 text-amber-700"
+                          : "border border-slate-200 bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {staff.status || "Active"}
+                    </span>
+                  </div>
 
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1.5 font-bold text-[#10264d]">
-                        <Phone size={13} className="text-[#244d8b]" />
-                        {staff.phone || "—"}
-                      </div>
-                      {staff.email && (
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#6d84a3]">
-                          <Mail size={12} />
-                          {staff.email}
-                        </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-[#f8fbff] p-2.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">Role</span>
+                      <p className="mt-1 font-bold text-[#10264d]">{staff.role || "Photographer"}</p>
+                      <p className="text-[11px] text-[#6d84a3]">{staff.department || "Photography"}</p>
+                    </div>
+
+                    <div className="rounded-xl bg-[#f8fbff] p-2.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">Monthly Salary</span>
+                      <p className="mt-1 font-black text-[#10264d]">{money(staff.salary)}</p>
+                      <p className="text-[11px] text-[#6d84a3]">Joined: {staff.joining_date || "—"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#edf3fa] pt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {staff.phone && (
+                        <a
+                          href={`tel:${staff.phone}`}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#d6e5f7] bg-[#f0f6ff] px-3 py-1.5 text-xs font-bold text-[#1a4a88]"
+                        >
+                          <Phone size={13} />
+                          {staff.phone}
+                        </a>
                       )}
-                    </td>
+                      {staff.email && (
+                        <a
+                          href={`mailto:${staff.email}`}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                        >
+                          <Mail size={12} />
+                          Email
+                        </a>
+                      )}
+                    </div>
 
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
-                          staff.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : staff.status === "On Leave"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-slate-100 text-slate-600 border border-slate-200"
-                        }`}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(staff)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-[#d6e5f7] bg-white px-3 py-1.5 text-xs font-bold text-[#244d8b] shadow-sm hover:bg-[#edf5ff]"
                       >
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        {staff.status || "Active"}
-                      </span>
-                    </td>
+                        <Pencil size={13} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteStaff(staff)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                    <td className="px-4 py-4 text-right font-extrabold text-[#10264d]">
-                      {money(staff.salary)}
-                    </td>
-
-                    <td className="px-4 py-4 font-semibold text-[#526b8b]">
-                      {staff.joining_date || "—"}
-                    </td>
-
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(staff)}
-                          className="rounded-lg p-1.5 text-[#244d8b] transition hover:bg-[#edf5ff]"
-                          title="Edit"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteStaff(staff)}
-                          className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
-                          title="Delete"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            {/* DESKTOP TABLE */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[#e7eef7] bg-[#f8fbff] text-[11px] font-extrabold uppercase tracking-wider text-[#526b8b]">
+                    <th className="px-5 py-4">Staff Member</th>
+                    <th className="px-4 py-4">Role & Dept</th>
+                    <th className="px-4 py-4">Contact</th>
+                    <th className="px-4 py-4">Status</th>
+                    <th className="px-4 py-4 text-right">Monthly Salary</th>
+                    <th className="px-4 py-4">Joining Date</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody className="divide-y divide-[#edf3fa]">
+                  {filteredStaff.map((staff) => (
+                    <tr key={staff.id} className="transition hover:bg-[#f6faff]">
+                      <td className="px-5 py-4">
+                        <div className="font-extrabold text-[#10264d]">{staff.staff_name}</div>
+                        <div className="mt-0.5 font-mono text-[11px] font-semibold text-[#6d84a3]">
+                          ID: {staff.employee_id}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="font-extrabold text-[#10264d]">{staff.role || "Photographer"}</div>
+                        <div className="mt-0.5 text-[11px] text-[#6d84a3]">{staff.department || "Photography"}</div>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-1.5 font-bold text-[#10264d]">
+                          <Phone size={13} className="text-[#244d8b]" />
+                          {staff.phone || "—"}
+                        </div>
+                        {staff.email && (
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#6d84a3]">
+                            <Mail size={12} />
+                            {staff.email}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
+                            staff.status === "Active"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : staff.status === "On Leave"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {staff.status || "Active"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-right font-extrabold text-[#10264d]">
+                        {money(staff.salary)}
+                      </td>
+
+                      <td className="px-4 py-4 font-semibold text-[#526b8b]">
+                        {staff.joining_date || "—"}
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(staff)}
+                            className="rounded-lg p-1.5 text-[#244d8b] transition hover:bg-[#edf5ff]"
+                            title="Edit"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteStaff(staff)}
+                            className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

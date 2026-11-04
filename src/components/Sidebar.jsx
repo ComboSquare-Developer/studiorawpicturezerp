@@ -1,131 +1,75 @@
 
 
 import { useEffect, useRef, useState } from "react";
-
 import {
-
   LayoutDashboard,
-
   MessageSquare,
-
   Users,
-
   CalendarDays,
-
   Wallet,
-
-
   PackageCheck,
-
   Boxes,
-
   Wrench,
-
   Receipt,
-
   Building2,
-
   BarChart3,
-
-
   Settings,
-
   LogOut,
-
-
-
-
   Menu,
-
   X,
-
   ChevronLeft,
-
   ChevronRight,
-
   Sparkles,
-
+  Camera,
+  Film,
+  PartyPopper,
+  Gift,
+  Bell,
 } from "lucide-react";
-
-
-
 import studioLogo from "../assets/favicon.png";
-
-
 
 const SOUND_KEY = "studioraw_sound";
 
-
-
 const menuGroups = [
-
   {
-
     title: "OVERVIEW",
-
     items: [
-
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-
       { id: "enquiries", label: "Enquiries", icon: MessageSquare },
-
       { id: "customers", label: "Customers", icon: Users },
-
     ],
-
   },
-
   {
-
     title: "SHOOT BOOKINGS & EVENTS",
-
     items: [
-
       { id: "bookings", label: "Bookings", icon: CalendarDays },
-
+      { id: "wedding-photography", label: "Wedding Photography", icon: Camera },
+      { id: "wedding-videography", label: "Wedding Videography", icon: Film },
+      { id: "functions-we-arrange", label: "Functions We Arrange", icon: PartyPopper },
+      { id: "event-management", label: "Event Management", icon: Sparkles },
+      { id: "customized-gifts", label: "Customized Gifts", icon: Gift },
     ],
-
   },
-
   {
-
     title: "OPERATIONS",
-
     items: [
-
       { id: "payments", label: "Payments", icon: Wallet },
-
       { id: "deliveries", label: "Deliveries", icon: PackageCheck },
-
       { id: "inventory", label: "Inventory", icon: Boxes },
-
       { id: "equipment", label: "Equipment", icon: Wrench },
-
       { id: "expenses", label: "Expenses", icon: Receipt },
-
     ],
-
   },
-
   {
-
     title: "MANAGEMENT",
-
     items: [
-
       { id: "staff", label: "Staff", icon: Users },
-
       { id: "branches", label: "Branches", icon: Building2 },
-
       { id: "reports", label: "Reports", icon: BarChart3 },
-
-
+      { id: "notifications", label: "Notifications", icon: Bell },
       { id: "settings", label: "Settings", icon: Settings },
-
     ],
-
   },
-
 ];
 
 

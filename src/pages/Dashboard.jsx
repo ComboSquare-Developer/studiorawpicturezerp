@@ -547,11 +547,11 @@ function StatCard({
 
   return (
     <div
-      className="group relative h-full min-w-0 overflow-hidden rounded-[26px] border p-5 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+      className="group relative h-full min-w-0 overflow-hidden rounded-[20px] sm:rounded-[26px] border p-3.5 sm:p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
       style={{
         background: `linear-gradient(145deg,#ffffff 0%,${theme.bg} 100%)`,
         borderColor: theme.border,
-        boxShadow: `0 10px 30px ${theme.accent}12`,
+        boxShadow: `0 8px 24px ${theme.accent}10`,
       }}
     >
       <div
@@ -559,16 +559,16 @@ function StatCard({
         style={{ backgroundColor: theme.accent }}
       />
 
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
           <p
-            className="text-xs font-bold sm:text-sm"
+            className="truncate text-[11px] font-bold sm:text-sm"
             style={{ color: theme.accent }}
           >
             {title}
           </p>
 
-          <h2 className="mt-4 break-words text-xl font-black tracking-tight text-[#10264d] sm:text-2xl">
+          <h2 className="mt-2 sm:mt-4 break-words text-lg sm:text-2xl font-black tracking-tight text-[#10264d]">
             <AnimatedNumber
               value={value}
               currency={isMoney}
@@ -576,24 +576,25 @@ function StatCard({
             />
           </h2>
 
-          <p className="mt-2 text-[11px] font-semibold leading-5 text-slate-500">
+          <p className="mt-1 sm:mt-2 line-clamp-1 text-[10px] sm:text-[11px] font-semibold text-slate-500">
             {subtitle}
           </p>
         </div>
 
         <div
-          className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl transition-all duration-500 group-hover:-rotate-6 group-hover:scale-110"
+          className="flex h-9 w-9 sm:h-[52px] sm:w-[52px] shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all duration-300 group-hover:scale-105"
           style={{
             backgroundColor: theme.iconBg,
             color: theme.accent,
           }}
         >
-          <Icon size={24} strokeWidth={2.4} />
+          <Icon size={18} strokeWidth={2.4} className="sm:hidden" />
+          <Icon size={24} strokeWidth={2.4} className="hidden sm:block" />
         </div>
       </div>
 
       <div
-        className="absolute bottom-0 left-0 h-1 w-full origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
+        className="absolute bottom-0 left-0 h-1 w-full origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
         style={{ backgroundColor: theme.accent }}
       />
     </div>
@@ -2231,7 +2232,7 @@ export default function Dashboard() {
 
           {/* HEADER FINANCIAL CARDS */}
 
-          <div className="relative mt-7 grid grid-cols-1 gap-3 border-t border-white/50 pt-6 sm:grid-cols-3 sm:gap-4">
+          <div className="relative mt-5 sm:mt-7 grid grid-cols-1 min-[420px]:grid-cols-3 gap-2.5 sm:gap-4 border-t border-white/50 pt-5 sm:pt-6">
             {[
               ["Total Billed", stats.billed],
               ["Total Received", stats.paid],
@@ -2239,13 +2240,13 @@ export default function Dashboard() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="sr-hero-stat min-w-0 rounded-2xl p-4"
+                className="sr-hero-stat min-w-0 rounded-2xl p-3 sm:p-4"
               >
-                <p className="text-xs font-semibold text-[#7b6b8d]">
+                <p className="text-[11px] sm:text-xs font-semibold text-[#7b6b8d]">
                   {label}
                 </p>
 
-                <p className="mt-3 break-words text-lg font-black text-[#443c5c] lg:text-xl xl:text-2xl">
+                <p className="mt-2 sm:mt-3 break-words text-base sm:text-xl lg:text-2xl font-black text-[#443c5c]">
                   <AnimatedNumber
                     value={value}
                     currency
@@ -2260,7 +2261,7 @@ export default function Dashboard() {
 
       {/* DASHBOARD STAT CARDS */}
 
-      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+      <div className="mb-7 grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         {cards.map((card, index) => (
           <ScrollReveal
             key={card.title}
