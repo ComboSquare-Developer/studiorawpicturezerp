@@ -1548,7 +1548,9 @@ export default function Header({
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : (
-                <span className="sr-premium-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#315b99]" />
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-slate-400 px-1 text-[9px] font-black text-white shadow-sm">
+                  0
+                </span>
               )}
             </button>
 

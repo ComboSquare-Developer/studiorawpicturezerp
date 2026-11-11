@@ -9,13 +9,9 @@
  * - Shared Monthly Income, Expenses, Category Breakdown & Net Profit
  */
 
-export const STAFF_SALARIES = [
-  { employee_id: "EMP-2026-001", name: "Vignesh Sundaram", role: "Photographer", salary: 10000 },
-  { employee_id: "EMP-2026-002", name: "Santhosh Kumar", role: "Cinematographer", salary: 10000 },
-  { employee_id: "EMP-2026-003", name: "Priya Natarajan", role: "Photo Editor", salary: 10000 },
-];
+export const STAFF_SALARIES = [];
 
-export const MONTHLY_SALARY_TOTAL = 30000;
+export const MONTHLY_SALARY_TOTAL = 0;
 
 /**
  * Safely parse any value into a finite non-negative number.
@@ -142,9 +138,11 @@ export function identifyStaffMember(item) {
 }
 
 /**
- * Generate standard 3 staff salary records for a given month (YYYY-MM).
+ * Generate standard staff salary records for a given month (YYYY-MM).
+ * Clean initial state: returns empty array if no staff salaries exist.
  */
 export function generateMonthlySalaries(monthStr) {
+  if (!STAFF_SALARIES || !STAFF_SALARIES.length) return [];
   if (!monthStr || !/^\d{4}-\d{2}$/.test(monthStr)) {
     const now = new Date();
     monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -174,12 +172,13 @@ export function generateMonthlySalaries(monthStr) {
  * Deduplicate staff salary expense records for a given month.
  *
  * Guarantees:
- * 1. Each of the 3 staff members has exactly ONE salary expense record per month.
+ * 1. Works exclusively from actual recorded expenses in the system.
  * 2. If multiple records exist for the same staff member in that month, keeps only the first valid one.
- * 3. If any staff member is missing for that month, provides their standard ₹10,000 record.
+ * 3. Does NOT fabricate or inject unrecorded salary records into an empty expense list.
  * 4. Preserves all non-salary expenses intact.
  */
 export function getDeduplicatedMonthlyExpenses(allExpenses = [], monthStr) {
+  if (!allExpenses || !allExpenses.length) return [];
   if (!monthStr || !/^\d{4}-\d{2}$/.test(monthStr)) {
     const now = new Date();
     monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -199,7 +198,6 @@ export function getDeduplicatedMonthlyExpenses(allExpenses = [], monthStr) {
     const isSalary = staff || String(item.category || "").trim().toLowerCase() === "staff salary";
 
     if (isSalary && staff) {
-      // If we haven't seen this staff member for this month yet, record it
       if (!staffSalaryMap.has(staff.employee_id)) {
         staffSalaryMap.set(staff.employee_id, {
           ...item,
@@ -212,34 +210,8 @@ export function getDeduplicatedMonthlyExpenses(allExpenses = [], monthStr) {
           status: item.status || "Paid",
         });
       }
-      // Any subsequent duplicates for the same staff member are safely ignored.
     } else {
       nonSalaryExpenses.push(item);
-    }
-  }
-
-  // Ensure all 3 staff members are present for the month
-  for (const staff of STAFF_SALARIES) {
-    if (!staffSalaryMap.has(staff.employee_id)) {
-      const dateStr = `${monthStr}-01`;
-      staffSalaryMap.set(staff.employee_id, {
-        id: `SAL-EXP-${staff.employee_id}-${monthStr}`,
-        title: `Monthly salary – ${staff.name}`,
-        expense_title: `Monthly salary – ${staff.name}`,
-        category: "Staff Salary",
-        amount: staff.salary,
-        date: dateStr,
-        expense_date: dateStr,
-        paymentMode: "Bank Transfer",
-        payment_method: "Bank Transfer",
-        paidTo: staff.name,
-        paid_to: staff.name,
-        status: "Paid",
-        receipt_number: `SAL-${monthStr.replace("-", "")}-001`,
-        notes: `Monthly basic salary for ${staff.name} (${staff.role})`,
-        createdAt: `${dateStr}T09:00:00.000Z`,
-        updatedAt: `${dateStr}T09:00:00.000Z`,
-      });
     }
   }
 

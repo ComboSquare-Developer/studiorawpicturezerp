@@ -41,17 +41,11 @@ import {
   getInvoiceStatus,
 } from "../financialService.js";
 
-const SEED_FLAG = "studioraw_demo_seeded_v9_finance_fix";
+const SEED_FLAG = "studioraw_clean_state_v10";
 const UPDATE_EVENT = "studioraw:data-updated";
 
-/**
- * Staff salary configuration:
- * Default demo salary date: 1st day of every month (configurable).
- * Fixed ₹10,000/month basic salary for each of the 3 staff members.
- * Total monthly salary expense: ₹30,000.
- */
 export const SALARY_CONFIG = {
-  paymentDay: 1, // 1st of every month
+  paymentDay: 1,
   staffSalaries: STAFF_SALARIES,
 };
 
@@ -84,95 +78,76 @@ const STORAGE_KEYS = {
   equipment: "studioraw_equipment",
 };
 
-const demoBranches = [
-  {
-    id: 1,
-    branch_name: "Main Branch - Nagercoil",
-    branch_code: "BR-NGC-01",
-    city: "Nagercoil",
-    state: "Tamil Nadu",
-    phone: "9876543210",
-    email: "nagercoil@studiorawpicturez.com",
-    address: "Main Road, Near Court Complex, Nagercoil",
-    manager_name: "Divya Balakrishnan",
-    status: "Active",
-  },
-  {
-    id: 2,
-    branch_name: "Chennai Creative Studio",
-    branch_code: "BR-CHN-02",
-    city: "Chennai",
-    state: "Tamil Nadu",
-    phone: "9876543211",
-    email: "chennai@studiorawpicturez.com",
-    address: "14 Anna Nagar West, Chennai",
-    manager_name: "Rahul Verma",
-    status: "Active",
-  },
-  {
-    id: 3,
-    branch_name: "Coimbatore Studio Lounge",
-    branch_code: "BR-CBE-03",
-    city: "Coimbatore",
-    state: "Tamil Nadu",
-    phone: "9876543212",
-    email: "coimbatore@studiorawpicturez.com",
-    address: "45 Race Course Road, Coimbatore",
-    manager_name: "Vignesh Sundaram",
-    status: "Active",
-  },
-];
+const demoBranches = [];
 
-// Seed initial demo data into localStorage
+// Safe cleanup of legacy demo records in localStorage without clearing auth or settings
 export function initializeDemoData(force = false) {
   try {
     if (typeof localStorage === "undefined") return;
-    const isSeeded = localStorage.getItem(SEED_FLAG);
-    if (isSeeded && !force) {
+    const isCleaned = localStorage.getItem(SEED_FLAG);
+    if (isCleaned && !force) {
       return;
     }
 
-    const setCleanData = (key, data) => {
-      localStorage.setItem(key, JSON.stringify(data));
-    };
+    const businessKeys = [
+      "studioraw_demo_seeded_v9_finance_fix",
+      "studio_raw_customers_clean_v8",
+      "studio_raw_customers_demo_v4_100",
+      "studioraw_staff_v4_deduped_3",
+      "studioraw_staff_seeded_v5_exact3",
+      "studioraw_wedding_demo_20_v1",
+      "studioraw_wedding_videography_v1",
+      "studioraw_wedding_video_clean_v1",
+      "studioraw_photoshoots",
+      "studio_raw_photoshoots",
+      "studioraw_photo_editing",
+      "studio_raw_photo_editing",
+      "studioraw_album_printing",
+      "studio_raw_album_printing",
+      "studioraw_photo_selections",
+      "studioraw_audit_logs",
+      "studioraw_followups",
+      "studioraw_preshoot_shoots",
+      "studio_raw_enquiries",
+      "studio_raw_bookings",
+      "studio_raw_payments",
+      "studio_raw_deliveries",
+      "studio_raw_expenses",
+      STORAGE_KEYS.customers,
+      STORAGE_KEYS.customersAlt,
+      STORAGE_KEYS.enquiries,
+      STORAGE_KEYS.bookings,
+      STORAGE_KEYS.payments,
+      STORAGE_KEYS.expenses,
+      STORAGE_KEYS.deliveries,
+      STORAGE_KEYS.staff,
+      STORAGE_KEYS.attendance,
+      STORAGE_KEYS.leaves,
+      STORAGE_KEYS.payroll,
+      STORAGE_KEYS.departments,
+      STORAGE_KEYS.weddingPhotography,
+      STORAGE_KEYS.weddingVideography,
+      STORAGE_KEYS.functions,
+      STORAGE_KEYS.events,
+      STORAGE_KEYS.gifts,
+      STORAGE_KEYS.notifications,
+      STORAGE_KEYS.branches,
+      STORAGE_KEYS.inventory,
+      STORAGE_KEYS.equipment,
+    ];
 
-    setCleanData(STORAGE_KEYS.customers, demoCustomers);
-    setCleanData(STORAGE_KEYS.customersAlt, demoCustomers);
-    setCleanData(STORAGE_KEYS.enquiries, demoEnquiries);
-    setCleanData(STORAGE_KEYS.bookings, demoBookings);
-    setCleanData(STORAGE_KEYS.payments, demoPayments);
-    setCleanData(STORAGE_KEYS.deliveries, demoDeliveries);
-    setCleanData(STORAGE_KEYS.staff, demoEmployees);
-    setCleanData(STORAGE_KEYS.attendance, demoAttendance);
-    setCleanData(STORAGE_KEYS.leaves, demoLeaves);
-    setCleanData(STORAGE_KEYS.payroll, demoPayroll);
-    setCleanData(STORAGE_KEYS.equipment, demoEquipment);
-    setCleanData(STORAGE_KEYS.inventory, demoInventory);
-
-    const setIfMissing = (key, data) => {
-      if (force || !localStorage.getItem(key)) {
-        localStorage.setItem(key, JSON.stringify(data));
-      }
-    };
-
-    setIfMissing(STORAGE_KEYS.expenses, demoExpenses);
-    setIfMissing(STORAGE_KEYS.departments, demoDepartments);
-    setIfMissing(STORAGE_KEYS.weddingPhotography, demoWeddingPhotography);
-    setIfMissing(STORAGE_KEYS.weddingVideography, demoWeddingVideography);
-    setIfMissing(STORAGE_KEYS.functions, demoFunctions);
-    setIfMissing(STORAGE_KEYS.events, demoEvents);
-    setIfMissing(STORAGE_KEYS.gifts, demoGifts);
-    setIfMissing(STORAGE_KEYS.notifications, demoNotifications);
-    setIfMissing(STORAGE_KEYS.settings, demoSettings);
-    setIfMissing(STORAGE_KEYS.branches, demoBranches);
+    businessKeys.forEach((key) => {
+      localStorage.setItem(key, "[]");
+    });
 
     localStorage.setItem(SEED_FLAG, "true");
   } catch (err) {
-    console.warn("Storage seed notice:", err);
+    console.warn("Storage clean notice:", err);
   }
 }
 
-// Auto-seed immediately on module load
+// Ensure clean state immediately on module load
+initializeDemoData(false);
 initializeDemoData(false);
 
 function getStorageItems(key, fallback = []) {
@@ -317,28 +292,6 @@ export const demoDataService = {
     async list(params = {}) {
       let items = getStorageItems(STORAGE_KEYS.expenses, demoExpenses);
 
-      // Automatically guarantee deterministic salary expenses for active months
-      const activeMonths = new Set(["2026-11", "2026-10"]);
-      if (params.month) activeMonths.add(params.month);
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      activeMonths.add(currentMonth);
-
-      const existingIds = new Set(items.map((i) => i.id));
-      let updated = false;
-      for (const m of activeMonths) {
-        const salaries = getSalaryExpensesForMonth(m);
-        for (const s of salaries) {
-          if (!existingIds.has(s.id)) {
-            items.push(s);
-            existingIds.add(s.id);
-            updated = true;
-          }
-        }
-      }
-      if (updated) {
-        setStorageItems(STORAGE_KEYS.expenses, items);
-      }
-
       // Support basic search
       if (params.search) {
         const query = String(params.search).toLowerCase();
@@ -468,24 +421,36 @@ export const demoDataService = {
         total_customers: customers.length,
         total_enquiries: enquiries.length,
         total_bookings: bookings.length,
-        total_revenue: totalRevenue || demoReportSummary.total_revenue,
-        total_received: totalReceived || demoReportSummary.total_received,
-        pending_payments: Math.max(0, totalRevenue - totalReceived) || demoReportSummary.pending_payments,
-        total_expenses: totalExpenseSum || demoReportSummary.total_expenses,
+        total_revenue: totalRevenue,
+        total_received: totalReceived,
+        pending_payments: Math.max(0, totalRevenue - totalReceived),
+        total_expenses: totalExpenseSum,
         net_profit: Math.max(0, totalReceived - totalExpenseSum),
       };
     },
 
     exportCsvUrl(type = "summary") {
+      const payments = getStorageItems(STORAGE_KEYS.payments, demoPayments);
+      const expenses = getStorageItems(STORAGE_KEYS.expenses, demoExpenses);
+      const totalRevenue = payments.reduce((sum, p) => sum + (Number(p.total || p.totalAmount || 0)), 0);
+      const totalReceived = payments.reduce((sum, p) => {
+        const status = String(p.status || p.paymentStatus || "").toLowerCase();
+        if (["failed", "unpaid", "cancelled", "refunded"].includes(status)) return sum;
+        return sum + (Number(p.advance || p.paidAmount || 0));
+      }, 0);
+      const totalExpenses = expenses.reduce((sum, e) => sum + (Number(e.amount || 0)), 0);
+      const pendingBalance = Math.max(0, totalRevenue - totalReceived);
+      const netProfit = Math.max(0, totalReceived - totalExpenses);
+
       const rows = [
         ["Report Type", type],
         ["Generated Date", new Date().toLocaleDateString("en-IN")],
         ["Studio", "Studio Raw Picturez"],
-        ["Total Revenue", demoReportSummary.total_revenue],
-        ["Amount Received", demoReportSummary.total_received],
-        ["Pending Balance", demoReportSummary.pending_payments],
-        ["Total Expenses", demoReportSummary.total_expenses],
-        ["Net Profit", demoReportSummary.net_profit],
+        ["Total Revenue", totalRevenue],
+        ["Amount Received", totalReceived],
+        ["Pending Balance", pendingBalance],
+        ["Total Expenses", totalExpenses],
+        ["Net Profit", netProfit],
       ];
       const csvContent =
         "data:text/csv;charset=utf-8," +

@@ -669,60 +669,70 @@ function ChartPanel({
         icon={icon}
       />
 
-      <div className="relative grid h-64 grid-cols-6 items-end gap-2 border-b border-[#e3eaf3] pb-4 sm:h-72 sm:gap-4">
-        <div className="pointer-events-none absolute inset-x-0 bottom-12 top-0 flex flex-col justify-between">
-          {[0, 1, 2, 3].map((index) => (
-            <div
-              key={index}
-              className="border-t border-dashed border-[#e8eef6]"
-            />
-          ))}
+      {maxValue <= 0 || data.every((item) => !item[dataKey]) ? (
+        <div className="flex h-64 sm:h-72 flex-col items-center justify-center border-b border-[#e3eaf3] pb-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf5ff] text-[#244d8b]">
+            <TrendingUp size={24} />
+          </div>
+          <p className="mt-3 text-sm font-bold text-[#10264d]">No data recorded for this period</p>
+          <p className="mt-1 text-xs text-slate-400">Monthly metrics will display once activities occur.</p>
         </div>
+      ) : (
+        <div className="relative grid h-64 grid-cols-6 items-end gap-2 border-b border-[#e3eaf3] pb-4 sm:h-72 sm:gap-4">
+          <div className="pointer-events-none absolute inset-x-0 bottom-12 top-0 flex flex-col justify-between">
+            {[0, 1, 2, 3].map((index) => (
+              <div
+                key={index}
+                className="border-t border-dashed border-[#e8eef6]"
+              />
+            ))}
+          </div>
 
-        {data.map((item, index) => {
-          const value = item[dataKey] || 0;
+          {data.map((item, index) => {
+            const value = item[dataKey] || 0;
 
-          const height = value
-            ? Math.max(
-                7,
-                (value / Math.max(1, maxValue)) * 80
-              )
-            : 2;
+            const height = value
+              ? Math.max(
+                  7,
+                  (value / Math.max(1, maxValue)) * 80
+                )
+              : 2;
 
-          return (
-            <div
-              key={item.key}
-              className="relative z-10 flex h-full min-w-0 flex-col items-center justify-end gap-3"
-            >
-              <span className="w-full truncate text-center text-[10px] font-black text-[#10264d] sm:text-xs">
-                {formatter ? formatter(value) : value}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setSelectedIndex(index)}
-                title={`${item.label}: ${value}`}
-                aria-label={`${item.label}: ${value}`}
-                className={`sr-premium-bar relative w-full max-w-16 origin-bottom overflow-hidden rounded-t-xl transition-all hover:brightness-110 ${
-                  selectedIndex === index
-                    ? "ring-2 ring-blue-400 ring-offset-2"
-                    : ""
-                } ${barColor}`}
-                style={{
-                  height: `${height}%`,
-                  animationDelay: `${index * 130}ms`,
-                }}
+            return (
+              <div
+                key={item.key}
+                className="relative z-10 flex h-full min-w-0 flex-col items-center justify-end gap-3"
               >
-                <span className="sr-bar-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-              </button>
+                <span className="w-full truncate text-center text-[10px] font-black text-[#10264d] sm:text-xs">
+                  {formatter ? formatter(value) : value}
+                </span>
 
-              <span className="text-[10px] font-bold text-[#71829b] sm:text-xs">
-                {item.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndex(index)}
+                  title={`${item.label}: ${value}`}
+                  aria-label={`${item.label}: ${value}`}
+                  className={`sr-premium-bar relative w-full max-w-16 origin-bottom overflow-hidden rounded-t-xl transition-all hover:brightness-110 ${
+                    selectedIndex === index
+                      ? "ring-2 ring-blue-400 ring-offset-2"
+                      : ""
+                  } ${barColor}`}
+                  style={{
+                    height: `${height}%`,
+                    animationDelay: `${index * 130}ms`,
+                  }}
+                >
+                  <span className="sr-bar-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                </button>
+
+                <span className="text-[10px] font-bold text-[#71829b] sm:text-xs">
+                  {item.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-5 flex items-center justify-between gap-3">
         <span className="text-xs font-semibold text-[#71829b]">
@@ -944,6 +954,15 @@ function RevenueLineChart({
       </div>
 
       <div className="mt-5">
+        {total === 0 || payments.length === 0 ? (
+          <div className="flex h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce7f4] bg-[#fafcff] text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ecfdf5] text-emerald-600">
+              <ChartNoAxesCombined size={24} />
+            </div>
+            <p className="mt-3 text-sm font-bold text-[#10264d]">No revenue records available</p>
+            <p className="mt-1 text-xs text-slate-400">Revenue analytics will chart automatically when payments are recorded.</p>
+          </div>
+        ) : (
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="block h-auto w-full overflow-visible"
@@ -1072,6 +1091,7 @@ function RevenueLineChart({
             </g>
           ))}
         </svg>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-2">
@@ -1257,6 +1277,7 @@ function SalesGauge({
             100%
           </text>
         </svg>
+        )}
       </div>
 
       <div className="mt-auto grid grid-cols-3 gap-2 border-t border-[#e6edf5] pt-5">
