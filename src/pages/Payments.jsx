@@ -70,7 +70,16 @@ function paidOf(invoice){
 
 const balanceOf=i=>Math.max(0,round(totalOf(i)-paidOf(i)));
 
-const statusOf=i=>totalOf(i)>0&&paidOf(i)>=totalOf(i)-.005?"Paid":paidOf(i)>0?"Partial":"Pending";
+const statusOf=i=>{
+ const explicit=String(i?.status||i?.paymentStatus||"").trim();
+ const lower=explicit.toLowerCase();
+ if(lower==="failed")return "Failed";
+ if(lower==="refunded")return "Refunded";
+ if(totalOf(i)>0&&paidOf(i)>=totalOf(i)-.005)return "Paid";
+ if(paidOf(i)>0)return "Partial";
+ if(lower==="unpaid")return "Unpaid";
+ return "Pending";
+};
 
 function historyOf(invoice){
 
@@ -110,7 +119,7 @@ const EMPTY={customerId:"",bookingId:"",customer:"",phone:"",packageName:"",tota
 
 function Field({label,required,children,hint}){return <div className="space-y-2"><label className="block text-xs font-bold text-[#567493]">{label}{required&&<span className="ml-1 text-red-500">*</span>}</label>{children}{hint&&<p className="text-[11px] text-[#8ca3bb]">{hint}</p>}</div>}
 
-function Badge({status}){const theme={Paid:"bg-[#e0f7eb] text-[#158563]",Partial:"bg-[#fff0d8] text-[#ac7625]",Pending:"bg-[#ffe7ec] text-[#bf4c65]"};return <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${theme[status]||theme.Pending}`}><span className="h-1.5 w-1.5 rounded-full bg-current"/>{status}</span>}
+function Badge({status}){const theme={Paid:"bg-[#e0f7eb] text-[#158563]",Partial:"bg-[#fff0d8] text-[#ac7625]","Partially Paid":"bg-[#fff0d8] text-[#ac7625]",Pending:"bg-[#ffe7ec] text-[#bf4c65]",Unpaid:"bg-[#f1f5f9] text-[#64748b]",Failed:"bg-[#fee2e2] text-[#b91c1c]",Refunded:"bg-[#fef3c7] text-[#92400e]"};return <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-extrabold ${theme[status]||theme.Pending}`}><span className="h-1.5 w-1.5 rounded-full bg-current"/>{status}</span>}
 
 function Modal({title,subtitle,icon:Icon,onClose,children,width="max-w-2xl"}){
 
@@ -173,7 +182,33 @@ export default function Payments(){
 
  const [modal,setModal]=useState(""),[selected,setSelected]=useState(null),[editing,setEditing]=useState(null),[form,setForm]=useState({...EMPTY,date:today()}),[receipt,setReceipt]=useState({amount:"",method:"Cash",date:today(),note:""}),[error,setError]=useState(""),[notice,setNotice]=useState("");
 
- const invoices=useMemo(()=>payments.map(normalized),[payments]);
+ const isConfirmedBooking = booking => {
+   const s = String(booking?.status || booking?.bookingStatus || "").trim().toLowerCase();
+   return s === "confirmed" || s === "completed";
+ };
+
+ const getLinkedBooking = invoice => {
+   const id = invoice?.bookingId?.id ?? invoice?.bookingId ?? invoice?.booking?.id ?? invoice?.booking;
+   return bookings.find(b => String(b.id) === String(id));
+ };
+
+ const isInvoiceEligible = invoice => {
+   const booking = getLinkedBooking(invoice);
+   return Boolean(booking ? isConfirmedBooking(booking) : invoice?.bookingId || invoice?.invoice);
+ };
+
+ // Display payments linked to active bookings (both Confirmed and Completed) or stand-alone payments
+ const invoices=useMemo(
+   ()=>payments.map(normalized).filter(invoice => {
+     const booking = getLinkedBooking(invoice);
+     if (!booking) {
+       return Boolean(invoice.customer || invoice.invoice);
+     }
+     const s = String(booking?.status || booking?.bookingStatus || "").trim().toLowerCase();
+     return s !== "cancelled" && s !== "canceled";
+   }),
+   [payments,bookings]
+ );
 
  useEffect(()=>{
 
@@ -245,15 +280,34 @@ export default function Payments(){
 
  const chooseCustomer=id=>{const c=customers.find(c=>String(c.id)===String(id));setForm(p=>({...p,customerId:id,bookingId:"",customer:c?nameOf(c):"",phone:c?.phone||"",packageName:"",total:""}))};
 
- const chooseBooking=id=>{const b=bookings.find(b=>String(b.id)===String(id));if(!b){setForm(p=>({...p,bookingId:""}));return}const c=customers.find(c=>String(c.id)===String(b.customerId));setForm(p=>({...p,bookingId:String(b.id),customerId:String(b.customerId||p.customerId||""),customer:nameOf(b)||nameOf(c)||p.customer,phone:b.phone||c?.phone||p.phone,packageName:b.package||b.packageName||b.event||"",total:String(bookingTotal(b))}))};
+ const chooseBooking=id=>{
+   const b=bookings.find(b=>String(b.id)===String(id));
+   if(!b){setForm(p=>({...p,bookingId:""}));return;}
+   if(!isConfirmedBooking(b)){
+     setError("Invoice can be generated only for Confirmed bookings.");
+     setForm(p=>({...p,bookingId:""}));
+     return;
+   }
+   setError("");
+   const c=customers.find(c=>String(c.id)===String(b.customerId));
+   setForm(p=>({...p,bookingId:String(b.id),customerId:String(b.customerId||p.customerId||""),customer:nameOf(b)||nameOf(c)||p.customer,phone:b.phone||c?.phone||p.phone,packageName:b.package||b.packageName||b.event||"",total:String(bookingTotal(b))}));
+ };
 
- const availableBookings=useMemo(()=>!form.customerId?bookings:bookings.filter(b=>String(b.customerId||"")===String(form.customerId)),[bookings,form.customerId]);
+ const availableBookings=useMemo(
+   ()=>bookings.filter(b=>isConfirmedBooking(b) && (!form.customerId || String(b.customerId||"")===String(form.customerId))),
+   [bookings,form.customerId]
+ );
 
  const linkedInvoice=useMemo(()=>!editing&&form.bookingId?invoices.find(i=>String(i.bookingId||"")===String(form.bookingId)):null,[editing,form.bookingId,invoices]);
 
  const submitInvoice=async e=>{
 
   e.preventDefault();setError("");const total=round(number(form.total)),initial=round(number(form.initialPayment));
+
+  if(!form.bookingId)return setError("Select a Confirmed booking to generate an invoice.");
+
+  const selectedBooking=bookings.find(b=>String(b.id)===String(form.bookingId));
+  if(!selectedBooking || !isConfirmedBooking(selectedBooking))return setError("Invoice can be generated only for Confirmed bookings.");
 
   if(!form.customer.trim())return setError("Customer name is required.");
 
@@ -323,7 +377,17 @@ export default function Payments(){
 
  const deleteInvoice=async ()=>{if(!selected)return;if(paidOf(selected)>0)return setError("Invoice has received payments. Deleting it would erase payment history. Keep the invoice for your records.");try{await api.payments.delete(selected.id);}catch(err){console.warn("Backend delete notice:",err.message);}if(save(payments.filter(i=>String(i.id)!==String(selected.id)))){countAction("delete");close()}};
 
- const summary=useMemo(()=>({total:round(invoices.reduce((s,i)=>s+totalOf(i),0)),received:round(invoices.reduce((s,i)=>s+paidOf(i),0)),pending:round(invoices.reduce((s,i)=>s+balanceOf(i),0)),paid:invoices.filter(i=>statusOf(i)==="Paid").length,partial:invoices.filter(i=>statusOf(i)==="Partial").length}),[invoices]);
+ const summary=useMemo(()=>({
+   total:round(invoices.reduce((s,i)=>s+totalOf(i),0)),
+   received:round(invoices.reduce((s,i)=>{
+     const st = statusOf(i);
+     if (st === "Failed" || st === "Unpaid") return s;
+     return s + paidOf(i);
+   },0)),
+   pending:round(invoices.reduce((s,i)=>s+balanceOf(i),0)),
+   paid:invoices.filter(i=>statusOf(i)==="Paid").length,
+   partial:invoices.filter(i=>statusOf(i)==="Partial"||statusOf(i)==="Partially Paid").length
+ }),[invoices]);
 
  const percent=summary.total?Math.min(100,summary.received/summary.total*100):0;
 
@@ -333,20 +397,19 @@ export default function Payments(){
 
  const exportCSV=()=>{const rows=[["Invoice","Date","Customer","Phone","Booking ID","Package","Total","Received","Pending","Status"],...filtered.map(i=>[i.invoice,i.date,i.customer,i.phone,i.bookingId,i.packageName,totalOf(i),paidOf(i),balanceOf(i),statusOf(i)])];const esc=v=>{const raw=String(v??""),safe=/^\s*[=+\-@\t\r]/.test(raw)?"'"+raw:raw;return `"${safe.replace(/"/g,'""')}"`};const blob=new Blob(["\uFEFF"+rows.map(r=>r.map(esc).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`StudioRaw-Payments-${today()}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
- const actionButtons=i=><div className="flex flex-wrap items-center gap-2">
-
-  {balanceOf(i)>0&&<button type="button" title="Add Payment to Same Invoice" onClick={()=>openCollect(i)} className="inline-flex items-center gap-1.5 rounded-xl bg-[#e0f7eb] px-3 py-2.5 text-xs font-black text-[#168363] hover:bg-[#c8eedb]"><Plus size={16}/>Add Payment</button>}
-
-  <button type="button" title="Payment History" onClick={()=>{setSelected(i);setModal("history")}} className="rounded-xl bg-[#f1ebff] p-2.5 text-[#7457b5]"><History size={18}/></button>
-
-  <button type="button" title="Download PDF" onClick={()=>pdfInvoice(i)} className="rounded-xl bg-[#e7f3ff] p-2.5 text-[#3474ad]"><Download size={18}/></button>
-
-  <button type="button" title="Print Invoice" onClick={()=>{pdfInvoice(i,"print");countAction("print")}} className="rounded-xl bg-[#e7f3ff] p-2.5 text-[#3474ad]"><Printer size={18}/></button>
-
-  <button type="button" title="Edit Invoice Details" onClick={()=>{countAction("edit");openEdit(i)}} className="rounded-xl bg-[#fff0db] p-2.5 text-[#b27b2a]"><Pencil size={18}/></button>
-
-  <button type="button" title="Delete Invoice" onClick={()=>{setSelected(i);setError("");setModal("delete")}} className="rounded-xl bg-[#ffe7ec] p-2.5 text-[#c64f69]"><Trash2 size={18}/></button>
-
+ const actionButtons=i=><div className="flex flex-col gap-1.5 w-[210px] min-w-[210px]">
+  <div className="flex items-center gap-1.5">
+   {balanceOf(i)>0?<button type="button" title="Add Payment to Same Invoice" onClick={()=>openCollect(i)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#e0f7eb] px-2.5 py-1.5 text-xs font-black text-[#168363] hover:bg-[#c8eedb] transition-colors"><Plus size={15}/>Add Payment</button>:<span className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl border border-[#c4e9d5] bg-[#eef8f3] px-2.5 py-1.5 text-[11px] font-bold text-[#1a8562]"><CheckCircle2 size={13}/>Paid in Full</span>}
+   <button type="button" title="Payment History" onClick={()=>{setSelected(i);setModal("history")}} className="rounded-xl bg-[#f1ebff] p-2 text-[#7457b5] hover:bg-[#e4d8fb] transition-colors"><History size={16}/></button>
+  </div>
+  <div className="flex items-center gap-1.5">
+   {isInvoiceEligible(i)&&<>
+    <button type="button" title="Download PDF" onClick={()=>pdfInvoice(i)} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Download size={16}/></button>
+    <button type="button" title="Print Invoice" onClick={()=>{pdfInvoice(i,"print");countAction("print")}} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Printer size={16}/></button>
+   </>}
+   <button type="button" title="Edit Invoice Details" onClick={()=>{countAction("edit");openEdit(i)}} className="rounded-xl bg-[#fff0db] p-2 text-[#b27b2a] hover:bg-[#fde2bf] transition-colors"><Pencil size={16}/></button>
+   <button type="button" title="Delete Invoice" onClick={()=>{setSelected(i);setError("");setModal("delete")}} className="rounded-xl bg-[#ffe7ec] p-2 text-[#c64f69] hover:bg-[#fcd0d8] transition-colors"><Trash2 size={16}/></button>
+  </div>
  </div>;
 
  return <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-gradient-to-br from-[#f5faff] via-[#edf5ff] to-[#e6f1ff] px-3 py-5 text-[#10264d] sm:px-5 sm:py-7 lg:px-8">
@@ -365,11 +428,11 @@ export default function Payments(){
 
  <div className="rounded-[24px] border border-[#d9e7f6] bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black text-[#153d70]">Payment Collection Overview</h2><p className="mt-1 text-xs text-[#8ba2ba]">Total received and outstanding amount</p></div><span className="rounded-xl bg-[#e5f6ed] px-4 py-2 text-sm font-black text-[#168363]">{percent.toFixed(1)}% Collected</span></div><div className="mt-5 h-4 overflow-hidden rounded-full bg-[#e7eff9]"><div className="h-full rounded-full bg-gradient-to-r from-[#17866c] to-[#77d1b7] transition-all duration-700" style={{width:`${percent}%`}}/></div><div className="mt-4 flex flex-wrap justify-between gap-3 text-xs font-bold"><span className="text-[#168363]">Received: {money(summary.received)}</span><span className="text-[#b77b2c]">Pending: {money(summary.pending)}</span></div></div>
 
- <div className="flex flex-col gap-3 rounded-[22px] border border-[#d9e7f6] bg-white p-4 lg:flex-row"><div className="relative flex-1"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8ba3ba]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search invoice, customer, booking..." className={`${input} pl-11`}/></div><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className={`${input} lg:w-44`}>{["All","Paid","Partial","Pending"].map(s=><option key={s} value={s}>{s==="All"?"All Status":s}</option>)}</select><select value={monthFilter} onChange={e=>setMonthFilter(e.target.value)} className={`${input} lg:w-48`}><option value="All">All Months</option>{months.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+ <div className="flex flex-col gap-3 rounded-[22px] border border-[#d9e7f6] bg-white p-4 lg:flex-row"><div className="relative flex-1"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8ba3ba]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search invoice, customer, booking..." className={`${input} pl-11`}/></div><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className={`${input} lg:w-44`}>{["All","Paid","Partial","Pending","Unpaid"].map(s=><option key={s} value={s}>{s==="All"?"All Status":s}</option>)}</select><select value={monthFilter} onChange={e=>setMonthFilter(e.target.value)} className={`${input} lg:w-48`}><option value="All">All Months</option>{months.map(m=><option key={m} value={m}>{m}</option>)}</select></div>
 
  <div className="overflow-hidden rounded-[25px] border border-[#d9e7f6] bg-white shadow-sm"><div className="flex items-center justify-between border-b border-[#e3edf7] p-5"><div><h2 className="font-black text-[#10264d]">Payment Records</h2><p className="mt-1 text-xs text-[#8ca2b9]">{filtered.length} invoices · Add Payment updates the same invoice number</p></div><Receipt size={22} className="text-[#3575b6]"/></div>
 
- {filtered.length?<><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1350px] text-left"><thead className="bg-[#edf5ff]"><tr>{["Invoice","Customer","Date","Service","Total","Received","Pending","Status","Actions"].map(h=><th key={h} className="whitespace-nowrap px-4 py-4 text-[11px] font-black uppercase tracking-wide text-[#6685a4]">{h}</th>)}</tr></thead><tbody className="divide-y divide-[#e8eff8]">{filtered.map(i=><tr key={i.id} className="hover:bg-[#f5faff]"><td className="px-4 py-4 text-sm font-black text-[#245f9f]">{i.invoice||i.id}</td><td className="px-4 py-4"><p className="text-sm font-bold text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#8ba2b9]">{i.phone||"—"}</p></td><td className="whitespace-nowrap px-4 py-4 text-sm text-[#6785a4]">{showDate(i.date)}</td><td className="px-4 py-4 text-sm text-[#6785a4]">{i.packageName||"—"}</td><td className="px-4 py-4 text-sm font-black text-[#173f72]">{money(totalOf(i))}</td><td className="px-4 py-4 text-sm font-black text-[#168363]">{money(paidOf(i))}</td><td className="px-4 py-4 text-sm font-black text-[#b77b2c]">{money(balanceOf(i))}</td><td className="px-4 py-4"><Badge status={statusOf(i)}/></td><td className="px-4 py-4">{actionButtons(i)}</td></tr>)}</tbody></table></div>
+ {filtered.length?<><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1350px] text-left"><thead className="bg-[#edf5ff]"><tr>{[["Invoice","w-[140px]"],["Customer","w-[180px]"],["Date","w-[120px]"],["Service","w-[160px]"],["Total","w-[120px]"],["Received","w-[120px]"],["Pending","w-[120px]"],["Status","w-[120px]"],["Actions","w-[230px]"]].map(([h,w])=><th key={h} className={`whitespace-nowrap px-4 py-4 text-[11px] font-black uppercase tracking-wide text-[#6685a4] ${w}`}>{h}</th>)}</tr></thead><tbody className="divide-y divide-[#e8eff8]">{filtered.map(i=><tr key={i.id} className="hover:bg-[#f5faff]"><td className="px-4 py-3 text-sm font-black text-[#245f9f] align-middle">{i.invoice||i.id}</td><td className="px-4 py-3 align-middle"><p className="text-sm font-bold text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#8ba2b9]">{i.phone||"—"}</p></td><td className="whitespace-nowrap px-4 py-3 text-sm text-[#6785a4] align-middle">{showDate(i.date)}</td><td className="px-4 py-3 text-sm text-[#6785a4] align-middle">{i.packageName||"—"}</td><td className="px-4 py-3 text-sm font-black text-[#173f72] align-middle">{money(totalOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#168363] align-middle">{money(paidOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#b77b2c] align-middle">{money(balanceOf(i))}</td><td className="px-4 py-3 align-middle"><Badge status={statusOf(i)}/></td><td className="px-4 py-3 align-middle">{actionButtons(i)}</td></tr>)}</tbody></table></div>
 
  <div className="grid gap-3 p-3 sm:grid-cols-2 lg:hidden">{filtered.map(i=><div key={i.id} className="rounded-2xl border border-[#dce8f6] bg-[#fbfdff] p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><div><p className="break-all text-sm font-black text-[#245f9f]">{i.invoice||i.id}</p><p className="mt-1 text-xs text-[#8ba2b9]">{showDate(i.date)}</p></div><Badge status={statusOf(i)}/></div><p className="mt-4 font-black text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#819ab3]">{i.phone||"No phone"}</p><p className="mt-2 text-xs text-[#6785a4]">{i.packageName||"Photography / Event"}</p><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#edf5ff] p-3">{[["Total",totalOf(i)],["Received",paidOf(i)],["Pending",balanceOf(i)]].map(([label,v])=><div key={label}><p className="text-[10px] text-[#829ab3]">{label}</p><p className="mt-1 break-words text-xs font-black text-[#173f72]">{money(v)}</p></div>)}</div><div className="mt-4 border-t border-[#e5edf7] pt-3">{actionButtons(i)}</div></div>)}</div></>:<div className="flex flex-col items-center justify-center py-20 text-center"><Receipt size={42} className="text-[#82acd5]"/><h3 className="mt-4 font-black text-[#24558a]">No Payment Records</h3><p className="mt-2 text-sm text-[#8ba2b9]">Add your first invoice or change filters.</p></div>}</div>
 
@@ -381,7 +444,7 @@ export default function Payments(){
 
  <Field label="Select Customer"><select value={form.customerId} onChange={e=>chooseCustomer(e.target.value)} className={input}><option value="">Manual Entry / Select Customer</option>{customers.map(c=><option key={c.id} value={String(c.id)}>{nameOf(c)}</option>)}</select></Field>
 
- <Field label="Select Booking"><select value={form.bookingId} onChange={e=>chooseBooking(e.target.value)} className={input}><option value="">Manual Invoice / Select Booking</option>{availableBookings.map(b=><option key={b.id} value={String(b.id)}>{nameOf(b)} - {b.event||"Booking"} - {money(bookingTotal(b))}</option>)}</select></Field>
+ <Field label="Select Confirmed Booking" required><select value={form.bookingId} onChange={e=>chooseBooking(e.target.value)} className={input} required><option value="">Select Confirmed Booking</option>{availableBookings.map(b=><option key={b.id} value={String(b.id)}>{nameOf(b)} - {b.event||"Booking"} - {money(bookingTotal(b))}</option>)}</select><p className="text-[11px] text-[#8ca3bb]">Only Confirmed bookings are available for invoice generation.</p></Field>
 
  {linkedInvoice&&<div className="rounded-xl border border-[#bce8d0] bg-[#eafaf1] p-4 text-sm text-[#177d5f]"><p className="font-black">Existing Invoice Found: {linkedInvoice.invoice||linkedInvoice.id}</p><p className="mt-1 text-xs">Do not create another invoice. Add the new payment to the existing invoice.</p><button type="button" onClick={()=>openCollect(linkedInvoice)} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#168363] px-4 py-2.5 text-xs font-bold text-white"><Plus size={16}/>Add Payment to Existing Invoice</button></div>}
 
@@ -411,7 +474,7 @@ export default function Payments(){
 
  {error&&<p className="rounded-xl bg-[#fff0f3] p-3 text-sm text-[#c34b65]">{error}</p>}<button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#168363] px-5 py-3 text-sm font-bold text-white"><CheckCircle2 size={18}/>Save Payment to Same Invoice</button></form></Modal>}
 
- {modal==="history"&&selected&&<Modal title="Payment History" subtitle={`Invoice ${selected.invoice||selected.id}`} icon={History} onClose={close} width="max-w-lg"><div className="space-y-4"><div className="rounded-xl bg-[#eaf4ff] p-4"><p className="font-black text-[#173e72]">{selected.customer}</p><p className="mt-2 text-xs">Total {money(totalOf(selected))} · Received {money(paidOf(selected))} · Pending {money(balanceOf(selected))}</p></div>{historyOf(selected).length?historyOf(selected).map((tx,index)=><div key={tx.id||index} className="rounded-xl border border-[#dce8f6] bg-white p-4"><div className="flex justify-between gap-3"><p className="text-sm font-bold text-[#173e72]">Payment {index+1}</p><p className="text-sm font-black text-[#168363]">{money(txAmount(tx))}</p></div><p className="mt-2 text-xs text-[#819ab3]">{showDate(tx.date)} · {tx.method||"Cash"} · {tx.status||"Paid"}</p>{tx.note&&<p className="mt-2 text-xs text-[#6785a4]">{tx.note}</p>}</div>):<p className="text-sm text-[#819ab3]">No payments received yet.</p>}{balanceOf(selected)>0&&<button type="button" onClick={()=>openCollect(selected)} className={`${button} w-full`}><Plus size={17}/>Add Payment</button>}<button type="button" onClick={()=>pdfInvoice(selected)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce8f6] bg-white px-4 py-3 text-sm font-bold text-[#2869ac]"><Download size={17}/>Download Updated Invoice</button></div></Modal>}
+ {modal==="history"&&selected&&<Modal title="Payment History" subtitle={`Invoice ${selected.invoice||selected.id}`} icon={History} onClose={close} width="max-w-lg"><div className="space-y-4"><div className="rounded-xl bg-[#eaf4ff] p-4"><p className="font-black text-[#173e72]">{selected.customer}</p><p className="mt-2 text-xs">Total {money(totalOf(selected))} · Received {money(paidOf(selected))} · Pending {money(balanceOf(selected))}</p></div>{historyOf(selected).length?historyOf(selected).map((tx,index)=><div key={tx.id||index} className="rounded-xl border border-[#dce8f6] bg-white p-4"><div className="flex justify-between gap-3"><p className="text-sm font-bold text-[#173e72]">Payment {index+1}</p><p className="text-sm font-black text-[#168363]">{money(txAmount(tx))}</p></div><p className="mt-2 text-xs text-[#819ab3]">{showDate(tx.date)} · {tx.method||"Cash"} · {tx.status||"Paid"}</p>{tx.note&&<p className="mt-2 text-xs text-[#6785a4]">{tx.note}</p>}</div>):<p className="text-sm text-[#819ab3]">No payments received yet.</p>}{balanceOf(selected)>0&&<button type="button" onClick={()=>openCollect(selected)} className={`${button} w-full`}><Plus size={17}/>Add Payment</button>}{isInvoiceEligible(selected)&&<button type="button" onClick={()=>pdfInvoice(selected)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce8f6] bg-white px-4 py-3 text-sm font-bold text-[#2869ac]"><Download size={17}/>Download Updated Invoice</button>}</div></Modal>}
 
  {modal==="delete"&&selected&&<Modal title="Delete Invoice" subtitle="Confirm deletion" icon={Trash2} onClose={close} width="max-w-md"><div className="space-y-5"><div className="rounded-xl bg-[#fff0f3] p-5 text-sm leading-6 text-[#ad4961]"><AlertCircle className="mb-3"/>Delete invoice <strong>{selected.invoice||selected.id}</strong> for <strong>{selected.customer}</strong>?{paidOf(selected)>0&&<p className="mt-2 font-bold">This invoice contains payments and cannot be deleted here.</p>}</div>{error&&<p className="rounded-xl bg-[#fff0f3] p-3 text-sm text-[#c34b65]">{error}</p>}<div className="flex gap-3"><button type="button" onClick={close} className="flex-1 rounded-xl border border-[#d5e4f4] bg-white px-5 py-3 text-sm font-bold">Cancel</button><button type="button" onClick={deleteInvoice} disabled={paidOf(selected)>0} className="flex-1 rounded-xl bg-[#c34b65] px-5 py-3 text-sm font-bold text-white disabled:opacity-40">Delete Invoice</button></div></div></Modal>}
 

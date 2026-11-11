@@ -85,8 +85,8 @@ export default function Login({
   onLogin,
   onForgotPassword,
 }) {
-  const [email, setEmail] = useState("prathi");
-  const [password, setPassword] = useState("prathi");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
@@ -200,9 +200,9 @@ export default function Login({
       ) {
         const demoUser = {
           username: "prathi",
-          name: "Prathiksha",
-          role: "admin",
-          email: "prathi@studioraw.com",
+          name: "Admin",
+          role: "Administrator",
+          email: "admin@studiorawpicturez.com",
         };
         if (typeof onLogin === "function") {
           await onLogin(demoUser);
@@ -596,7 +596,7 @@ export default function Login({
                             setEmail(e.target.value);
                             if (error) setError("");
                           }}
-                          placeholder="Username or email (e.g. prathi or admin)"
+                          placeholder="Enter your username or email"
                           autoComplete="username"
                           required
                           className="w-full rounded-xl border border-[#dfe6ef] !bg-[#fbfcfe] py-3.5 pl-11 pr-4 text-sm !text-[#102b53] outline-none transition placeholder:text-[#9aa8ba] focus:border-[#7c9cc9] focus:!bg-white focus:ring-4 focus:ring-blue-50"
@@ -653,24 +653,6 @@ export default function Login({
                           )}
                         </button>
                       </div>
-                    </div>
-
-                    {/* QUICK PREFILL CREDENTIALS */}
-                    <div className="flex items-center justify-between rounded-xl border border-[#d6e4f7] bg-[#f0f6ff] px-3.5 py-2.5 text-xs text-[#204374]">
-                      <span className="font-medium">
-                        Admin Login: <strong className="font-bold text-[#102b53]">prathi</strong> / <strong className="font-bold text-[#102b53]">prathi</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEmail("prathi");
-                          setPassword("prathi");
-                          if (error) setError("");
-                        }}
-                        className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[#102b53] shadow-sm hover:bg-[#e4effd]"
-                      >
-                        Reset to prathi
-                      </button>
                     </div>
 
                     {/* FORGOT PASSWORD BUTTON */}

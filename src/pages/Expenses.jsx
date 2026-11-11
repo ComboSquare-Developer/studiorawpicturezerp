@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
+import {
+  getDeduplicatedMonthlyExpenses,
+  calculateMonthlyExpenseTotal,
+  calculateMonthlyIncome,
+  calculateCategoryBreakdown,
+  parseAmount,
+} from "../services/financialService";
 import { createPortal } from "react-dom";
 import {
   Wallet,
@@ -78,26 +85,70 @@ const inputClass =
 
 const demoExpenses = [
   {
-    id: "EXP-DEMO-001",
-    title: "Studio Electricity Bill",
-    category: "Electricity",
-    amount: 2450,
-    date: "2026-10-05",
-    paymentMode: "UPI",
-    paidTo: "TNEB Electricity Board",
-    notes: "Monthly studio electricity bill",
-    updatedAt: "2026-10-05T10:00:00.000Z",
+    id: "SAL-EXP-EMP-2026-001-2026-10",
+    title: "Monthly salary – Vignesh Sundaram",
+    category: "Staff Salary",
+    amount: 10000,
+    date: "2026-10-01",
+    paymentMode: "Bank Transfer",
+    paidTo: "Vignesh Sundaram",
+    notes: "October monthly salary for Vignesh Sundaram",
+    updatedAt: "2026-10-01T10:00:00.000Z",
   },
   {
-    id: "EXP-DEMO-002",
-    title: "Photographer Salary",
+    id: "SAL-EXP-EMP-2026-002-2026-10",
+    title: "Monthly salary – Santhosh Kumar",
     category: "Staff Salary",
-    amount: 18000,
-    date: "2026-10-03",
+    amount: 10000,
+    date: "2026-10-01",
     paymentMode: "Bank Transfer",
-    paidTo: "Senior Photographer",
-    notes: "October monthly salary",
-    updatedAt: "2026-10-03T10:00:00.000Z",
+    paidTo: "Santhosh Kumar",
+    notes: "October monthly salary for Santhosh Kumar",
+    updatedAt: "2026-10-01T10:00:00.000Z",
+  },
+  {
+    id: "SAL-EXP-EMP-2026-003-2026-10",
+    title: "Monthly salary – Priya Natarajan",
+    category: "Staff Salary",
+    amount: 10000,
+    date: "2026-10-01",
+    paymentMode: "Bank Transfer",
+    paidTo: "Priya Natarajan",
+    notes: "October monthly salary for Priya Natarajan",
+    updatedAt: "2026-10-01T10:00:00.000Z",
+  },
+  {
+    id: "SAL-EXP-EMP-2026-001-2026-11",
+    title: "Monthly salary – Vignesh Sundaram",
+    category: "Staff Salary",
+    amount: 10000,
+    date: "2026-11-01",
+    paymentMode: "Bank Transfer",
+    paidTo: "Vignesh Sundaram",
+    notes: "November monthly salary for Vignesh Sundaram",
+    updatedAt: "2026-11-01T10:00:00.000Z",
+  },
+  {
+    id: "SAL-EXP-EMP-2026-002-2026-11",
+    title: "Monthly salary – Santhosh Kumar",
+    category: "Staff Salary",
+    amount: 10000,
+    date: "2026-11-01",
+    paymentMode: "Bank Transfer",
+    paidTo: "Santhosh Kumar",
+    notes: "November monthly salary for Santhosh Kumar",
+    updatedAt: "2026-11-01T10:00:00.000Z",
+  },
+  {
+    id: "SAL-EXP-EMP-2026-003-2026-11",
+    title: "Monthly salary – Priya Natarajan",
+    category: "Staff Salary",
+    amount: 10000,
+    date: "2026-11-01",
+    paymentMode: "Bank Transfer",
+    paidTo: "Priya Natarajan",
+    notes: "November monthly salary for Priya Natarajan",
+    updatedAt: "2026-11-01T10:00:00.000Z",
   },
   {
     id: "EXP-DEMO-003",
@@ -258,16 +309,21 @@ function readPayments() {
 function readInitialExpenses() {
   try {
     const saved = localStorage.getItem(EXPENSE_KEY);
+    let list = demoExpenses;
 
     if (saved !== null) {
       const parsed = JSON.parse(saved);
-
       if (Array.isArray(parsed)) {
-        return parsed;
+        list = parsed;
       }
     }
 
-    return demoExpenses;
+    // Filter out obsolete legacy salary demo entry if present
+    list = list.filter(
+      (item) => item.id !== "EXP-DEMO-002" && item.title !== "Photographer Salary"
+    );
+
+    return list;
   } catch {
     return demoExpenses;
   }
@@ -1592,10 +1648,7 @@ export default function Expenses() {
   /* ---------------- MONTHLY FILTER ---------------- */
 
   const monthlyExpenses = useMemo(() => {
-    return expenses.filter((item) =>
-      normalizedDate(item.date)
-        .startsWith(selectedMonth)
-    );
+    return getDeduplicatedMonthlyExpenses(expenses, selectedMonth);
   }, [expenses, selectedMonth]);
 
   /* ---------------- SEARCH FILTER ---------------- */
@@ -1634,57 +1687,29 @@ export default function Expenses() {
   /* ---------------- TOTAL EXPENSES ---------------- */
 
   const totalExpenses = useMemo(() => {
-    return monthlyExpenses.reduce(
-      (sum, item) =>
-        sum + amountNumber(item.amount),
-      0
-    );
-  }, [monthlyExpenses]);
+    return calculateMonthlyExpenseTotal(expenses, selectedMonth);
+  }, [expenses, selectedMonth]);
 
   /* ---------------- FIXED MONTHLY INCOME ---------------- */
 
   const monthlyIncome = useMemo(() => {
-    return payments.reduce(
-      (total, payment) =>
-        total +
-        getMonthlyPaymentIncome(
-          payment,
-          selectedMonth
-        ),
-      0
-    );
+    return calculateMonthlyIncome(payments, selectedMonth);
   }, [payments, selectedMonth]);
 
   /* ---------------- PROFIT ---------------- */
 
   const profit =
-    monthlyIncome - totalExpenses;
+    Math.round((monthlyIncome - totalExpenses) * 100) / 100;
 
   /* ---------------- CATEGORY TOTALS ---------------- */
 
   const categoryTotals = useMemo(() => {
-    const totals = new Map();
-
-    monthlyExpenses.forEach((item) => {
-      const category =
-        item.category || "Other";
-
-      totals.set(
-        category,
-        (totals.get(category) || 0) +
-          amountNumber(item.amount)
-      );
-    });
-
-    return Array.from(
-      totals,
-      ([category, total]) => ({
-        category,
-        total,
-      })
-    )
-      .filter((item) => item.total > 0)
-      .sort((a, b) => b.total - a.total);
+    const breakdown = calculateCategoryBreakdown(monthlyExpenses);
+    return breakdown.map((item) => ({
+      category: item.category,
+      total: item.amount,
+      percentage: item.percentage,
+    }));
   }, [monthlyExpenses]);
 
   /* ---------------- CSV EXPORT ---------------- */

@@ -1,306 +1,230 @@
+/**
+ * Studio Raw ERP - API Client (Frontend-Only Demo Mode)
+ *
+ * Disconnects live network connectivity to the Django backend and routes all
+ * API operations through the local demo data and authentication services.
+ *
+ * Preserves the exact API signatures (api.*, apiRequest, initializeCSRF)
+ * so existing pages, hooks, and components continue to function seamlessly.
+ */
 
-const DEFAULT_API_URL =
-  "https://studioraw-backend-2.onrender.com/api";
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || DEFAULT_API_URL
-)
-  .trim()
-  .replace(/\/+$/, "");
+import { demoDataService } from "../services/demo/demoDataService";
+import { demoAuthService } from "../services/demo/demoAuthService";
+import { APP_MODE } from "../config/appMode";
 
-// CSRF token received from the backend
-let inMemoryCsrfToken = null;
+export const API_BASE_URL = "demo://studio-raw-erp";
 
-// Normalize API endpoint
-function getApiUrl(endpoint = "") {
-  let cleanEndpoint = String(endpoint)
+// In-memory demo CSRF token
+let inMemoryCsrfToken = "demo-csrf-token-studio-raw-erp";
+
+/**
+ * Demo CSRF initialization (offline synchronous fulfillment)
+ */
+export async function initializeCSRF() {
+  inMemoryCsrfToken = "demo-csrf-token-studio-raw-erp";
+  return {
+    csrfToken: inMemoryCsrfToken,
+    demoMode: true,
+  };
+}
+
+/**
+ * Route URL path requests to the local demo service
+ */
+export async function apiRequest(endpoint, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const rawBody = options.body;
+  let body = {};
+
+  if (rawBody) {
+    if (typeof rawBody === "string") {
+      try {
+        body = JSON.parse(rawBody);
+      } catch {
+        body = rawBody;
+      }
+    } else {
+      body = rawBody;
+    }
+  }
+
+  // Normalize endpoint string
+  let cleanEndpoint = String(endpoint || "")
     .trim()
-    .replace(/^\/+/, "");
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "");
 
-  // Avoid duplicate /api/api/
   if (cleanEndpoint.startsWith("api/")) {
     cleanEndpoint = cleanEndpoint.slice(4);
   }
 
-  return cleanEndpoint
-    ? `${API_BASE_URL}/${cleanEndpoint}`
-    : `${API_BASE_URL}/`;
-}
+  const [path, queryString] = cleanEndpoint.split("?");
+  const queryParams = Object.fromEntries(
+    new URLSearchParams(queryString || "").entries()
+  );
 
-// Get CSRF token from Django backend
-export async function initializeCSRF() {
-  try {
-    const response = await fetch(getApiUrl("csrf/"), {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `CSRF initialization failed (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-
-    if (!data?.csrfToken) {
-      throw new Error(
-        "CSRF token was not returned by the backend."
-      );
-    }
-
-    inMemoryCsrfToken = data.csrfToken;
-
-    return data;
-  } catch (error) {
-    console.error("CSRF initialization failed:", error);
-    throw error;
+  // 1. CSRF
+  if (path === "csrf" || path === "csrf/") {
+    return initializeCSRF();
   }
-}
 
-// Main API request
-export async function apiRequest(endpoint, options = {}) {
-  const method = (options.method || "GET").toUpperCase();
+  // 2. Authentication endpoints
+  if (path === "login" || path === "login/") {
+    return demoAuthService.login(body);
+  }
 
-  const isWriteRequest = ![
-    "GET",
-    "HEAD",
-    "OPTIONS",
-    "TRACE",
-  ].includes(method);
+  if (path === "logout" || path === "logout/") {
+    return demoAuthService.logout();
+  }
 
-  const isFormData =
-    typeof FormData !== "undefined" &&
-    options.body instanceof FormData;
+  if (path === "auth/me" || path === "auth/me/") {
+    if (!demoAuthService.isAuthenticated()) {
+      throw new Error("401 Unauthorized: Demo session not active");
+    }
+    return demoAuthService.getCurrentUser();
+  }
 
-  const headers = {
-    Accept: "application/json",
-    ...(options.body && !isFormData
-      ? { "Content-Type": "application/json" }
-      : {}),
-    ...options.headers,
+  if (path === "auth/profile" || path === "auth/profile/") {
+    return demoAuthService.updateProfile(body);
+  }
+
+  if (path === "auth/change-password" || path === "auth/change-password/") {
+    return demoAuthService.changePassword(body);
+  }
+
+  if (path === "auth/forgot-password" || path === "auth/forgot-password/") {
+    return demoAuthService.forgotPassword(body);
+  }
+
+  if (path === "auth/reset-password" || path === "auth/reset-password/") {
+    return demoAuthService.resetPassword(body);
+  }
+
+  // 3. Dashboard stats
+  if (path === "dashboard/stats" || path === "dashboard/stats/") {
+    return demoDataService.dashboard.stats();
+  }
+
+  // 4. Reports summary
+  if (path === "reports/summary" || path === "reports/summary/") {
+    return demoDataService.reports.summary(queryParams);
+  }
+
+  // 5. Notifications helpers
+  if (path === "notifications/unread-count" || path === "notifications/unread-count/") {
+    return demoDataService.notifications.unreadCount();
+  }
+
+  if (path === "notifications/mark-all-read" || path === "notifications/mark-all-read/") {
+    return demoDataService.notifications.markAllRead();
+  }
+
+  const markReadMatch = path.match(/^notifications\/([^/]+)\/mark-read$/);
+  if (markReadMatch) {
+    return demoDataService.notifications.markRead(markReadMatch[1]);
+  }
+
+  // 6. Settings
+  if (path === "settings" || path === "settings/") {
+    if (method === "GET") {
+      return demoDataService.settings.get();
+    }
+    return demoDataService.settings.update(body);
+  }
+
+  // 7. General resource routing
+  const resourceMap = {
+    customers: demoDataService.customers,
+    enquiries: demoDataService.enquiries,
+    bookings: demoDataService.bookings,
+    payments: demoDataService.payments,
+    deliveries: demoDataService.deliveries,
+    "wedding-photography": demoDataService.weddingPhotography,
+    "wedding-videography": demoDataService.weddingVideography,
+    "functions-we-arrange": demoDataService.functionsWeArrange,
+    "event-management": demoDataService.eventManagement,
+    "customized-gifts": demoDataService.customizedGifts,
+    inventory: demoDataService.inventory,
+    equipment: demoDataService.equipment,
+    expenses: demoDataService.expenses,
+    staff: demoDataService.staff,
+    branches: demoDataService.branches,
+    notifications: demoDataService.notifications,
   };
 
-  // Always obtain a fresh backend CSRF token for write requests.
-  if (isWriteRequest) {
-    const csrfData = await initializeCSRF();
+  const segments = path.split("/");
+  const resourceKey = segments[0];
+  const service = resourceMap[resourceKey];
 
-    const csrfToken =
-      csrfData?.csrfToken || inMemoryCsrfToken;
+  if (service) {
+    const recordId = segments[1];
 
-    if (!csrfToken) {
-      throw new Error("Unable to obtain Django CSRF token.");
-    }
-
-    headers["X-CSRFToken"] = csrfToken;
-  }
-
-  const response = await fetch(getApiUrl(endpoint), {
-    ...options,
-    method,
-    headers,
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    let errorMessage = `Request failed (${response.status})`;
-
-    try {
-      const contentType =
-        response.headers.get("content-type") || "";
-
-      if (contentType.includes("application/json")) {
-        const errorData = await response.json();
-
-        if (typeof errorData === "string") {
-          errorMessage = errorData;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (errorData.non_field_errors) {
-          errorMessage = errorData.non_field_errors.join(", ");
-        } else {
-          errorMessage = JSON.stringify(errorData);
-        }
-      } else {
-        const text = await response.text();
-
-        if (text) {
-          errorMessage = text;
-        }
+    if (method === "GET") {
+      if (recordId) {
+        return service.get(recordId);
       }
-    } catch {
-      // Keep original HTTP error
+      return service.list(queryParams);
     }
 
-    throw new Error(errorMessage);
+    if (method === "POST") {
+      return service.create(body);
+    }
+
+    if (method === "PATCH" || method === "PUT") {
+      if (recordId) {
+        return service.update(recordId, body);
+      }
+      return service.create(body);
+    }
+
+    if (method === "DELETE") {
+      if (recordId) {
+        return service.delete(recordId);
+      }
+      return { success: true };
+    }
   }
 
-  if (response.status === 204) {
-    return null;
-  }
-
-  const contentType =
-    response.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    return response.json();
-  }
-
-  return response.text();
+  // Fallback for any unknown demo endpoint
+  console.info(`[Demo Mode] Simulated fulfillment for endpoint: ${cleanEndpoint}`);
+  return { success: true, demoMode: true };
 }
 
-// Resource API creator
-function createResourceApi(resourceName) {
-  return {
-    list: (params = {}) => {
-      const query = new URLSearchParams(params).toString();
-
-      const url = query
-        ? `${resourceName}/?${query}`
-        : `${resourceName}/`;
-
-      return apiRequest(url);
-    },
-
-    get: (id) =>
-      apiRequest(`${resourceName}/${id}/`),
-
-    create: (data) =>
-      apiRequest(`${resourceName}/`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-
-    update: (id, data) =>
-      apiRequest(`${resourceName}/${id}/`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-
-    put: (id, data) =>
-      apiRequest(`${resourceName}/${id}/`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-
-    delete: (id) =>
-      apiRequest(`${resourceName}/${id}/`, {
-        method: "DELETE",
-      }),
-  };
-}
-
-// All application APIs
+/**
+ * Main application API object
+ */
 export const api = {
-  customers: createResourceApi("customers"),
-  enquiries: createResourceApi("enquiries"),
-  bookings: createResourceApi("bookings"),
-  payments: createResourceApi("payments"),
-  deliveries: createResourceApi("deliveries"),
+  customers: demoDataService.customers,
+  enquiries: demoDataService.enquiries,
+  bookings: demoDataService.bookings,
+  payments: demoDataService.payments,
+  deliveries: demoDataService.deliveries,
 
-  weddingPhotography: createResourceApi("wedding-photography"),
-  weddingVideography: createResourceApi("wedding-videography"),
-  functionsWeArrange: createResourceApi("functions-we-arrange"),
-  eventManagement: createResourceApi("event-management"),
-  customizedGifts: createResourceApi("customized-gifts"),
+  weddingPhotography: demoDataService.weddingPhotography,
+  weddingVideography: demoDataService.weddingVideography,
+  functionsWeArrange: demoDataService.functionsWeArrange,
+  eventManagement: demoDataService.eventManagement,
+  customizedGifts: demoDataService.customizedGifts,
 
-  inventory: createResourceApi("inventory"),
-  equipment: createResourceApi("equipment"),
-  expenses: createResourceApi("expenses"),
-  staff: createResourceApi("staff"),
-  branches: createResourceApi("branches"),
+  inventory: demoDataService.inventory,
+  equipment: demoDataService.equipment,
+  expenses: demoDataService.expenses,
+  staff: demoDataService.staff,
+  branches: demoDataService.branches,
 
-  notifications: {
-    ...createResourceApi("notifications"),
-
-    unreadCount: () =>
-      apiRequest("notifications/unread-count/"),
-
-    markRead: (id) =>
-      apiRequest(`notifications/${id}/mark-read/`, {
-        method: "POST",
-      }),
-
-    markAllRead: () =>
-      apiRequest("notifications/mark-all-read/", {
-        method: "POST",
-      }),
-  },
-
-  reports: {
-    summary: (params = {}) => {
-      const query = new URLSearchParams(params).toString();
-
-      const url = query
-        ? `reports/summary/?${query}`
-        : "reports/summary/";
-
-      return apiRequest(url);
-    },
-
-    exportCsvUrl: (type = "summary") =>
-      `${getApiUrl("reports/export-csv/")}?type=${encodeURIComponent(type)}`,
-  },
-
-  settings: {
-    get: () =>
-      apiRequest("settings/"),
-
-    update: (data) =>
-      apiRequest("settings/", {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-  },
-
-  dashboard: {
-    stats: () =>
-      apiRequest("dashboard/stats/"),
-  },
+  notifications: demoDataService.notifications,
+  reports: demoDataService.reports,
+  settings: demoDataService.settings,
+  dashboard: demoDataService.dashboard,
 
   auth: {
-    me: () =>
-      apiRequest("auth/me/"),
-
-    login: (credentials) =>
-      apiRequest("login/", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-      }),
-
-    logout: () =>
-      apiRequest("logout/", {
-        method: "POST",
-      }),
-
-    updateProfile: (data) =>
-      apiRequest("auth/profile/", {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-
-    changePassword: (data) =>
-      apiRequest("auth/change-password/", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-
-    forgotPassword: (data) =>
-      apiRequest("auth/forgot-password/", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-
-    resetPassword: (data) =>
-      apiRequest("auth/reset-password/", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    me: () => demoAuthService.getCurrentUser(),
+    login: (credentials) => demoAuthService.login(credentials),
+    logout: () => demoAuthService.logout(),
+    updateProfile: (data) => demoAuthService.updateProfile(data),
+    changePassword: (data) => demoAuthService.changePassword(data),
+    forgotPassword: (data) => demoAuthService.forgotPassword(data),
+    resetPassword: (data) => demoAuthService.resetPassword(data),
   },
 };
 

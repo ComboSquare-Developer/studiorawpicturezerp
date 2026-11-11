@@ -101,9 +101,11 @@ function readProfile() {
         typeof parsed === "object" &&
         !Array.isArray(parsed)
       ) {
+        let name = parsed.name || defaultProfile.name;
+        if (name === "Prathiksha (Admin)" || name === "Prathiksha") name = "Admin";
         return {
           ...defaultProfile,
-          name: parsed.name || defaultProfile.name,
+          name,
           email: parsed.email || defaultProfile.email,
           role: parsed.role || defaultProfile.role,
         };
@@ -1207,8 +1209,9 @@ export default function Header({
       try {
         const user = await api.auth.me();
         if (active && user) {
+          const rawName = user.name || user.username || "Admin";
           const loaded = {
-            name: user.name || user.username || "Admin",
+            name: (rawName === "Prathiksha (Admin)" || rawName === "Prathiksha") ? "Admin" : rawName,
             role: user.role || (user.is_superuser ? "Administrator" : "Staff"),
             email: user.email || "admin@studiorawpicturez.com",
           };

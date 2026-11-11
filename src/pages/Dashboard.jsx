@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import {
+  getInvoiceTotal,
+  getInvoiceReceived,
+  getInvoiceBalance,
+  getInvoiceStatus,
+} from "../services/financialService";
+import {
   Users,
   MessageSquare,
   CalendarDays,
@@ -26,14 +32,15 @@ import {
 ========================================== */
 
 const STORAGE = {
-  customers: "studio_raw_customers",
-  enquiries: "studioraw_enquiries",
-  bookings: "studioraw_bookings",
-  payments: "studioraw_payments",
-  photoshoots: "studioraw_photoshoots",
-  editing: "studioraw_photo_editing",
-  albums: "studioraw_album_printing",
-  deliveries: "studioraw_deliveries",
+  customers: ["studio_raw_customers", "studioraw_customers"],
+  enquiries: ["studioraw_enquiries", "studio_raw_enquiries"],
+  bookings: ["studioraw_bookings", "studio_raw_bookings"],
+  payments: ["studioraw_payments", "studio_raw_payments"],
+  photoshoots: ["studioraw_photoshoots", "studio_raw_photoshoots"],
+  editing: ["studioraw_photo_editing", "studio_raw_photo_editing"],
+  albums: ["studioraw_album_printing", "studio_raw_album_printing"],
+  deliveries: ["studioraw_deliveries", "studio_raw_deliveries"],
+  expenses: ["studioraw_expenses", "studio_raw_expenses"],
 };
 
 const UPDATE_EVENT = "studioraw:data-updated";
@@ -42,36 +49,40 @@ const UPDATE_EVENT = "studioraw:data-updated";
    STORAGE HELPERS
 ========================================== */
 
-function readArray(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
+function readArray(keyOrKeys) {
+  const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
 
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
 
-    if (parsed && typeof parsed === "object") {
-      for (const field of [
-        "data",
-        "records",
-        "items",
-        "list",
-        "payments",
-        "bookings",
-        "customers",
-        "enquiries",
-        "deliveries",
-      ]) {
-        if (Array.isArray(parsed[field])) {
-          return parsed[field];
+      if (parsed && typeof parsed === "object") {
+        for (const field of [
+          "data",
+          "records",
+          "items",
+          "list",
+          "payments",
+          "bookings",
+          "customers",
+          "enquiries",
+          "deliveries",
+          "expenses",
+        ]) {
+          if (Array.isArray(parsed[field]) && parsed[field].length > 0) {
+            return parsed[field];
+          }
         }
       }
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Continue to next alias
     }
-
-    return [];
-  } catch {
-    return [];
   }
+  return [];
 }
 
 function getAllData() {
@@ -1485,10 +1496,9 @@ export default function Dashboard() {
 
     const update = () => {
       try {
+        const allKeys = Object.values(STORAGE).flat();
         const snapshot = JSON.stringify(
-          Object.values(STORAGE).map((key) =>
-            localStorage.getItem(key)
-          )
+          allKeys.map((key) => localStorage.getItem(key))
         );
 
         if (snapshot !== lastSnapshot) {
@@ -1552,69 +1562,71 @@ export default function Dashboard() {
   ======================================== */
 
   const stats = useMemo(() => {
-    const billed = data.payments.reduce(
-      (sum, payment) =>
-        sum + paymentTotal(payment),
-      0
+    // 1. Customer summary: unique customers count
+    const uniqueCusts = new Set();
+    (data.customers || []).forEach((c) => {
+      const key = String(c.id || c.customerId || c.phone || c.mobile || c.name || "").trim().toLowerCase();
+      if (key) uniqueCusts.add(key);
+    });
+    const totalCustomers = uniqueCusts.size || (data.customers || []).length;
+
+    // 2. Enquiry summary: live count of active enquiries
+    const totalEnquiries = (data.enquiries || []).length;
+
+    // 3. Booking summary: live count of booking records
+    const totalBookings = (data.bookings || []).length;
+
+    // 4. Financial summary: Total Billed, Total Received, Pending Amount
+    // Reconcile 100% with Payments page and financialService
+    const validInvoices = (data.payments || []).filter((invoice) => {
+      const s = String(invoice?.status || invoice?.paymentStatus || "").toLowerCase();
+      return s !== "cancelled" && s !== "canceled";
+    });
+
+    const billed = roundMoney(
+      validInvoices.reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0)
     );
 
-    const paid = data.payments.reduce(
-      (sum, payment) =>
-        sum + paymentReceived(payment),
-      0
+    const paid = roundMoney(
+      validInvoices.reduce((sum, invoice) => {
+        const st = getInvoiceStatus(invoice);
+        if (st === "Failed" || st === "Unpaid") return sum;
+        return sum + getInvoiceReceived(invoice);
+      }, 0)
     );
 
-    const pending = data.payments.reduce(
-      (sum, payment) =>
-        sum + paymentBalance(payment),
+    // Guaranteed reconciliation: Pending Amount = Total Billed - Total Received
+    const pending = Math.max(0, roundMoney(billed - paid));
+
+    // 5. Deliveries summary: Pending or awaiting delivery (excluding delivered, completed, cancelled)
+    const localDeliveriesPending = (data.deliveries || []).filter((item) => {
+      const status = String(item.status || "").trim().toLowerCase();
+      return !["delivered", "completed", "cancelled", "canceled"].includes(status);
+    }).length;
+
+    const localTotalExpenses = (data.expenses || []).reduce(
+      (sum, e) => sum + (Number(e.amount) || 0),
       0
     );
-
-    const localDeliveriesPending = data.deliveries.filter(
-      (item) =>
-        ![
-          "delivered",
-          "cancelled",
-          "canceled",
-        ].includes(
-          String(item.status || "").toLowerCase()
-        )
-    ).length;
-
-    if (backendStats) {
-      return {
-        customers: backendStats.customers ?? data.customers.length,
-        enquiries: backendStats.enquiries ?? data.enquiries.length,
-        bookings: backendStats.bookings ?? data.bookings.length,
-        billed: roundMoney(
-          (backendStats.payments_received || 0) + (backendStats.pending_balance || 0)
-        ) || roundMoney(billed),
-        paid: roundMoney(backendStats.payments_received ?? paid),
-        pending: roundMoney(backendStats.pending_balance ?? pending),
-        deliveriesPending: backendStats.pending_deliveries ?? localDeliveriesPending,
-        weddingPhotography: backendStats.wedding_photography ?? 0,
-        weddingVideography: backendStats.wedding_videography ?? 0,
-        totalExpenses: backendStats.total_expenses ?? 0,
-        inventoryAlerts: backendStats.inventory_alerts ?? 0,
-      };
-    }
 
     return {
-      customers: data.customers.length,
-      enquiries: data.enquiries.length,
-      bookings: data.bookings.length,
-
-      billed: roundMoney(billed),
-      paid: roundMoney(paid),
-      pending: roundMoney(pending),
-
+      customers: totalCustomers,
+      enquiries: totalEnquiries,
+      bookings: totalBookings,
+      billed,
+      paid,
+      pending,
       deliveriesPending: localDeliveriesPending,
-      weddingPhotography: 0,
-      weddingVideography: 0,
-      totalExpenses: 0,
+      weddingPhotography: (data.bookings || []).filter((b) =>
+        String(b.service || b.event || "").toLowerCase().includes("photography")
+      ).length,
+      weddingVideography: (data.bookings || []).filter((b) =>
+        String(b.service || b.event || "").toLowerCase().includes("videography")
+      ).length,
+      totalExpenses: localTotalExpenses,
       inventoryAlerts: 0,
     };
-  }, [data, backendStats]);
+  }, [data]);
 
   /* ========================================
      UPCOMING BOOKINGS

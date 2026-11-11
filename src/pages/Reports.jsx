@@ -7,6 +7,10 @@ import {
   useState,
 } from "react";
 import { api } from "../api/client";
+import {
+  getDeduplicatedMonthlyExpenses,
+  calculateMonthlyExpenseTotal,
+} from "../services/financialService";
 
 import {
   BarChart3,
@@ -1615,8 +1619,10 @@ export default function Reports() {
         (item) => getMonth(item) === selectedMonth
       );
 
+    const deduplicatedExpenses = getDeduplicatedMonthlyExpenses(data.expenses, selectedMonth);
+
     return {
-      expenses: filter(data.expenses),
+      expenses: deduplicatedExpenses,
       bookings: allBookings.filter(
         (b) => b._normalizedDate && b._normalizedDate.slice(0, 7) === selectedMonth
       ),
@@ -1701,14 +1707,8 @@ export default function Reports() {
   /* EXPENSE SUMMARY */
 
   const expenseTotal = useMemo(
-    () =>
-      round(
-        monthly.expenses.reduce(
-          (sum, item) => sum + getExpenseAmount(item),
-          0
-        )
-      ),
-    [monthly.expenses]
+    () => calculateMonthlyExpenseTotal(data.expenses, selectedMonth),
+    [data.expenses, selectedMonth]
   );
 
   const profit = round(

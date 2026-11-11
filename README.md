@@ -1,16 +1,49 @@
-# React + Vite
+# Studio Raw ERP & CRM - Frontend-Only Demo Mode
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This application has been converted into a completely independent, frontend-only demonstration application. It showcases the exact Studio Raw ERP interface, layouts, tables, forms, charts, and interactions without requiring the Django backend server, database, or external network connectivity.
 
-Currently, two official plugins are available:
+## Demo Login Credentials
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Username:** `prathi`
+- **Password:** `prathi`
 
-## React Compiler
+*(Alternative admin credentials: `admin` / `admin`)*
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Running the Application Locally
 
-## Expanding the Oxlint configuration
+```bash
+# Navigate to the frontend directory
+cd studio-raw-erp
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+# Install dependencies (if not already installed)
+npm install
+
+# Start the Vite development server
+npm run dev
+
+# Or build for production
+npm run build
+npm run preview
+```
+
+Open `http://localhost:5173` in your browser.
+
+## Key Demo Features
+
+- **Zero Backend Dependency:** All live fetch requests targeting Django have been disconnected. The app runs completely offline.
+- **Centralized Demo Data Layer:** Located in `src/data/demo/` and managed via `src/services/demo/demoDataService.js`.
+- **Consistent Data Relationships:** The same employee, customer, booking, and invoice IDs are synchronized across all modules.
+- **Local State Persistence:** Edits, additions, status updates, and deletions persist in `localStorage` across page reloads.
+- **Interactive Modules:**
+  - **Dashboard:** Real-time statistics, monthly trend charts, upcoming bookings, and recent activities.
+  - **Customers:** Client directory, search, filter, and profile inspection.
+  - **Enquiries:** Lead status pipeline (New, Contacted, Follow Up, Won, Converted, Lost).
+  - **Booking Calendar:** Shoot bookings calendar with date filters and staff assignments.
+  - **Payments & Billing:** Invoices, payment transaction history, and jsPDF invoice printing.
+  - **Deliveries:** Milestone delivery tracking and status management.
+  - **Expenses:** Operating expense log with category breakdowns.
+  - **Staff Management:** Complete employee directory with roles, departments, and salaries in ₹.
+  - **Staff Attendance:** Daily attendance marking (Present, Absent, Leave, Half Day).
+  - **Wedding Photography & Videography:** Shoot orders and crew management.
+  - **Reports & Analytics:** Precalculated and dynamic conversion rates, revenue, and profitability charts.
+  - **Studio Settings:** Editable studio profile and preferences.
