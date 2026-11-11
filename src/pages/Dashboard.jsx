@@ -1277,7 +1277,6 @@ function SalesGauge({
             100%
           </text>
         </svg>
-        )}
       </div>
 
       <div className="mt-auto grid grid-cols-3 gap-2 border-t border-[#e6edf5] pt-5">
