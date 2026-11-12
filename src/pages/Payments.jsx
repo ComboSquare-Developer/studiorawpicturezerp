@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-
 import { api } from "../api/client";
-
 import { createPortal } from "react-dom";
-
-import { jsPDF } from "jspdf";
-
 import {
-
   Plus, Search, Wallet, Receipt, IndianRupee, CheckCircle2, Clock3,
-
   CreditCard, Download, Printer, Pencil, Trash2, X, Save, RefreshCw,
-
   History, AlertCircle
-
 } from "lucide-react";
+import {
+  generateInvoicePdf,
+  formatBookingService,
+  getInvoiceServiceDisplay,
+} from "../services/invoicePdfService";
 
 
 
@@ -137,34 +133,8 @@ function Stat({title,value,subtitle,icon:Icon,color="blue"}){
 
 }
 
-function pdfInvoice(invoice,action="download"){
-
- const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"}),navy=[16,38,77],gray=[99,119,145];
-
- const total=totalOf(invoice),received=paidOf(invoice),balance=balanceOf(invoice);
-
- doc.setFillColor(...navy);doc.rect(0,0,210,47,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("STUDIO RAW PICTUREZ",15,22);doc.setFont("helvetica","normal");doc.setFontSize(10);doc.text("PHOTOGRAPHY | EVENTS | CREATIVE SERVICES",15,31);doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("INVOICE",195,22,{align:"right"});doc.setFontSize(9);doc.text(String(invoice.invoice||invoice.id),195,31,{align:"right"});
-
- doc.setTextColor(...navy);doc.setFontSize(10);doc.text("BILL TO",15,61);doc.setFont("helvetica","normal");doc.setFontSize(12);doc.text(doc.splitTextToSize(String(invoice.customer||"Customer"),95),15,70);doc.setFontSize(10);doc.setTextColor(...gray);doc.text(`Phone: ${invoice.phone||"N/A"}`,15,83);doc.setTextColor(...navy);doc.setFont("helvetica","bold");doc.text("INVOICE DETAILS",125,61);doc.setFont("helvetica","normal");doc.setTextColor(...gray);doc.text(`Date: ${showDate(invoice.date)}`,125,70);doc.text(`Status: ${statusOf(invoice)}`,125,78);
-
- doc.setDrawColor(218,231,245);doc.line(15,91,195,91);doc.setFillColor(237,245,255);doc.roundedRect(15,98,180,18,3,3,"F");doc.setFont("helvetica","bold");doc.setTextColor(...navy);doc.text("SERVICE / PACKAGE",20,109);doc.text("AMOUNT",189,109,{align:"right"});doc.setFont("helvetica","normal");doc.text(doc.splitTextToSize(String(invoice.packageName||"Photography / Event Service"),120).slice(0,3),20,127);doc.text(`Rs. ${total.toFixed(2)}`,189,127,{align:"right"});doc.line(15,149,195,149);
-
- doc.setFillColor(237,245,255);doc.roundedRect(105,157,90,52,4,4,"F");doc.setTextColor(...gray);doc.text("Total Amount",111,169);doc.text("Received",111,181);doc.text("Pending Balance",111,193);doc.setFont("helvetica","bold");doc.setTextColor(...navy);doc.text(`Rs. ${total.toFixed(2)}`,189,169,{align:"right"});doc.setTextColor(18,125,94);doc.text(`Rs. ${received.toFixed(2)}`,189,181,{align:"right"});doc.setTextColor(177,115,36);doc.text(`Rs. ${balance.toFixed(2)}`,189,193,{align:"right"});
-
- doc.setTextColor(...navy);doc.setFont("helvetica","bold");doc.text("PAYMENT HISTORY",15,223);
-
- let y=234;const history=historyOf(invoice).filter(validTx);
-
- if(!history.length){doc.setFont("helvetica","normal");doc.setTextColor(...gray);doc.text("No payments received yet.",15,y)}
-
- else history.forEach((tx,i)=>{if(y>264){doc.addPage();y=25}doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...gray);doc.text(`${i+1}. ${showDate(tx.date)} - ${tx.method||"Cash"}`,15,y);doc.setTextColor(...navy);doc.text(`Rs. ${txAmount(tx).toFixed(2)}`,189,y,{align:"right"});y+=9});
-
- for(let page=1;page<=doc.internal.getNumberOfPages();page++){doc.setPage(page);doc.setDrawColor(218,231,245);doc.line(15,278,195,278);doc.setFontSize(9);doc.setTextColor(...gray);doc.text("Thank you for choosing Studio Raw Picturez!",105,286,{align:"center"})}
-
- const filename=`Invoice-${String(invoice.invoice||invoice.id).replace(/[^a-zA-Z0-9_-]/g,"_")}.pdf`;
-
- if(action==="print"){const url=doc.output("bloburl");if(!window.open(url,"_blank")){doc.save(filename);window.alert("Popup blocked. Invoice downloaded instead.")}}else doc.save(filename);
-
+async function pdfInvoice(invoice, action = "download", booking = null) {
+  return generateInvoicePdf(invoice, { booking, action });
 }
 
 export default function Payments(){
@@ -290,7 +260,20 @@ export default function Payments(){
    }
    setError("");
    const c=customers.find(c=>String(c.id)===String(b.customerId));
-   setForm(p=>({...p,bookingId:String(b.id),customerId:String(b.customerId||p.customerId||""),customer:nameOf(b)||nameOf(c)||p.customer,phone:b.phone||c?.phone||p.phone,packageName:b.package||b.packageName||b.event||"",total:String(bookingTotal(b))}));
+   const serviceName = getInvoiceServiceDisplay(null, b);
+   setForm(p=>({
+     ...p,
+     bookingId:String(b.id),
+     customerId:String(b.customerId||p.customerId||""),
+     customer:nameOf(b)||nameOf(c)||p.customer,
+     phone:b.phone||c?.phone||p.phone,
+     service:b.service||"",
+     customService:b.customService||b.custom_service||"",
+     event:b.event||"",
+     customEvent:b.customEvent||b.custom_event||"",
+     packageName:serviceName,
+     total:String(bookingTotal(b))
+   }));
  };
 
  const availableBookings=useMemo(
@@ -325,7 +308,31 @@ export default function Payments(){
 
     try{await api.payments.update(editing.id,{customer_name:form.customer.trim(),total_amount:total,payment_method:form.method,notes:form.notes.trim()});}catch(err){console.warn("Backend payment update notice:",err.message);}
 
-    const next=payments.map(item=>{if(String(item.id)!==String(editing.id))return item;const prev=normalized(item),updated={...prev,customerId:form.customerId,bookingId:form.bookingId,customer:form.customer.trim(),phone:form.phone.trim(),packageName:form.packageName.trim(),total,date:form.date||today(),method:form.method,notes:form.notes.trim(),updatedAt:now};return {...updated,advance:paidOf(updated),status:statusOf(updated)}});if(save(next))close();return;
+    const next=payments.map(item=>{
+      if(String(item.id)!==String(editing.id))return item;
+      const prev=normalized(item);
+      const b=bookings.find(x=>String(x.id)===String(form.bookingId||prev.bookingId));
+      const serviceName = b ? getInvoiceServiceDisplay(null, b) : (form.packageName.trim() || prev.packageName);
+      const updated={
+        ...prev,
+        customerId:form.customerId,
+        bookingId:form.bookingId||prev.bookingId,
+        customer:form.customer.trim(),
+        phone:form.phone.trim(),
+        service:b?.service || prev.service || "",
+        customService:b?.customService || b?.custom_service || prev.customService || "",
+        event:b?.event || prev.event || "",
+        customEvent:b?.customEvent || b?.custom_event || prev.customEvent || "",
+        packageName:serviceName,
+        total,
+        date:form.date||today(),
+        method:form.method,
+        notes:form.notes.trim(),
+        updatedAt:now
+      };
+      return {...updated,advance:paidOf(updated),status:statusOf(updated)};
+    });
+    if(save(next))close();return;
 
   }
 
@@ -343,7 +350,29 @@ export default function Payments(){
 
   const transactions=initial>0?[{id:uid("TXN"),amount:initial,method:form.method,date:form.date||today(),note:"Initial / Advance Payment",status:"Paid",createdAt:now}]:[];
 
-  const invoice={id:createdId,invoice:invNumber,customerId:form.customerId,bookingId:form.bookingId,customer:form.customer.trim(),phone:form.phone.trim(),packageName:form.packageName.trim(),total,advance:initial,method:form.method,date:form.date||today(),notes:form.notes.trim(),transactions,createdAt:now,updatedAt:now};
+  const serviceName = selectedBooking ? getInvoiceServiceDisplay(null, selectedBooking) : form.packageName.trim();
+
+  const invoice={
+    id:createdId,
+    invoice:invNumber,
+    customerId:form.customerId,
+    bookingId:form.bookingId,
+    customer:form.customer.trim(),
+    phone:form.phone.trim(),
+    service:selectedBooking?.service || form.service || "",
+    customService:selectedBooking?.customService || selectedBooking?.custom_service || form.customService || "",
+    event:selectedBooking?.event || form.event || "",
+    customEvent:selectedBooking?.customEvent || selectedBooking?.custom_event || form.customEvent || "",
+    packageName:serviceName,
+    total,
+    advance:initial,
+    method:form.method,
+    date:form.date||today(),
+    notes:form.notes.trim(),
+    transactions,
+    createdAt:now,
+    updatedAt:now
+  };
 
   invoice.status=statusOf(invoice);if(save([invoice,...payments]))close();
 
@@ -395,7 +424,7 @@ export default function Payments(){
 
  const filtered=useMemo(()=>invoices.filter(i=>(statusFilter==="All"||statusOf(i)===statusFilter)&&(monthFilter==="All"||dateOf(i.date).slice(0,7)===monthFilter)&&(!search.trim()||[i.invoice,i.customer,i.phone,i.packageName,i.bookingId,i.method,statusOf(i)].some(v=>String(v||"").toLowerCase().includes(search.trim().toLowerCase())))).sort((a,b)=>String(b.date).localeCompare(String(a.date))),[invoices,search,statusFilter,monthFilter]);
 
- const exportCSV=()=>{const rows=[["Invoice","Date","Customer","Phone","Booking ID","Package","Total","Received","Pending","Status"],...filtered.map(i=>[i.invoice,i.date,i.customer,i.phone,i.bookingId,i.packageName,totalOf(i),paidOf(i),balanceOf(i),statusOf(i)])];const esc=v=>{const raw=String(v??""),safe=/^\s*[=+\-@\t\r]/.test(raw)?"'"+raw:raw;return `"${safe.replace(/"/g,'""')}"`};const blob=new Blob(["\uFEFF"+rows.map(r=>r.map(esc).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`StudioRaw-Payments-${today()}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+ const exportCSV=()=>{const rows=[["Invoice","Date","Customer","Phone","Booking ID","Service","Total","Received","Pending","Status"],...filtered.map(i=>[i.invoice,i.date,i.customer,i.phone,i.bookingId,getInvoiceServiceDisplay(i,getLinkedBooking(i)),totalOf(i),paidOf(i),balanceOf(i),statusOf(i)])];const esc=v=>{const raw=String(v??""),safe=/^\s*[=+\-@\t\r]/.test(raw)?"'"+raw:raw;return `"${safe.replace(/"/g,'""')}"`};const blob=new Blob(["\uFEFF"+rows.map(r=>r.map(esc).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`StudioRaw-Payments-${today()}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 
  const actionButtons=i=><div className="flex flex-col gap-1.5 w-[210px] min-w-[210px]">
   <div className="flex items-center gap-1.5">
@@ -404,8 +433,8 @@ export default function Payments(){
   </div>
   <div className="flex items-center gap-1.5">
    {isInvoiceEligible(i)&&<>
-    <button type="button" title="Download PDF" onClick={()=>pdfInvoice(i)} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Download size={16}/></button>
-    <button type="button" title="Print Invoice" onClick={()=>{pdfInvoice(i,"print");countAction("print")}} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Printer size={16}/></button>
+    <button type="button" title="Download PDF" onClick={()=>pdfInvoice(i,"download",getLinkedBooking(i))} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Download size={16}/></button>
+    <button type="button" title="Print Invoice" onClick={()=>{pdfInvoice(i,"print",getLinkedBooking(i));countAction("print")}} className="rounded-xl bg-[#e7f3ff] p-2 text-[#3474ad] hover:bg-[#d4e8fc] transition-colors"><Printer size={16}/></button>
    </>}
    <button type="button" title="Edit Invoice Details" onClick={()=>{countAction("edit");openEdit(i)}} className="rounded-xl bg-[#fff0db] p-2 text-[#b27b2a] hover:bg-[#fde2bf] transition-colors"><Pencil size={16}/></button>
    <button type="button" title="Delete Invoice" onClick={()=>{setSelected(i);setError("");setModal("delete")}} className="rounded-xl bg-[#ffe7ec] p-2 text-[#c64f69] hover:bg-[#fcd0d8] transition-colors"><Trash2 size={16}/></button>
@@ -432,9 +461,9 @@ export default function Payments(){
 
  <div className="overflow-hidden rounded-[25px] border border-[#d9e7f6] bg-white shadow-sm"><div className="flex items-center justify-between border-b border-[#e3edf7] p-5"><div><h2 className="font-black text-[#10264d]">Payment Records</h2><p className="mt-1 text-xs text-[#8ca2b9]">{filtered.length} invoices · Add Payment updates the same invoice number</p></div><Receipt size={22} className="text-[#3575b6]"/></div>
 
- {filtered.length?<><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1350px] text-left"><thead className="bg-[#edf5ff]"><tr>{[["Invoice","w-[140px]"],["Customer","w-[180px]"],["Date","w-[120px]"],["Service","w-[160px]"],["Total","w-[120px]"],["Received","w-[120px]"],["Pending","w-[120px]"],["Status","w-[120px]"],["Actions","w-[230px]"]].map(([h,w])=><th key={h} className={`whitespace-nowrap px-4 py-4 text-[11px] font-black uppercase tracking-wide text-[#6685a4] ${w}`}>{h}</th>)}</tr></thead><tbody className="divide-y divide-[#e8eff8]">{filtered.map(i=><tr key={i.id} className="hover:bg-[#f5faff]"><td className="px-4 py-3 text-sm font-black text-[#245f9f] align-middle">{i.invoice||i.id}</td><td className="px-4 py-3 align-middle"><p className="text-sm font-bold text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#8ba2b9]">{i.phone||"—"}</p></td><td className="whitespace-nowrap px-4 py-3 text-sm text-[#6785a4] align-middle">{showDate(i.date)}</td><td className="px-4 py-3 text-sm text-[#6785a4] align-middle">{i.packageName||"—"}</td><td className="px-4 py-3 text-sm font-black text-[#173f72] align-middle">{money(totalOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#168363] align-middle">{money(paidOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#b77b2c] align-middle">{money(balanceOf(i))}</td><td className="px-4 py-3 align-middle"><Badge status={statusOf(i)}/></td><td className="px-4 py-3 align-middle">{actionButtons(i)}</td></tr>)}</tbody></table></div>
+ {filtered.length?<><div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1350px] text-left"><thead className="bg-[#edf5ff]"><tr>{[["Invoice","w-[140px]"],["Customer","w-[180px]"],["Date","w-[120px]"],["Service","w-[160px]"],["Total","w-[120px]"],["Received","w-[120px]"],["Pending","w-[120px]"],["Status","w-[120px]"],["Actions","w-[230px]"]].map(([h,w])=><th key={h} className={`whitespace-nowrap px-4 py-4 text-[11px] font-black uppercase tracking-wide text-[#6685a4] ${w}`}>{h}</th>)}</tr></thead><tbody className="divide-y divide-[#e8eff8]">{filtered.map(i=><tr key={i.id} className="hover:bg-[#f5faff]"><td className="px-4 py-3 text-sm font-black text-[#245f9f] align-middle">{i.invoice||i.id}</td><td className="px-4 py-3 align-middle"><p className="text-sm font-bold text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#8ba2b9]">{i.phone||"—"}</p></td><td className="whitespace-nowrap px-4 py-3 text-sm text-[#6785a4] align-middle">{showDate(i.date)}</td><td className="px-4 py-3 text-sm font-semibold text-[#173f72] align-middle">{getInvoiceServiceDisplay(i, getLinkedBooking(i))}</td><td className="px-4 py-3 text-sm font-black text-[#173f72] align-middle">{money(totalOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#168363] align-middle">{money(paidOf(i))}</td><td className="px-4 py-3 text-sm font-black text-[#b77b2c] align-middle">{money(balanceOf(i))}</td><td className="px-4 py-3 align-middle"><Badge status={statusOf(i)}/></td><td className="px-4 py-3 align-middle">{actionButtons(i)}</td></tr>)}</tbody></table></div>
 
- <div className="grid gap-3 p-3 sm:grid-cols-2 lg:hidden">{filtered.map(i=><div key={i.id} className="rounded-2xl border border-[#dce8f6] bg-[#fbfdff] p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><div><p className="break-all text-sm font-black text-[#245f9f]">{i.invoice||i.id}</p><p className="mt-1 text-xs text-[#8ba2b9]">{showDate(i.date)}</p></div><Badge status={statusOf(i)}/></div><p className="mt-4 font-black text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#819ab3]">{i.phone||"No phone"}</p><p className="mt-2 text-xs text-[#6785a4]">{i.packageName||"Photography / Event"}</p><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#edf5ff] p-3">{[["Total",totalOf(i)],["Received",paidOf(i)],["Pending",balanceOf(i)]].map(([label,v])=><div key={label}><p className="text-[10px] text-[#829ab3]">{label}</p><p className="mt-1 break-words text-xs font-black text-[#173f72]">{money(v)}</p></div>)}</div><div className="mt-4 border-t border-[#e5edf7] pt-3">{actionButtons(i)}</div></div>)}</div></>:<div className="flex flex-col items-center justify-center py-20 text-center"><Receipt size={42} className="text-[#82acd5]"/><h3 className="mt-4 font-black text-[#24558a]">No Payment Records</h3><p className="mt-2 text-sm text-[#8ba2b9]">Add your first invoice or change filters.</p></div>}</div>
+ <div className="grid gap-3 p-3 sm:grid-cols-2 lg:hidden">{filtered.map(i=><div key={i.id} className="rounded-2xl border border-[#dce8f6] bg-[#fbfdff] p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><div><p className="break-all text-sm font-black text-[#245f9f]">{i.invoice||i.id}</p><p className="mt-1 text-xs text-[#8ba2b9]">{showDate(i.date)}</p></div><Badge status={statusOf(i)}/></div><p className="mt-4 font-black text-[#173f72]">{i.customer}</p><p className="mt-1 text-xs text-[#819ab3]">{i.phone||"No phone"}</p><p className="mt-2 text-xs font-semibold text-[#173f72]">{getInvoiceServiceDisplay(i, getLinkedBooking(i))}</p><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-[#edf5ff] p-3">{[["Total",totalOf(i)],["Received",paidOf(i)],["Pending",balanceOf(i)]].map(([label,v])=><div key={label}><p className="text-[10px] text-[#829ab3]">{label}</p><p className="mt-1 break-words text-xs font-black text-[#173f72]">{money(v)}</p></div>)}</div><div className="mt-4 border-t border-[#e5edf7] pt-3">{actionButtons(i)}</div></div>)}</div></>:<div className="flex flex-col items-center justify-center py-20 text-center"><Receipt size={42} className="text-[#82acd5]"/><h3 className="mt-4 font-black text-[#24558a]">{payments.length === 0 ? "No payment records available." : "No Payment Records"}</h3><p className="mt-2 text-sm text-[#8ba2b9]">{payments.length === 0 ? "Record your first payment to get started." : "Add your first invoice or change filters."}</p></div>}</div>
 
  </div>
 
@@ -474,7 +503,7 @@ export default function Payments(){
 
  {error&&<p className="rounded-xl bg-[#fff0f3] p-3 text-sm text-[#c34b65]">{error}</p>}<button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#168363] px-5 py-3 text-sm font-bold text-white"><CheckCircle2 size={18}/>Save Payment to Same Invoice</button></form></Modal>}
 
- {modal==="history"&&selected&&<Modal title="Payment History" subtitle={`Invoice ${selected.invoice||selected.id}`} icon={History} onClose={close} width="max-w-lg"><div className="space-y-4"><div className="rounded-xl bg-[#eaf4ff] p-4"><p className="font-black text-[#173e72]">{selected.customer}</p><p className="mt-2 text-xs">Total {money(totalOf(selected))} · Received {money(paidOf(selected))} · Pending {money(balanceOf(selected))}</p></div>{historyOf(selected).length?historyOf(selected).map((tx,index)=><div key={tx.id||index} className="rounded-xl border border-[#dce8f6] bg-white p-4"><div className="flex justify-between gap-3"><p className="text-sm font-bold text-[#173e72]">Payment {index+1}</p><p className="text-sm font-black text-[#168363]">{money(txAmount(tx))}</p></div><p className="mt-2 text-xs text-[#819ab3]">{showDate(tx.date)} · {tx.method||"Cash"} · {tx.status||"Paid"}</p>{tx.note&&<p className="mt-2 text-xs text-[#6785a4]">{tx.note}</p>}</div>):<p className="text-sm text-[#819ab3]">No payments received yet.</p>}{balanceOf(selected)>0&&<button type="button" onClick={()=>openCollect(selected)} className={`${button} w-full`}><Plus size={17}/>Add Payment</button>}{isInvoiceEligible(selected)&&<button type="button" onClick={()=>pdfInvoice(selected)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce8f6] bg-white px-4 py-3 text-sm font-bold text-[#2869ac]"><Download size={17}/>Download Updated Invoice</button>}</div></Modal>}
+ {modal==="history"&&selected&&<Modal title="Payment History" subtitle={`Invoice ${selected.invoice||selected.id}`} icon={History} onClose={close} width="max-w-lg"><div className="space-y-4"><div className="rounded-xl bg-[#eaf4ff] p-4"><p className="font-black text-[#173e72]">{selected.customer}</p><p className="mt-2 text-xs">Total {money(totalOf(selected))} · Received {money(paidOf(selected))} · Pending {money(balanceOf(selected))}</p></div>{historyOf(selected).length?historyOf(selected).map((tx,index)=><div key={tx.id||index} className="rounded-xl border border-[#dce8f6] bg-white p-4"><div className="flex justify-between gap-3"><p className="text-sm font-bold text-[#173e72]">Payment {index+1}</p><p className="text-sm font-black text-[#168363]">{money(txAmount(tx))}</p></div><p className="mt-2 text-xs text-[#819ab3]">{showDate(tx.date)} · {tx.method||"Cash"} · {tx.status||"Paid"}</p>{tx.note&&<p className="mt-2 text-xs text-[#6785a4]">{tx.note}</p>}</div>):<p className="text-sm text-[#819ab3]">No payments received yet.</p>}{balanceOf(selected)>0&&<button type="button" onClick={()=>openCollect(selected)} className={`${button} w-full`}><Plus size={17}/>Add Payment</button>}{isInvoiceEligible(selected)&&<button type="button" onClick={()=>pdfInvoice(selected,"download",getLinkedBooking(selected))} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce8f6] bg-white px-4 py-3 text-sm font-bold text-[#2869ac]"><Download size={17}/>Download Updated Invoice</button>}</div></Modal>}
 
  {modal==="delete"&&selected&&<Modal title="Delete Invoice" subtitle="Confirm deletion" icon={Trash2} onClose={close} width="max-w-md"><div className="space-y-5"><div className="rounded-xl bg-[#fff0f3] p-5 text-sm leading-6 text-[#ad4961]"><AlertCircle className="mb-3"/>Delete invoice <strong>{selected.invoice||selected.id}</strong> for <strong>{selected.customer}</strong>?{paidOf(selected)>0&&<p className="mt-2 font-bold">This invoice contains payments and cannot be deleted here.</p>}</div>{error&&<p className="rounded-xl bg-[#fff0f3] p-3 text-sm text-[#c34b65]">{error}</p>}<div className="flex gap-3"><button type="button" onClick={close} className="flex-1 rounded-xl border border-[#d5e4f4] bg-white px-5 py-3 text-sm font-bold">Cancel</button><button type="button" onClick={deleteInvoice} disabled={paidOf(selected)>0} className="flex-1 rounded-xl bg-[#c34b65] px-5 py-3 text-sm font-bold text-white disabled:opacity-40">Delete Invoice</button></div></div></Modal>}
 

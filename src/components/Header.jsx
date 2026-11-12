@@ -4,25 +4,20 @@ import { createPortal } from "react-dom";
 import {
   Menu,
   Bell,
-  ChevronDown,
   ChevronRight,
-  LogOut,
-  UserCircle,
-  Building2,
-  X,
-  Pencil,
-  Mail,
-  LockKeyhole,
-  User,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
   Camera,
-  KeyRound,
-  ShieldCheck,
+  CalendarDays,
+  Truck,
+  CheckCircle2,
 } from "lucide-react";
-import { api } from "../api/client";
+import studioLogo from "../assets/favicon.png";
+import {
+  getGeneratedNotifications,
+  getUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  UPDATE_EVENT,
+} from "../services/notificationService";
 
 /* ==========================================
    CONSTANTS
@@ -66,7 +61,7 @@ const pageTitles = {
   branches: "Multi-Branch Management",
   reports: "Reports & Analytics",
   roles: "Roles & Permissions",
-  notifications: "Notifications & Reminders",
+  notifications: "Notifications & Upcoming Schedule",
   auditlogs: "Audit Logs & Activity",
   settings: "Studio Settings",
 };
@@ -1138,123 +1133,61 @@ export default function Header({
 }) {
   const playSound = useBeautifulSound();
 
-  const [profileOpen, setProfileOpen] =
-    useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
-  const [editOpen, setEditOpen] =
-    useState(false);
-
-  const [resetOpen, setResetOpen] =
-    useState(false);
-
-  const [profile, setProfile] =
-    useState(readProfile);
-
-  const profileRef = useRef(null);
+  const [notifications, setNotifications] = useState(() => getGeneratedNotifications());
+  const [unreadCount, setUnreadCount] = useState(() => getUnreadNotificationCount());
 
   const title =
     pageTitles[activePage] || "Dashboard";
 
   useEffect(() => {
+    const syncNotifs = () => {
+      setNotifications(getGeneratedNotifications());
+      setUnreadCount(getUnreadNotificationCount());
+    };
+    syncNotifs();
+    window.addEventListener("storage", syncNotifs);
+    window.addEventListener(UPDATE_EVENT, syncNotifs);
+    return () => {
+      window.removeEventListener("storage", syncNotifs);
+      window.removeEventListener(UPDATE_EVENT, syncNotifs);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleOutsideClick = (event) => {
       if (
-        profileRef.current &&
-        !profileRef.current.contains(
-          event.target
-        )
+        notifRef.current &&
+        !notifRef.current.contains(event.target)
       ) {
-        setProfileOpen(false);
+        setNotifOpen(false);
       }
     };
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
-        setProfileOpen(false);
+        setNotifOpen(false);
       }
     };
 
-    document.addEventListener(
-      "pointerdown",
-      handleOutsideClick
-    );
-
-    window.addEventListener(
-      "keydown",
-      handleEscape
-    );
+    document.addEventListener("pointerdown", handleOutsideClick);
+    window.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handleOutsideClick
-      );
-
-      window.removeEventListener(
-        "keydown",
-        handleEscape
-      );
+      document.removeEventListener("pointerdown", handleOutsideClick);
+      window.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
   useEffect(() => {
-    setProfileOpen(false);
+    setNotifOpen(false);
   }, [activePage]);
-
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchLiveAdmin = async () => {
-      try {
-        const user = await api.auth.me();
-        if (active && user) {
-          const rawName = user.name || user.username || "Admin";
-          const loaded = {
-            name: (rawName === "Prathiksha (Admin)" || rawName === "Prathiksha") ? "Admin" : rawName,
-            role: user.role || (user.is_superuser ? "Administrator" : "Staff"),
-            email: user.email || "admin@studiorawpicturez.com",
-          };
-          setProfile(loaded);
-          try {
-            localStorage.setItem(PROFILE_KEY, JSON.stringify(loaded));
-          } catch {}
-        }
-      } catch {
-        // Fallback to local profile
-      }
-    };
-
-    const fetchUnread = async () => {
-      try {
-        const res = await api.notifications.unreadCount();
-        if (active && typeof res?.unread_count === "number") {
-          setUnreadCount(res.unread_count);
-        }
-      } catch {}
-    };
-
-    fetchLiveAdmin();
-    fetchUnread();
-
-    const syncProfile = () => {
-      setProfile(readProfile());
-      fetchUnread();
-    };
-
-    window.addEventListener("storage", syncProfile);
-    window.addEventListener("studioraw:data-updated", syncProfile);
-
-    return () => {
-      active = false;
-      window.removeEventListener("storage", syncProfile);
-      window.removeEventListener("studioraw:data-updated", syncProfile);
-    };
-  }, []);
 
   const openSidebar = () => {
     playSound("click");
-    setProfileOpen(false);
+    setNotifOpen(false);
 
     if (
       typeof onMenuClick === "function"
@@ -1272,56 +1205,24 @@ export default function Header({
         : "click"
     );
 
-    setProfileOpen(false);
+    setNotifOpen(false);
     onNavigate?.(page);
   };
 
-  const handleLogout = () => {
-    playSound("logout");
-    setProfileOpen(false);
-    onLogout?.();
-  };
-
-  const openEditProfile = () => {
-    playSound("profile");
-    setProfileOpen(false);
-    setEditOpen(true);
-  };
-
-  const openResetPassword = () => {
-    playSound("profile");
-    setProfileOpen(false);
-    setResetOpen(true);
-  };
-
-  const saveProfile = async (updatedProfile) => {
-    try {
-      const cleanProfile = {
-        name: updatedProfile.name,
-        email: updatedProfile.email,
-        role: updatedProfile.role,
-      };
-
-      try {
-        await api.auth.updateProfile({
-          name: updatedProfile.name,
-          email: updatedProfile.email,
-        });
-      } catch (err) {
-        console.warn("Backend profile sync notice:", err);
-      }
-
-      localStorage.setItem(
-        PROFILE_KEY,
-        JSON.stringify(cleanProfile)
-      );
-
-      setProfile(cleanProfile);
-
-      return true;
-    } catch {
-      return false;
+  const handleNotifClick = (notif) => {
+    playSound("notification");
+    markNotificationAsRead(notif.id);
+    setNotifOpen(false);
+    if (notif.targetModule) {
+      navigateTo(notif.targetModule);
     }
+  };
+
+  const handleMarkAllRead = () => {
+    playSound("click");
+    markAllNotificationsAsRead();
+    setNotifications(getGeneratedNotifications());
+    setUnreadCount(0);
   };
 
   return (
@@ -1517,221 +1418,196 @@ export default function Header({
 
           {/* RIGHT */}
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
-            {/* BRANCH */}
-
-            <div className="hidden h-11 items-center gap-2 rounded-2xl border border-[#e1e8f2] bg-[#f8fbff] px-3 xl:flex">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#e8f0fb] text-[#244d8b]">
-                <Building2 size={15} />
-              </span>
-
-              <span className="text-xs font-bold text-[#10264d]">
-                Main Branch
-              </span>
-            </div>
-
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {/* NOTIFICATIONS */}
-
-            <button
-              type="button"
-              onClick={() =>
-                navigateTo("notifications")
-              }
-              aria-label="Open notifications"
-              title="Notifications"
-              className="sr-premium-control sr-premium-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#dce5f2] bg-[#f8fbff] text-[#10264d] sm:h-11 sm:w-11"
-            >
-              <Bell size={19} />
-
-              {unreadCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#315b99] px-1 text-[9px] font-black text-white shadow-sm">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              ) : (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-slate-400 px-1 text-[9px] font-black text-white shadow-sm">
-                  0
-                </span>
-              )}
-            </button>
-
-            {/* DIVIDER */}
-
-            <div className="mx-0.5 hidden h-8 w-px bg-[#e1e8f2] sm:block" />
-
-            {/* PROFILE */}
-
-            <div
-              ref={profileRef}
-              className="relative shrink-0"
-            >
+            <div ref={notifRef} className="relative">
               <button
                 type="button"
                 onClick={() => {
-                  playSound("profile");
-
-                  setProfileOpen(
-                    (previous) => !previous
-                  );
+                  playSound("notification");
+                  setNotifOpen((previous) => !previous);
                 }}
-                aria-label="Open profile menu"
-                aria-expanded={profileOpen}
-                aria-haspopup="menu"
-                className={`sr-premium-control flex items-center gap-2 rounded-2xl border p-1 transition-all duration-300 ${
-                  profileOpen
-                    ? "border-[#244d8b] bg-[#eef5ff] shadow-[0_0_0_3px_rgba(36,77,139,0.08)]"
-                    : "border-transparent hover:border-[#dce5f2] hover:bg-[#f5f8fd]"
+                aria-label="Open notifications"
+                aria-expanded={notifOpen}
+                title="Notifications"
+                className={`sr-premium-control sr-premium-bell relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 sm:h-11 sm:w-11 ${
+                  notifOpen
+                    ? "border-[#244d8b] bg-[#eef5ff] text-[#244d8b] shadow-[0_0_0_3px_rgba(36,77,139,0.08)]"
+                    : "border-[#dce5f2] bg-[#f8fbff] text-[#10264d] hover:bg-[#edf4fc]"
                 }`}
               >
-                {/* DUMMY ADMIN IMAGE */}
+                <Bell size={19} />
 
-                <AdminAvatar
-                  name={profile.name}
-                  className="h-9 w-9 rounded-xl border border-[#dce5f2] shadow-[0_5px_14px_rgba(16,38,77,0.18)] sm:h-10 sm:w-10"
-                />
-
-                <div className="hidden min-w-0 text-left xl:block">
-                  <p className="max-w-32 truncate text-sm font-extrabold text-[#10264d]">
-                    {profile.name}
-                  </p>
-
-                  <p className="text-[11px] text-[#526581]">
-                    {profile.role}
-                  </p>
-                </div>
-
-                <ChevronDown
-                  size={15}
-                  className={`hidden shrink-0 text-[#526581] transition-transform duration-300 sm:block ${
-                    profileOpen
-                      ? "rotate-180"
-                      : ""
-                  }`}
-                />
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#244d8b] px-1 text-[9px] font-black text-white shadow-sm">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-slate-400 px-1 text-[9px] font-black text-white shadow-sm">
+                    0
+                  </span>
+                )}
               </button>
 
-              {/* PROFILE DROPDOWN */}
-
-              {profileOpen && (
+              {/* NOTIFICATION DROPDOWN PANEL */}
+              {notifOpen && (
                 <div
-                  role="menu"
-                  className="sr-premium-dropdown absolute right-0 top-full z-50 mt-3 w-64 max-w-[calc(100vw-16px)] overflow-hidden rounded-[20px] border border-[#dce5f2] bg-white shadow-[0_20px_55px_rgba(16,38,77,0.16)]"
+                  role="dialog"
+                  aria-label="Notifications panel"
+                  className="sr-premium-dropdown absolute right-0 top-full z-50 mt-3 w-80 max-w-[calc(100vw-24px)] overflow-hidden rounded-[22px] border border-[#dce5f2] bg-white shadow-[0_22px_60px_rgba(16,38,77,0.18)] sm:w-96"
                 >
-                  {/* PROFILE INFO */}
-
-                  <div className="relative overflow-hidden bg-[#10264d] p-4 text-white">
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-blue-300/15 blur-2xl" />
-
-                    <div className="relative flex items-center gap-3">
-                      {/* DUMMY ADMIN IMAGE */}
-
-                      <AdminAvatar
-                        name={profile.name}
-                        className="h-11 w-11 rounded-xl border border-white/20"
-                      />
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-extrabold text-white">
-                          {profile.name}
-                        </p>
-
-                        <p className="mt-0.5 text-xs text-blue-100">
-                          {profile.role}
-                        </p>
-                      </div>
+                  {/* PANEL HEADER */}
+                  <div className="flex items-center justify-between border-b border-[#e5effb] bg-gradient-to-r from-[#f0f6ff] to-[#f8fbff] px-4 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black text-[#10264d]">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="rounded-full bg-[#244d8b] px-2 py-0.5 text-[10px] font-bold text-white">
+                          {unreadCount} New
+                        </span>
+                      )}
                     </div>
-
-                    <p className="relative mt-3 truncate border-t border-white/15 pt-3 text-[11px] text-blue-100">
-                      {profile.email}
-                    </p>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] font-bold text-[#2d64a6] hover:underline"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
 
-                  {/* ACTIONS */}
+                  {/* NOTIFICATION LIST */}
+                  <div className="max-h-[380px] divide-y divide-[#edf3fa] overflow-y-auto bg-white">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf5ff] text-[#2d64a6]">
+                          <Bell size={22} />
+                        </div>
+                        <p className="text-sm font-extrabold text-[#10264d]">No notifications yet</p>
+                        <p className="mt-1 text-xs text-[#7188a8]">
+                          No upcoming bookings or delivery reminders.
+                        </p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => {
+                        const isBooking = n.module === "bookings";
+                        const urgencyBadgeStyles = {
+                          overdue: "bg-rose-50 text-rose-700 border-rose-200",
+                          today: "bg-amber-50 text-amber-800 border-amber-200",
+                          upcoming: "bg-blue-50 text-blue-700 border-blue-200",
+                          completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                        };
 
-                  <div className="p-2">
-                    {/* EDIT PROFILE */}
+                        return (
+                          <div
+                            key={n.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleNotifClick(n)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleNotifClick(n);
+                              }
+                            }}
+                            className={`group flex cursor-pointer items-start gap-3 p-3.5 transition-colors hover:bg-[#f5f9ff] ${
+                              !n.isRead ? "bg-[#fcfdff]" : "bg-white opacity-80"
+                            }`}
+                          >
+                            {/* ICON */}
+                            <div
+                              className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
+                                isBooking
+                                  ? "bg-blue-100 text-[#1f508d]"
+                                  : n.urgency === "completed"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {isBooking ? (
+                                <CalendarDays size={17} />
+                              ) : n.urgency === "completed" ? (
+                                <CheckCircle2 size={17} />
+                              ) : (
+                                <Truck size={17} />
+                              )}
+                            </div>
 
+                            {/* CONTENT */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6c86a6]">
+                                  {isBooking ? "Booking" : "Delivery"}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${
+                                    urgencyBadgeStyles[n.urgency] || urgencyBadgeStyles.upcoming
+                                  }`}
+                                >
+                                  {n.urgencyLabel}
+                                </span>
+                              </div>
+
+                              <p className="mt-1 truncate text-xs font-black text-[#10264d]">
+                                {n.customer}
+                              </p>
+                              <p className="text-[11px] font-semibold text-[#486383]">
+                                {n.event}
+                              </p>
+
+                              <p className="mt-1 text-[11px] text-[#7188a8]">
+                                {n.dateFormatted} {n.timeFormatted ? `· ${n.timeFormatted}` : ""}
+                                {n.staff ? ` · Staff: ${n.staff}` : ""}
+                              </p>
+                            </div>
+
+                            {/* UNREAD DOT */}
+                            {!n.isRead && (
+                              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#244d8b]" />
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* PANEL FOOTER */}
+                  <div className="border-t border-[#e5effb] bg-[#f8fbff] p-2.5 text-center">
                     <button
                       type="button"
-                      role="menuitem"
-                      onClick={openEditProfile}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:bg-[#eef5ff]"
+                      onClick={() => {
+                        setNotifOpen(false);
+                        navigateTo("notifications");
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#244d8b] hover:underline"
                     >
-                      <Pencil size={17} />
-
-                      Edit Profile
-
-                      <ChevronRight
-                        size={15}
-                        className="ml-auto transition-transform group-hover:translate-x-1"
-                      />
-                    </button>
-
-                    {/* FORGOT PASSWORD */}
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={openResetPassword}
-                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#10264d] transition-all duration-200 hover:bg-[#eef5ff]"
-                    >
-                      <KeyRound size={17} />
-
-                      Forgot Password
-
-                      <ChevronRight
-                        size={15}
-                        className="ml-auto transition-transform group-hover:translate-x-1"
-                      />
-                    </button>
-
-                    <div className="my-1 border-t border-[#e7edf6]" />
-
-                    {/* LOGOUT */}
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-rose-500 transition hover:bg-rose-50"
-                    >
-                      <LogOut size={17} />
-
-                      Logout
+                      View All Notifications & Schedule
+                      <ChevronRight size={14} />
                     </button>
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* DIVIDER */}
+            <div className="mx-0.5 hidden h-8 w-px bg-[#e1e8f2] sm:block" />
+
+            {/* STUDIO RAW PICTUREZ LOGO */}
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center sm:h-11 sm:w-11"
+              title="Studio Raw Picturez"
+            >
+              <img
+                src={studioLogo}
+                alt="Studio Raw Picturez"
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
             </div>
           </div>
         </div>
       </header>
-
-      {/* EDIT PROFILE MODAL */}
-
-      {editOpen && (
-        <EditProfileModal
-          profile={profile}
-          onClose={() =>
-            setEditOpen(false)
-          }
-          onSave={saveProfile}
-          playSound={playSound}
-        />
-      )}
-
-      {/* RESET PASSWORD MODAL */}
-
-      {resetOpen && (
-        <ResetPasswordModal
-          onClose={() =>
-            setResetOpen(false)
-          }
-          playSound={playSound}
-          onResetPassword={
-            onResetPassword
-          }
-        />
-      )}
     </>
   );
 }

@@ -572,7 +572,7 @@ export default function AuditLogs() {
   const deleteLog = (log) => {
     if (log.source !== "Manual") return;
 
-    if (!window.confirm("Delete this demo activity record?")) {
+    if (!window.confirm("Delete this activity record?")) {
       return;
     }
 
@@ -854,7 +854,7 @@ export default function AuditLogs() {
         />
 
         <p className="text-xs leading-6 text-amber-800">
-          Demo activity records are stored in this browser. This is
+          Activity records are stored in this browser. This is
           not a tamper-proof security audit trail. Automatic event
           logging requires integration with each module and
           server-side logging for production.
@@ -865,7 +865,7 @@ export default function AuditLogs() {
       {showForm && (
         <Modal
           title="Add Activity Record"
-          subtitle="Create a manual demo activity entry"
+          subtitle="Create a manual activity entry"
           icon={Plus}
           onClose={closeForm}
         >

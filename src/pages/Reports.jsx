@@ -10,6 +10,7 @@ import { api } from "../api/client";
 import {
   getDeduplicatedMonthlyExpenses,
   calculateMonthlyExpenseTotal,
+  syncStaffSalaryExpenses,
 } from "../services/financialService";
 
 import {
@@ -1446,6 +1447,7 @@ export default function Reports() {
   /* LIVE MODULE CONNECTION */
 
   const loadReports = useCallback(() => {
+    syncStaffSalaryExpenses();
     const latest = loadAllData();
 
     if (

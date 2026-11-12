@@ -171,51 +171,7 @@ const dateOffset = (days) => {
   ].join("-");
 };
 
-const DEMO_DATA = CUSTOMERS.map((customer, index) => {
-  const amount = 35000 + (index % 9) * 25000;
-
-  const advance =
-    index % 5 === 0
-      ? amount
-      : Math.round(
-          amount * (index % 2 === 0 ? 0.4 : 0.3)
-        );
-
-  // Cycle through all available event types.
-  const eventType = EVENT_TYPES[index % EVENT_TYPES.length];
-
-  return {
-    id: `EVENT-DEMO-${String(index + 1).padStart(3, "0")}`,
-    eventName: `${customer} - ${eventType}`,
-    customer,
-    phone: `98765${String(10000 + index).slice(-5)}`,
-    eventType,
-    eventDate: dateOffset(
-      index < 5 ? -(25 - index * 4) : index * 4
-    ),
-    startTime: index % 3 === 0 ? "09:00" : "10:00",
-    endTime: index % 3 === 0 ? "17:00" : "18:00",
-    venue: VENUES[index % (VENUES.length - 1)],
-    coordinator:
-      COORDINATORS[index % (COORDINATORS.length - 1)],
-    guests: 100 + (index % 8) * 100,
-    services: DEMO_SERVICES[index],
-    amount,
-    advance,
-    status:
-      index < 4
-        ? "Completed"
-        : index < 7
-        ? "Confirmed"
-        : index < 10
-        ? "In Progress"
-        : index === 19
-        ? "Cancelled"
-        : "Planning",
-    priority: PRIORITIES[index % PRIORITIES.length],
-    notes: `Demo event management booking for ${eventType}`,
-  };
-});
+const DEMO_DATA = [];
 
 const emptyForm = {
   eventName: "",
@@ -933,22 +889,12 @@ function Detail({
 export default function EventManagement() {
   const [events, setEvents] = useState(() => {
     try {
-      const saved =
-        localStorage.getItem(
-          STORAGE_KEY
-        );
-
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-
-        return Array.isArray(parsed)
-          ? parsed
-          : DEMO_DATA;
-      }
-
-      return DEMO_DATA;
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return DEMO_DATA;
+      return [];
     }
   });
 
@@ -1711,7 +1657,7 @@ export default function EventManagement() {
                 />
 
                 <p className="mt-3 text-sm text-[#829db9]">
-                  No events found.
+                  {events.length === 0 ? "No event management bookings yet." : "No events found."}
                 </p>
               </div>
             ) : (
@@ -1961,7 +1907,7 @@ export default function EventManagement() {
                       colSpan={11}
                       className="px-4 py-16 text-center text-[#91abc8]"
                     >
-                      No events found.
+                      {events.length === 0 ? "No event management bookings yet." : "No events found."}
                     </td>
                   </tr>
                 ) : (

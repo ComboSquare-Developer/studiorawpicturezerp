@@ -82,110 +82,7 @@ const STATUSES = [
 
 const PAYMENT_MODES = ["Cash", "UPI", "Bank Transfer", "Card"];
 
-const demoData = [
-  {
-    id: 1,
-    customer: "Arun Kumar",
-    phone: "9876543210",
-    giftType: "LED Photo Frame",
-    occasion: "Wedding",
-    quantity: 2,
-    orderDate: "2026-10-20",
-    deliveryDate: "2026-10-28",
-    customization: "Couple photo with names",
-    size: "12x18 inches",
-    amount: 3500,
-    advance: 1500,
-    paymentMode: "UPI",
-    status: "Designing",
-    notes: "Warm white LED",
-  },
-  {
-    id: 2,
-    customer: "Priya",
-    phone: "9876501234",
-    giftType: "Photo Mug",
-    occasion: "Birthday",
-    quantity: 5,
-    orderDate: "2026-10-18",
-    deliveryDate: "2026-10-25",
-    customization: "Birthday photos and wishes",
-    size: "Standard",
-    amount: 2500,
-    advance: 2500,
-    paymentMode: "Cash",
-    status: "Ready",
-    notes: "",
-  },
-  {
-    id: 3,
-    customer: "Vijay",
-    phone: "9876512345",
-    giftType: "Customized Photo Album",
-    occasion: "Anniversary",
-    quantity: 1,
-    orderDate: "2026-10-12",
-    deliveryDate: "2026-10-21",
-    customization: "30-page couple album",
-    size: "12x12 inches",
-    amount: 6500,
-    advance: 6500,
-    paymentMode: "UPI",
-    status: "Delivered",
-    notes: "Premium matte finish",
-  },
-  {
-    id: 4,
-    customer: "Divya",
-    phone: "9876523456",
-    giftType: "Photo Cushion",
-    occasion: "Birthday",
-    quantity: 3,
-    orderDate: "2026-10-21",
-    deliveryDate: "2026-11-02",
-    customization: "Family photo print",
-    size: "16x16 inches",
-    amount: 3000,
-    advance: 1000,
-    paymentMode: "Cash",
-    status: "Pending",
-    notes: "",
-  },
-  {
-    id: 5,
-    customer: "Karthik",
-    phone: "9876534567",
-    giftType: "Crystal Photo Gift",
-    occasion: "Anniversary",
-    quantity: 2,
-    orderDate: "2026-10-22",
-    deliveryDate: "2026-11-04",
-    customization: "Couple portrait engraving",
-    size: "Medium",
-    amount: 4800,
-    advance: 2000,
-    paymentMode: "UPI",
-    status: "Printing",
-    notes: "Gift wrapping required",
-  },
-  {
-    id: 6,
-    customer: "Meena",
-    phone: "9876545670",
-    giftType: "Photo Calendar",
-    occasion: "Corporate Gift",
-    quantity: 20,
-    orderDate: "2026-10-19",
-    deliveryDate: "2026-11-10",
-    customization: "Company branding",
-    size: "A4",
-    amount: 12000,
-    advance: 5000,
-    paymentMode: "Bank Transfer",
-    status: "Pending",
-    notes: "Bulk order",
-  },
-];
+const demoData = [];
 
 const today = () => {
   const date = new Date();
@@ -481,13 +378,11 @@ export default function CustomizedGifts() {
   const [gifts, setGifts] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY);
-
-      if (saved === null) return demoData;
-
+      if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : demoData;
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return demoData;
+      return [];
     }
   });
 
@@ -1020,7 +915,7 @@ export default function CustomizedGifts() {
 
             {filtered.length === 0 && (
               <div className="rounded-xl border border-dashed border-[#cfe5fb] bg-[#f7fbff] py-12 text-center text-sm text-[#7898b7] sm:col-span-2">
-                No gift orders found.
+                {gifts.length === 0 ? "No customized gifts orders yet." : "No gift orders found."}
               </div>
             )}
           </div>
@@ -1127,7 +1022,7 @@ export default function CustomizedGifts() {
                       colSpan={10}
                       className="py-14 text-center text-[#7898b7]"
                     >
-                      No gift orders found.
+                      {gifts.length === 0 ? "No customized gifts orders yet." : "No gift orders found."}
                     </td>
                   </tr>
                 )}

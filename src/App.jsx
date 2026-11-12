@@ -212,6 +212,16 @@ export default function App() {
     setSidebarOpen(false);
   };
 
+  useEffect(() => {
+    const onGlobalNav = (e) => {
+      if (e?.detail?.page) {
+        handleNavigation(e.detail.page);
+      }
+    };
+    window.addEventListener("studioraw:navigate", onGlobalNav);
+    return () => window.removeEventListener("studioraw:navigate", onGlobalNav);
+  }, []);
+
   const handleForgotPassword = async ({ email }) => {
     try {
       const res = await apiRequest("auth/forgot-password/", {
@@ -298,7 +308,7 @@ export default function App() {
             <main className="min-w-0 flex-1 pb-20 lg:pb-0">
               <Suspense fallback={<Loader />}>
                 {ActivePage ? (
-                  <ActivePage />
+                  <ActivePage onNavigate={handleNavigation} />
                 ) : (
                   <div className="flex min-h-[70vh] items-center justify-center p-5">
                     <div

@@ -96,6 +96,7 @@ export function initializeDemoData(force = false) {
       "studioraw_staff_v4_deduped_3",
       "studioraw_staff_seeded_v5_exact3",
       "studioraw_wedding_demo_20_v1",
+      "studioraw_videography_demo_30_v1",
       "studioraw_wedding_videography_v1",
       "studioraw_wedding_video_clean_v1",
       "studioraw_photoshoots",

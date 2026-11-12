@@ -39,164 +39,7 @@ const CUSTOMER_STORAGE_KEY = "studio_raw_customers";
 const BOOKING_STORAGE_KEY = "studioraw_bookings";
 const DATA_UPDATED_EVENT = "studioraw:data-updated";
 
-const demoData = [
-  {
-    id: 1,
-    name: "Arun Kumar",
-    email: "arun@gmail.com",
-    number: "9876543210",
-    mainEvent: "Wedding",
-    eventDate: "2026-11-15",
-    city: "Chennai",
-    weddingCoverage: "Full Day",
-    notes: "Candid photography and cinematic video",
-    status: "New",
-    budget: "₹1,20,000",
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    email: "priya@gmail.com",
-    number: "9876501234",
-    mainEvent: "Wedding",
-    eventDate: "2026-12-05",
-    city: "Coimbatore",
-    weddingCoverage: "Full Day",
-    notes: "Traditional photography with wedding album",
-    status: "In Discussion",
-    budget: "₹85,000",
-  },
-  {
-    id: 3,
-    name: "Vijay Raj",
-    email: "vijay@gmail.com",
-    number: "9123456780",
-    mainEvent: "Engagement",
-    eventDate: "2026-11-25",
-    city: "Madurai",
-    weddingCoverage: "Half Day",
-    notes: "Photography and highlight video",
-    status: "Follow-up",
-    budget: "₹45,000",
-  },
-  {
-    id: 4,
-    name: "Divya R",
-    email: "divya@gmail.com",
-    number: "9988776655",
-    mainEvent: "Wedding",
-    eventDate: "2026-12-20",
-    city: "Tirunelveli",
-    weddingCoverage: "Two Days",
-    notes: "Candid photos and outdoor couple shoot",
-    status: "Confirmed",
-    budget: "₹1,50,000",
-  },
-  {
-    id: 5,
-    name: "Karthik M",
-    email: "karthik@gmail.com",
-    number: "9090901234",
-    mainEvent: "Wedding",
-    eventDate: "2027-01-10",
-    city: "Nagercoil",
-    weddingCoverage: "Full Day",
-    notes: "Traditional photography and video coverage",
-    status: "New",
-    budget: "₹95,000",
-  },
-  {
-    id: 6,
-    name: "Meena Devi",
-    email: "meena@gmail.com",
-    number: "9876123450",
-    mainEvent: "Birthday",
-    eventDate: "2026-11-30",
-    city: "Trichy",
-    weddingCoverage: "Not Applicable",
-    notes: "Family portraits and event photography",
-    status: "In Discussion",
-    budget: "₹25,000",
-  },
-  {
-    id: 7,
-    name: "Rahul S",
-    email: "rahul@gmail.com",
-    number: "9845671230",
-    mainEvent: "Wedding",
-    eventDate: "2027-02-14",
-    city: "Salem",
-    weddingCoverage: "Two Days",
-    notes: "Candid photography and cinematic film",
-    status: "Confirmed",
-    budget: "₹1,80,000",
-  },
-  {
-    id: 8,
-    name: "Anitha R",
-    email: "anitha@gmail.com",
-    number: "9789012345",
-    mainEvent: "Baby Shower",
-    eventDate: "2026-12-12",
-    city: "Erode",
-    weddingCoverage: "Not Applicable",
-    notes: "Family photos and event highlights",
-    status: "New",
-    budget: "₹30,000",
-  },
-  {
-    id: 9,
-    name: "Sanjay Kumar",
-    email: "sanjay@gmail.com",
-    number: "9840012345",
-    mainEvent: "Wedding",
-    eventDate: "2027-01-22",
-    city: "Bengaluru",
-    weddingCoverage: "Full Day",
-    notes: "Premium wedding photography package",
-    status: "Follow-up",
-    budget: "₹1,40,000",
-  },
-  {
-    id: 10,
-    name: "Keerthana S",
-    email: "keerthana@gmail.com",
-    number: "9894012345",
-    mainEvent: "Engagement",
-    eventDate: "2026-12-28",
-    city: "Chennai",
-    weddingCoverage: "Half Day",
-    notes: "Couple portraits and candid photography",
-    status: "Confirmed",
-    budget: "₹50,000",
-  },
-  {
-    id: 11,
-    name: "Ajay Kumar",
-    email: "ajay@gmail.com",
-    number: "9790012345",
-    mainEvent: "Wedding",
-    eventDate: "2027-02-05",
-    city: "Coimbatore",
-    weddingCoverage: "Two Days",
-    notes: "Wedding album and cinematic video",
-    status: "In Discussion",
-    budget: "₹1,60,000",
-  },
-  {
-    id: 12,
-    name: "Nithya R",
-    email: "nithya@gmail.com",
-    number: "9677012345",
-    mainEvent: "Birthday",
-    eventDate: "2026-11-18",
-    city: "Madurai",
-    weddingCoverage: "Not Applicable",
-    notes: "Birthday event and family photography",
-    status: "New",
-    budget: "₹20,000",
-  },
-];
+const demoData = [];
 
 const emptyForm = {
   name: "",
@@ -459,7 +302,7 @@ function loadEnquiries() {
     console.error("Unable to load enquiries:", error);
   }
 
-  return demoData.map(cleanEnquiry);
+  return [];
 }
 
 /* =========================================
@@ -492,7 +335,6 @@ function syncEnquiryToModules(enquiry) {
   const budget = parseAmount(enquiry.budget);
 
   const customers = readRecords(CUSTOMER_STORAGE_KEY);
-  const bookings = readRecords(BOOKING_STORAGE_KEY);
 
   const confirmed =
     String(enquiry.status || "")
@@ -523,37 +365,7 @@ function syncEnquiryToModules(enquiry) {
   const customerId =
     previousCustomer?.id || enquiry.customerId || `CUS-${Date.now().toString().slice(-4)}`;
 
-  // Find only the booking belonging to this enquiry.
-  let bookingIndex = bookings.findIndex((booking) => {
-    return (
-      (booking.enquiryId != null &&
-        String(booking.enquiryId) === enquiryId) ||
-      (enquiry.bookingId &&
-        String(booking.id) === String(enquiry.bookingId))
-    );
-  });
-
-  if (bookingIndex < 0) {
-    bookingIndex = bookings.findIndex((booking) => {
-      return (
-        !booking.enquiryId &&
-        normalizePhone(booking.phone) === phone &&
-        normalizeDate(booking.date) === date &&
-        String(booking.event || "")
-          .trim()
-          .toLowerCase() === eventName.toLowerCase()
-      );
-    });
-  }
-
-  const previousBooking =
-    bookingIndex >= 0 ? bookings[bookingIndex] : null;
-
-  const bookingId =
-    previousBooking?.id || enquiry.bookingId || `BK-${Date.now().toString().slice(-4)}`;
-
   let nextCustomers = [...customers];
-  let nextBookings = [...bookings];
 
   if (confirmed) {
     // Only Confirmed enquiries create or update customer records
@@ -583,64 +395,16 @@ function syncEnquiryToModules(enquiry) {
       nextCustomers.unshift(updatedCustomer);
     }
 
-    const bookingStatus =
-      previousBooking?.status === "Completed"
-        ? "Completed"
-        : "Confirmed";
-
-    const updatedBooking = {
-      ...(previousBooking || {}),
-      id: bookingId,
-      enquiryId: enquiry.id,
-      customerId,
-      customer: name,
-      customerName: name,
-      phone,
-      email,
-      event: eventName,
-      eventType: eventName,
-      service: enquiry.mainEvent || "",
-      serviceDetail: enquiry.serviceDetail || "",
-      date: date || previousBooking?.date || "",
-      eventDate: date || previousBooking?.eventDate || "",
-      time: previousBooking?.time || "10:00",
-      location: city || previousBooking?.location || "",
-      city,
-      photographer: previousBooking?.photographer || "Not Assigned",
-      totalAmount: budget,
-      amount: budget,
-      status: bookingStatus,
-      paymentStatus: previousBooking?.paymentStatus || "Unpaid",
-      source: "Enquiry",
-      weddingCoverage: enquiry.weddingCoverage || "",
-      notes: enquiry.notes || "",
-      createdAt: previousBooking?.createdAt || now,
-      updatedAt: now,
-    };
-
-    if (bookingIndex >= 0) {
-      nextBookings[bookingIndex] = updatedBooking;
-    } else {
-      nextBookings.unshift(updatedBooking);
-    }
-
     localStorage.setItem(
       CUSTOMER_STORAGE_KEY,
       JSON.stringify(nextCustomers)
     );
 
-    localStorage.setItem(
-      BOOKING_STORAGE_KEY,
-      JSON.stringify(nextBookings)
-    );
-
     notifyDataChanged(CUSTOMER_STORAGE_KEY, "customers");
-    notifyDataChanged(BOOKING_STORAGE_KEY, "bookings");
 
     return {
       ...enquiry,
       customerId,
-      bookingId,
     };
   } else {
     // Non-confirmed enquiries (New, In Discussion, Follow-up) do NOT create customer records.
@@ -1929,39 +1693,12 @@ export default function Enquiries() {
     const customer = existingCustomer || await api.customers.create(customerPayload);
     if (!customer?.id) throw new Error("Customer API did not return an ID.");
 
-    const bookings = unwrap(await api.bookings.list());
-    const eventDate = normalizeDate(enquiry.eventDate);
-    const eventType = enquiry.eventType || "Wedding";
-    const existingBooking = bookings.find((b) =>
-      (b.enquiry_id != null && String(b.enquiry_id) === String(enquiry.id)) ||
-      (b.enquiry != null && String(b.enquiry?.id ?? b.enquiry) === String(enquiry.id)) ||
-      (normalizePhone(b.phone || b.customer_phone) === phone &&
-       normalizeDate(b.event_date || b.date || b.eventDate) === eventDate &&
-       String(b.event_type || b.event || b.eventType || "").toLowerCase() === eventType.toLowerCase())
-    );
-    const bookingPayload = {
-      customer: customer.id,
-      event_type: eventType,
-      event_date: eventDate || null,
-      location: enquiry.city || "",
-      total_amount: parseAmount(enquiry.budget),
-      status: "Confirmed",
-      notes: [
-        enquiry.notes || "",
-        enquiry.mainEvent ? `Service: ${enquiry.mainEvent}` : "",
-        enquiry.serviceDetail ? `Related Service: ${enquiry.serviceDetail}` : "",
-      ].filter(Boolean).join("\n"),
-    };
-    const booking = existingBooking || await api.bookings.create(bookingPayload);
-    if (!booking?.id) throw new Error("Booking API did not return an ID.");
-
-    // Maintain compatibility with existing localStorage-based module views.
+    // Maintain compatibility with existing localStorage-based module views (Confirmed enquiry creates customer record).
     const linked = syncEnquiryToModules({
       ...enquiry,
       customerId: customer.id,
-      bookingId: booking.id,
     });
-    return { ...linked, customerId: customer.id, bookingId: booking.id };
+    return { ...linked, customerId: customer.id };
   };
 
   const enquiryPayload = (data) => ({
@@ -2473,7 +2210,7 @@ export default function Enquiries() {
                 />
 
                 <p className="mt-3 text-sm font-bold text-[#102b53]">
-                  No enquiries found
+                  {enquiries.length === 0 ? "No enquiries available." : "No enquiries found"}
                 </p>
 
                 <button
@@ -2507,7 +2244,7 @@ export default function Enquiries() {
 
             {filtered.length === 0 && (
               <div className="col-span-full py-14 text-center text-sm text-slate-500">
-                No enquiries found.
+                {enquiries.length === 0 ? "No enquiries available." : "No enquiries found."}
 
                 <button
                   type="button"

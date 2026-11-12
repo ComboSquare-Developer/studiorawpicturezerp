@@ -1,5 +1,5 @@
 // FILE: src/pages/Staff.jsx
-// Replace the entire existing file with this code.
+// Production-quality Staff Management with Service-Based Role & Department
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -13,47 +13,79 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  Download,
   RefreshCw,
   Phone,
   Mail,
 } from "lucide-react";
 import { api } from "../api/client";
+import { syncStaffSalaryExpenses } from "../services/financialService";
 
 const STAFF_KEY = "studioraw_staff";
-const SEED_KEY = "studioraw_staff_seed_v6_exact3";
+const UPDATE_EVENT = "studioraw:data-updated";
 
-const ROLES = [
-  "All",
-  "Senior Photographer",
-  "Photographer",
-  "Candid Photographer",
-  "Traditional Photographer",
-  "Pre-Wedding Photographer",
-  "Cinematographer",
-  "Videographer",
-  "Drone Pilot",
-  "Video Editor",
-  "Lead Editor",
-  "Album Designer",
-  "Graphic Designer",
-  "Studio Manager",
-  "Lighting Technician",
-  "Production Assistant",
-  "Customer Support",
-  "Makeup Artist",
-  "Event Coordinator",
+export const STAFF_SERVICES = [
+  "Wedding Photography",
+  "Wedding Videography",
+  "Functions We Arrange",
+  "Event Management",
+  "Customer Gifts",
+  "Others",
 ];
 
-const DEPARTMENTS = [
-  "All",
-  "Photography",
-  "Videography",
-  "Post-Production",
-  "Management",
-  "Operations",
-  "Customer Support",
-];
+export const SERVICE_SPECIALIZATIONS = {
+  "Wedding Photography": [
+    "Traditional Photographer",
+    "Candid Photographer",
+    "Helicam Photographer",
+    "Pre-Wedding Photographer",
+    "Post-Wedding Photographer",
+    "Other",
+  ],
+  "Wedding Videography": [
+    "Traditional Wedding Videographer",
+    "Cinematic Wedding Videographer",
+    "Traditional + Candid Video",
+    "Pre-Wedding Videographer",
+    "Post-Wedding Videographer",
+    "Drone / Helicam Videographer",
+    "Other",
+  ],
+  "Functions We Arrange": [
+    "Engagement",
+    "Reception",
+    "Wedding",
+    "Birthday Function",
+    "Baby Shower",
+    "Naming Ceremony",
+    "Corporate Function",
+    "Other Function",
+  ],
+  "Event Management": [
+    "Wedding Event Management",
+    "Engagement Event Management",
+    "Birthday Event Management",
+    "Corporate Event Management",
+    "Stage & Decoration",
+    "Other Event",
+  ],
+  "Customer Gifts": [
+    "Customized Photo Frame",
+    "Album",
+    "Mug Printing",
+    "Customized Gifts",
+    "Return Gifts",
+    "Other Gift",
+  ],
+};
+
+export const isOtherSpecialization = (spec) => {
+  return [
+    "Other",
+    "Other Function",
+    "Other Event",
+    "Other Gift",
+  ].includes(spec);
+};
 
 const STATUSES = ["Active", "Inactive", "On Leave"];
 
@@ -63,8 +95,12 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
-  role: "Photographer",
-  department: "Photography",
+  service: "Wedding Photography",
+  specialization: "Candid Photographer",
+  custom_service: "",
+  custom_specialization: "",
+  role: "Candid Photographer",
+  department: "Wedding Photography",
   joining_date: new Date().toISOString().slice(0, 10),
   salary: "",
   salary_date: "",
@@ -72,61 +108,11 @@ const emptyForm = {
   notes: "",
 };
 
-// Exactly 3 staff members for Studio Raw ERP, each with fixed basic salary of ₹10,000/month (Total ₹30,000).
-const DEFAULT_STAFF = [
-  {
-    id: 1,
-    staff_name: "Vignesh Sundaram",
-    employee_id: "EMP-2026-001",
-    role: "Photographer",
-    department: "Photography",
-    phone: "9988776655",
-    email: "vignesh.s@studioraw.com",
-    address: "12 Cross Street, RS Puram, Coimbatore, Tamil Nadu",
-    joining_date: "2023-08-01",
-    salary: 10000,
-    salary_date: "01",
-    status: "Active",
-    notes: "Lead wedding and portrait photographer specializing in candid moments.",
-  },
-  {
-    id: 2,
-    staff_name: "Santhosh Kumar",
-    employee_id: "EMP-2026-002",
-    role: "Cinematographer",
-    department: "Videography",
-    phone: "9876501234",
-    email: "santhosh.k@studioraw.com",
-    address: "88 Main Bazaar, Nagercoil, Tamil Nadu",
-    joining_date: "2022-11-10",
-    salary: 10000,
-    salary_date: "01",
-    status: "Active",
-    notes: "Expert gimbal operator and cinematic Sony FX3/FX6 visualizer.",
-  },
-  {
-    id: 3,
-    staff_name: "Priya Natarajan",
-    employee_id: "EMP-2026-003",
-    role: "Photo Editor",
-    department: "Post-Production",
-    phone: "9765432109",
-    email: "priya.n@studioraw.com",
-    address: "15 Temple View Street, Madurai, Tamil Nadu",
-    joining_date: "2023-01-20",
-    salary: 10000,
-    salary_date: "01",
-    status: "Active",
-    notes: "Lead colorist and retoucher with DaVinci Resolve and Lightroom Mastery.",
-  },
-];
-
 const inputClass =
   "block w-full min-w-0 rounded-2xl border border-[#d6e5f7] bg-white px-4 py-3 text-sm font-semibold text-[#10264d] outline-none transition-all duration-200 placeholder:text-[#9aacc1] focus:border-[#244d8b] focus:ring-4 focus:ring-[#e4f0ff]";
 
 function money(amount) {
   const num = Number(amount) || 0;
-
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
@@ -138,46 +124,11 @@ function readStoredStaff() {
   try {
     const raw = localStorage.getItem(STAFF_KEY);
     const stored = raw ? JSON.parse(raw) : [];
-
-    const isSeeded = localStorage.getItem(SEED_KEY);
-    const validIds = new Set(["EMP-2026-001", "EMP-2026-002", "EMP-2026-003"]);
-
-    // If not seeded with exact 3 or if stored has more/less than 3, strictly enforce exactly the 3 staff
-    if (
-      isSeeded !== "true" ||
-      !Array.isArray(stored) ||
-      stored.length !== 3 ||
-      stored.some((person) => !validIds.has(person.employee_id))
-    ) {
-      localStorage.setItem(STAFF_KEY, JSON.stringify(DEFAULT_STAFF));
-      localStorage.setItem(SEED_KEY, "true");
-      return DEFAULT_STAFF;
-    }
-
-    return stored;
+    return Array.isArray(stored) ? stored : [];
   } catch (error) {
     console.error("Unable to read staff data:", error);
-    return DEFAULT_STAFF;
+    return [];
   }
-}
-
-function mergeStaffLists(primary, secondary) {
-  const result = [...primary];
-  const existingIds = new Set(
-    result.map((person) => person.employee_id).filter(Boolean)
-  );
-
-  secondary.forEach((person) => {
-    if (
-      person.employee_id &&
-      !existingIds.has(person.employee_id)
-    ) {
-      result.push(person);
-      existingIds.add(person.employee_id);
-    }
-  });
-
-  return result;
 }
 
 export default function Staff() {
@@ -185,8 +136,7 @@ export default function Staff() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
-  const [departmentFilter, setDepartmentFilter] = useState("All");
+  const [serviceFilter, setServiceFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
   const [formOpen, setFormOpen] = useState(false);
@@ -200,6 +150,10 @@ export default function Staff() {
   const saveLocalStaff = (list) => {
     try {
       localStorage.setItem(STAFF_KEY, JSON.stringify(list));
+      window.dispatchEvent(
+        new CustomEvent(UPDATE_EVENT, { detail: { key: STAFF_KEY, module: "staff" } })
+      );
+      syncStaffSalaryExpenses();
     } catch (err) {
       console.error("Unable to save staff locally:", err);
     }
@@ -221,12 +175,8 @@ export default function Staff() {
         : null;
 
       if (list) {
-        // Enforce the 3 demo staff members
-        const validIds = new Set(["EMP-2026-001", "EMP-2026-002", "EMP-2026-003"]);
-        const validStaff = list.filter((p) => validIds.has(p.employee_id));
-        const finalStaff = validStaff.length === 3 ? validStaff : DEFAULT_STAFF;
-        setStaffList(finalStaff);
-        saveLocalStaff(finalStaff);
+        setStaffList(list);
+        saveLocalStaff(list);
       }
     } catch (err) {
       console.warn("Backend staff API notice:", err.message);
@@ -277,36 +227,49 @@ export default function Staff() {
     return staffList.filter((item) => {
       const searchText = search.toLowerCase().trim();
 
+      const staffService = item.service || item.department || "";
+      const staffSpec = item.specialization || item.role || "";
+
       const matchesSearch =
         !searchText ||
         (item.staff_name || "").toLowerCase().includes(searchText) ||
         (item.employee_id || "").toLowerCase().includes(searchText) ||
         (item.phone || "").toLowerCase().includes(searchText) ||
         (item.email || "").toLowerCase().includes(searchText) ||
-        (item.role || "").toLowerCase().includes(searchText);
+        staffService.toLowerCase().includes(searchText) ||
+        staffSpec.toLowerCase().includes(searchText);
 
-      const matchesRole =
-        roleFilter === "All" || item.role === roleFilter;
-
-      const matchesDept =
-        departmentFilter === "All" ||
-        item.department === departmentFilter;
+      let matchesService = true;
+      if (serviceFilter !== "All") {
+        if (serviceFilter === "Others") {
+          matchesService =
+            item.service === "Others" ||
+            (!STAFF_SERVICES.slice(0, 5).includes(item.service) &&
+              !STAFF_SERVICES.slice(0, 5).includes(item.department));
+        } else {
+          matchesService =
+            item.service === serviceFilter ||
+            item.department === serviceFilter ||
+            (serviceFilter === "Wedding Photography" &&
+              (item.department === "Photography" || (item.role || "").toLowerCase().includes("photo"))) ||
+            (serviceFilter === "Wedding Videography" &&
+              (item.department === "Videography" || (item.role || "").toLowerCase().includes("video")));
+        }
+      }
 
       const matchesStatus =
         statusFilter === "All" || item.status === statusFilter;
 
       return (
         matchesSearch &&
-        matchesRole &&
-        matchesDept &&
+        matchesService &&
         matchesStatus
       );
     });
   }, [
     staffList,
     search,
-    roleFilter,
-    departmentFilter,
+    serviceFilter,
     statusFilter,
   ]);
 
@@ -320,6 +283,10 @@ export default function Staff() {
     setForm({
       ...emptyForm,
       employee_id: nextId,
+      service: "Wedding Photography",
+      specialization: "Traditional Photographer",
+      custom_service: "",
+      custom_specialization: "",
     });
 
     setError("");
@@ -329,16 +296,66 @@ export default function Staff() {
   const openEdit = (staff) => {
     setEditingStaff(staff);
 
+    // Determine normalized service
+    let service = staff.service || "";
+    let customService = staff.custom_service || "";
+    let specialization = staff.specialization || staff.role || "";
+    let customSpecialization = staff.custom_specialization || "";
+
+    if (!service) {
+      const dept = String(staff.department || "").toLowerCase();
+      const role = String(staff.role || "").toLowerCase();
+      if (dept.includes("videography") || role.includes("video") || role.includes("cinema")) {
+        service = "Wedding Videography";
+      } else if (dept.includes("management") || role.includes("event")) {
+        service = "Event Management";
+      } else if (
+        dept.includes("gift") ||
+        dept.includes("post-production") ||
+        role.includes("album") ||
+        role.includes("designer")
+      ) {
+        service = "Customer Gifts";
+      } else if (role.includes("function") || dept.includes("function")) {
+        service = "Functions We Arrange";
+      } else if (dept === "other" || dept === "others") {
+        service = "Others";
+        customService = staff.role || staff.designation || "";
+      } else {
+        service = "Wedding Photography";
+      }
+    }
+
+    if (service === "Others") {
+      if (!customService) {
+        customService = staff.custom_service || staff.role || staff.designation || "";
+      }
+    } else {
+      const allowedSpecs = SERVICE_SPECIALIZATIONS[service] || [];
+      if (!allowedSpecs.includes(specialization)) {
+        if (specialization) {
+          const otherChoice = allowedSpecs.find((s) => s.toLowerCase().startsWith("other")) || "Other";
+          customSpecialization = specialization;
+          specialization = otherChoice;
+        } else {
+          specialization = allowedSpecs[0] || "";
+        }
+      }
+    }
+
     setForm({
       staff_name: staff.staff_name || "",
       employee_id: staff.employee_id || "",
       email: staff.email || "",
       phone: staff.phone || "",
       address: staff.address || "",
-      role: staff.role || "Photographer",
-      department: staff.department || "Photography",
-      joining_date:
-        staff.joining_date || new Date().toISOString().slice(0, 10),
+      service,
+      specialization,
+      custom_service: customService,
+      custom_specialization: customSpecialization,
+      role: specialization || staff.role || "",
+      department: service || staff.department || "",
+      joining_date: staff.joining_date || new Date().toISOString().slice(0, 10),
       salary: staff.salary ?? "",
       salary_date: staff.salary_date || "",
       status: staff.status || "Active",
@@ -347,6 +364,17 @@ export default function Staff() {
 
     setError("");
     setFormOpen(true);
+  };
+
+  const handleServiceChange = (newService) => {
+    const allowedSpecs = SERVICE_SPECIALIZATIONS[newService] || [];
+    setForm((prev) => ({
+      ...prev,
+      service: newService,
+      specialization: allowedSpecs[0] || "",
+      custom_service: "",
+      custom_specialization: "",
+    }));
   };
 
   const handleSubmit = async (event) => {
@@ -360,6 +388,20 @@ export default function Staff() {
 
     if (!form.employee_id.trim()) {
       setError("Employee ID is required.");
+      return;
+    }
+
+    if (form.service === "Others" && !form.custom_service.trim()) {
+      setError("Please enter the custom service or designation.");
+      return;
+    }
+
+    if (
+      form.service !== "Others" &&
+      isOtherSpecialization(form.specialization) &&
+      !form.custom_specialization.trim()
+    ) {
+      setError("Please enter the custom department or specialization.");
       return;
     }
 
@@ -378,10 +420,29 @@ export default function Staff() {
     setSaving(true);
 
     try {
+      const finalService =
+        form.service === "Others"
+          ? form.custom_service.trim()
+          : form.service;
+
+      const finalSpecialization =
+        form.service === "Others"
+          ? form.custom_service.trim()
+          : isOtherSpecialization(form.specialization)
+          ? form.custom_specialization.trim()
+          : form.specialization;
+
       const payload = {
         ...form,
         staff_name: form.staff_name.trim(),
         employee_id: form.employee_id.trim(),
+        service: form.service,
+        custom_service: form.custom_service.trim(),
+        specialization: finalSpecialization,
+        custom_specialization: form.custom_specialization.trim(),
+        role: finalSpecialization,
+        designation: finalSpecialization,
+        department: finalService,
         salary: parseFloat(form.salary) || 0,
         joining_date: form.joining_date || null,
         salary_date: form.salary_date || null,
@@ -459,7 +520,7 @@ export default function Staff() {
     setStaffList((previous) => {
       const next = previous.filter(
         (staff) =>
-          String(staff.id) !== String(deleteStaff.id) ||
+          String(staff.id) !== String(deleteStaff.id) &&
           staff.employee_id !== deleteStaff.employee_id
       );
 
@@ -478,8 +539,8 @@ export default function Staff() {
       "ID",
       "Employee ID",
       "Staff Name",
-      "Role",
-      "Department",
+      "Service",
+      "Specialization",
       "Phone",
       "Email",
       "Joining Date",
@@ -492,8 +553,8 @@ export default function Staff() {
       staff.id || "",
       staff.employee_id || "",
       `"${(staff.staff_name || "").replace(/"/g, '""')}"`,
-      `"${(staff.role || "").replace(/"/g, '""')}"`,
-      `"${(staff.department || "").replace(/"/g, '""')}"`,
+      `"${(staff.service || staff.department || "").replace(/"/g, '""')}"`,
+      `"${(staff.specialization || staff.role || "").replace(/"/g, '""')}"`,
       staff.phone || "",
       staff.email || "",
       staff.joining_date || "",
@@ -560,14 +621,13 @@ export default function Staff() {
             onClick={exportCsv}
             className="flex items-center gap-2 rounded-xl border border-[#d6e5f7] bg-white px-3.5 py-2.5 text-xs font-bold text-[#10264d] shadow-sm transition hover:bg-[#edf5ff]"
           >
-            <Download size={15} />
             Export CSV
           </button>
 
           <button
             type="button"
             onClick={openAdd}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#10264d] to-[#254f8e] px-4 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:opacity-95"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#10264d] to-[#254f8e] px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:opacity-95"
           >
             <Plus size={16} />
             Add Staff Member
@@ -575,37 +635,31 @@ export default function Staff() {
         </div>
       </div>
 
-      {/* STATS CARDS */}
-      <div className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* STATS OVERVIEW */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm">
-          <p className="text-xs font-bold text-[#647c9d]">
-            Total Crew Members
-          </p>
+          <p className="text-xs font-bold text-[#647c9d]">Total Team</p>
           <p className="mt-2 text-2xl font-black text-[#10264d]">
             {stats.totalStaff}
           </p>
           <p className="mt-1 text-[11px] font-semibold text-slate-400">
-            Total registered staff
+            Registered employees
           </p>
         </div>
 
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
-          <p className="text-xs font-bold text-emerald-800">
-            Active Working Staff
-          </p>
-          <p className="mt-2 text-2xl font-black text-emerald-700">
+        <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm">
+          <p className="text-xs font-bold text-[#647c9d]">Active Staff</p>
+          <p className="mt-2 text-2xl font-black text-emerald-600">
             {stats.activeStaff}
           </p>
           <p className="mt-1 text-[11px] font-semibold text-emerald-600">
-            On duty & available for events
+            Available on roster
           </p>
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-          <p className="text-xs font-bold text-amber-800">
-            On Leave / Vacation
-          </p>
-          <p className="mt-2 text-2xl font-black text-amber-700">
+        <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm">
+          <p className="text-xs font-bold text-[#647c9d]">On Leave</p>
+          <p className="mt-2 text-2xl font-black text-amber-500">
             {stats.onLeaveStaff}
           </p>
           <p className="mt-1 text-[11px] font-semibold text-amber-600">
@@ -626,53 +680,62 @@ export default function Staff() {
         </div>
       </div>
 
-      {/* SERVICE TEAM SUMMARY */}
+      {/* SERVICE SUMMARY CARDS */}
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            name: "Photography",
+            name: "Wedding Photography",
             count: staffList.filter(
-              (staff) => staff.department === "Photography"
+              (s) =>
+                (s.service || s.department) === "Wedding Photography" ||
+                s.department === "Photography"
             ).length,
           },
           {
-            name: "Videography",
+            name: "Wedding Videography",
             count: staffList.filter(
-              (staff) => staff.department === "Videography"
+              (s) =>
+                (s.service || s.department) === "Wedding Videography" ||
+                s.department === "Videography"
             ).length,
           },
           {
-            name: "Post-Production",
-            count: staffList.filter(
-              (staff) => staff.department === "Post-Production"
+            name: "Functions & Events",
+            count: staffList.filter((s) =>
+              ["Functions We Arrange", "Event Management"].includes(
+                s.service || s.department
+              )
             ).length,
           },
           {
-            name: "Other Teams",
+            name: "Gifts & Others",
             count: staffList.filter(
-              (staff) =>
+              (s) =>
                 ![
+                  "Wedding Photography",
                   "Photography",
+                  "Wedding Videography",
                   "Videography",
-                  "Post-Production",
-                ].includes(staff.department)
+                  "Functions We Arrange",
+                  "Event Management",
+                ].includes(s.service || s.department)
             ).length,
           },
         ].map((team) => (
           <button
             key={team.name}
             type="button"
-            onClick={() => setDepartmentFilter(team.name === "Other Teams" ? "All" : team.name)}
+            onClick={() => {
+              if (team.name === "Wedding Photography") setServiceFilter("Wedding Photography");
+              else if (team.name === "Wedding Videography") setServiceFilter("Wedding Videography");
+              else setServiceFilter("All");
+            }}
             className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-left shadow-sm transition hover:border-[#9bb9df] hover:bg-[#f8fbff]"
           >
-            <p className="text-xs font-bold text-[#647c9d]">
-              {team.name}
-            </p>
-            <p className="mt-1 text-2xl font-black text-[#10264d]">
-              {team.count}
-            </p>
+            <p className="text-xs font-bold text-[#647c9d]">{team.name}</p>
+            <p className="mt-1 text-2xl font-black text-[#10264d]">{team.count}</p>
             <p className="mt-1 text-[11px] font-semibold text-[#7990af]">
-              Registered team members
+              Team members
             </p>
           </button>
         ))}
@@ -689,37 +752,23 @@ export default function Staff() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search staff by name, employee ID, phone, or email..."
+            placeholder="Search staff by name, employee ID, phone, role or service..."
             className="w-full rounded-xl border border-[#dce7f5] bg-[#f9fbfe] py-2.5 pl-10 pr-4 text-xs font-semibold text-[#10264d] outline-none transition placeholder:text-[#9bb0cc] focus:border-[#244d8b] focus:bg-white"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#647c9d]">Role:</span>
+            <span className="text-xs font-bold text-[#647c9d]">Service:</span>
             <select
-              value={roleFilter}
-              onChange={(event) => setRoleFilter(event.target.value)}
+              value={serviceFilter}
+              onChange={(event) => setServiceFilter(event.target.value)}
               className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
             >
-              {ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#647c9d]">Dept:</span>
-            <select
-              value={departmentFilter}
-              onChange={(event) => setDepartmentFilter(event.target.value)}
-              className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
-            >
-              {DEPARTMENTS.map((department) => (
-                <option key={department} value={department}>
-                  {department}
+              <option value="All">All Services</option>
+              {STAFF_SERVICES.map((srv) => (
+                <option key={srv} value={srv}>
+                  {srv}
                 </option>
               ))}
             </select>
@@ -732,7 +781,7 @@ export default function Staff() {
               onChange={(event) => setStatusFilter(event.target.value)}
               className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
             >
-              <option value="All">All</option>
+              <option value="All">All Status</option>
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -743,7 +792,7 @@ export default function Staff() {
         </div>
       </div>
 
-      {/* STAFF TABLE */}
+      {/* STAFF TABLE & CARDS */}
       <div className="overflow-hidden rounded-2xl border border-[#dce7f5] bg-white shadow-sm">
         {loading ? (
           <div className="flex min-h-[350px] items-center justify-center">
@@ -756,11 +805,13 @@ export default function Staff() {
             </div>
 
             <h3 className="mt-4 text-base font-extrabold text-[#10264d]">
-              No Staff Members Found
+              {staffList.length === 0 ? "No staff members added yet." : "No Staff Members Found"}
             </h3>
 
             <p className="mt-1 text-xs text-[#647c9d]">
-              Try clearing filters or add your studio team members.
+              {staffList.length === 0
+                ? "Add your first team member to get started."
+                : "Try clearing filters or add your studio team members."}
             </p>
 
             <button
@@ -808,13 +859,13 @@ export default function Staff() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-[#f8fbff] p-2.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">
-                        Role
+                        Designation
                       </span>
                       <p className="mt-1 font-bold text-[#10264d]">
-                        {staff.role || "Photographer"}
+                        {staff.specialization || staff.role || "Staff Member"}
                       </p>
                       <p className="text-[11px] text-[#6d84a3]">
-                        {staff.department || "Photography"}
+                        {staff.service || staff.department || "Wedding Photography"}
                       </p>
                     </div>
 
@@ -883,7 +934,7 @@ export default function Staff() {
                 <thead>
                   <tr className="border-b border-[#e7eef7] bg-[#f8fbff] text-[11px] font-extrabold uppercase tracking-wider text-[#526b8b]">
                     <th className="px-5 py-4">Staff Member</th>
-                    <th className="px-4 py-4">Role & Dept</th>
+                    <th className="px-4 py-4">Designation & Service</th>
                     <th className="px-4 py-4">Contact</th>
                     <th className="px-4 py-4">Status</th>
                     <th className="px-4 py-4 text-right">Monthly Salary</th>
@@ -909,10 +960,10 @@ export default function Staff() {
 
                       <td className="px-4 py-4">
                         <div className="font-extrabold text-[#10264d]">
-                          {staff.role || "Photographer"}
+                          {staff.specialization || staff.role || "Staff Member"}
                         </div>
                         <div className="mt-0.5 text-[11px] text-[#6d84a3]">
-                          {staff.department || "Photography"}
+                          {staff.service || staff.department || "Wedding Photography"}
                         </div>
                       </td>
 
@@ -1003,7 +1054,7 @@ export default function Staff() {
                       {editingStaff ? "Edit Staff Member" : "Add Staff Member"}
                     </h2>
                     <p className="text-xs font-semibold text-[#6680a1]">
-                      Register photographers, editors, and studio roles
+                      Register photographers, cinematographers, and studio roles
                     </p>
                   </div>
                 </div>
@@ -1067,48 +1118,91 @@ export default function Staff() {
                     />
                   </div>
 
+                  {/* SERVICE / DESIGNATION DROPDOWN */}
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                      Role / Designation
+                      Service / Designation
                     </label>
                     <select
-                      value={form.role}
-                      onChange={(event) =>
-                        setForm({ ...form, role: event.target.value })
-                      }
+                      value={form.service}
+                      onChange={(event) => handleServiceChange(event.target.value)}
                       className={inputClass}
                     >
-                      {ROLES.filter((role) => role !== "All").map((role) => (
-                        <option key={role} value={role}>
-                          {role}
+                      {STAFF_SERVICES.map((srv) => (
+                        <option key={srv} value={srv}>
+                          {srv}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                      Department
-                    </label>
-                    <select
-                      value={form.department}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          department: event.target.value,
-                        })
-                      }
-                      className={inputClass}
-                    >
-                      {DEPARTMENTS.filter(
-                        (department) => department !== "All"
-                      ).map((department) => (
-                        <option key={department} value={department}>
-                          {department}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* DYNAMIC DEPARTMENT / SPECIALIZATION OR CUSTOM SERVICE INPUT */}
+                  {form.service === "Others" ? (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
+                        Enter Service / Designation <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter custom service or designation"
+                        value={form.custom_service}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            custom_service: event.target.value,
+                          })
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
+                        Department / Specialization
+                      </label>
+                      <select
+                        value={form.specialization}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            specialization: event.target.value,
+                            custom_specialization: "",
+                          })
+                        }
+                        className={inputClass}
+                      >
+                        {(SERVICE_SPECIALIZATIONS[form.service] || []).map((spec) => (
+                          <option key={spec} value={spec}>
+                            {spec}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* CUSTOM SPECIALIZATION TEXT INPUT IF OTHER SELECTED */}
+                  {form.service !== "Others" &&
+                    isOtherSpecialization(form.specialization) && (
+                      <div className="sm:col-span-2">
+                        <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
+                          Enter Specialization <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter custom department or specialization"
+                          value={form.custom_specialization}
+                          onChange={(event) =>
+                            setForm({
+                              ...form,
+                              custom_specialization: event.target.value,
+                            })
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                    )}
 
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
@@ -1210,7 +1304,7 @@ export default function Staff() {
                     />
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
                       Residential Address
                     </label>

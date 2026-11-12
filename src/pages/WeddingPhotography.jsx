@@ -52,69 +52,10 @@ const venues = [
   "Other",
 ];
 
-const demoCouples = [
-  ["Priya", "Arun"],
-  ["Divya", "Karthik"],
-  ["Anitha", "Vijay"],
-  ["Keerthana", "Praveen"],
-  ["Swetha", "Rahul"],
-  ["Nithya", "Sanjay"],
-  ["Harini", "Vignesh"],
-  ["Aishwarya", "Dinesh"],
-  ["Meena", "Ajay"],
-  ["Ramya", "Naveen"],
-  ["Abinaya", "Surya"],
-  ["Kavya", "Aravind"],
-  ["Janani", "Bala"],
-  ["Deepika", "Ashwin"],
-  ["Pavithra", "Ramesh"],
-  ["Shalini", "Gokul"],
-  ["Monisha", "Sathish"],
-  ["Rithika", "Manoj"],
-  ["Gayathri", "Hari"],
-  ["Sneha", "Prakash"],
-];
-
-const demoAmounts = [
-  85000, 150000, 45000, 95000, 180000,
-  55000, 125000, 75000, 65000, 110000,
-  140000, 48000, 92000, 175000, 58000,
-  120000, 88000, 160000, 68000, 105000,
-];
-
-const demoAdvances = [
-  30000, 50000, 10000, 45000, 80000,
-  55000, 50000, 25000, 15000, 40000,
-  70000, 12000, 35000, 80000, 20000,
-  60000, 30000, 75000, 25000, 45000,
-];
-
-const demoWeddings = demoCouples.map(([bride, groom], index) => {
-  const date = new Date(2026, 9, 10 + index * 5);
-
-  const dateString = [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-
-  return {
-    id: `WED${String(index + 1).padStart(3, "0")}`,
-    bride,
-    groom,
-    phone: String(9000010001 + index),
-    date: dateString,
-    venue: venues[index % (venues.length - 1)],
-    eventType: eventTypes[index % eventTypes.length],
-    package: packages[index % 3],
-    amount: demoAmounts[index],
-    advance: demoAdvances[index],
-    status: ["Confirmed", "Confirmed", "Pending", "Completed"][
-      index % 4
-    ],
-    isDemo: true,
-  };
-});
+const demoCouples = [];
+const demoAmounts = [];
+const demoAdvances = [];
+const demoWeddings = [];
 
 const emptyForm = {
   bride: "",
@@ -153,26 +94,9 @@ function loadWeddings() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     const parsed = saved ? JSON.parse(saved) : [];
-    const existing = Array.isArray(parsed) ? parsed : [];
-
-    if (localStorage.getItem(DEMO_SEED_KEY) === "true") {
-      return existing;
-    }
-
-    const existingIds = new Set(existing.map((item) => item.id));
-
-    const missingDemo = demoWeddings.filter(
-      (item) => !existingIds.has(item.id)
-    );
-
-    const merged = [...existing, ...missingDemo];
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-    localStorage.setItem(DEMO_SEED_KEY, "true");
-
-    return merged;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return demoWeddings;
+    return [];
   }
 }
 
@@ -1197,7 +1121,7 @@ export default function WeddingPhotography() {
                 className="mx-auto text-[#9bb9dc]"
               />
               <p className="mt-3 text-sm text-[#8a9fba]">
-                No wedding records found.
+                {weddings.length === 0 ? "No wedding photography bookings yet." : "No wedding records found."}
               </p>
             </div>
           ) : (
@@ -1344,7 +1268,7 @@ export default function WeddingPhotography() {
                     colSpan={8}
                     className="px-5 py-16 text-center text-sm text-[#8a9fba]"
                   >
-                    No wedding records found.
+                    {weddings.length === 0 ? "No wedding photography bookings yet." : "No wedding records found."}
                   </td>
                 </tr>
               ) : (

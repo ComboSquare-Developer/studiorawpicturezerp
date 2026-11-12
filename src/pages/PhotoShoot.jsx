@@ -37,68 +37,7 @@ const eventOptions = [
   "Complete Wedding Package",
 ];
 
-const initialRecords = [
-  {
-    id: 1001,
-    clientName: "Arun Kumar",
-    eventType: "Wedding Photography",
-    shootDate: "2026-10-10",
-    location: "Nagercoil",
-    photographer: "Prathiksha",
-    packageType: "Premium",
-    totalPhotos: 850,
-    status: "Completed",
-    paymentStatus: "Paid",
-  },
-  {
-    id: 1002,
-    clientName: "Priya & Karthik",
-    eventType: "Pre-Wedding / Outdoor Shoot",
-    shootDate: "2026-10-14",
-    location: "Kanyakumari",
-    photographer: "Arun",
-    packageType: "Luxury",
-    totalPhotos: 420,
-    status: "Editing",
-    paymentStatus: "Partial",
-  },
-  {
-    id: 1003,
-    clientName: "Divya Raj",
-    eventType: "Baby & Kids Shoot",
-    shootDate: "2026-10-17",
-    location: "Marthandam",
-    photographer: "Prathiksha",
-    packageType: "Standard",
-    totalPhotos: 280,
-    status: "In Progress",
-    paymentStatus: "Pending",
-  },
-  {
-    id: 1004,
-    clientName: "Michael & Sarah",
-    eventType: "Complete Wedding Package",
-    shootDate: "2026-10-20",
-    location: "Tirunelveli",
-    photographer: "David",
-    packageType: "Luxury",
-    totalPhotos: 1200,
-    status: "Scheduled",
-    paymentStatus: "Partial",
-  },
-  {
-    id: 1005,
-    clientName: "Sneha",
-    eventType: "Candid Photography",
-    shootDate: "2026-10-25",
-    location: "Nagercoil",
-    photographer: "Arun",
-    packageType: "Standard",
-    totalPhotos: 150,
-    status: "Scheduled",
-    paymentStatus: "Pending",
-  },
-];
+const initialRecords = [];
 
 const emptyForm = {
   clientName: "",
@@ -153,30 +92,11 @@ const paymentOptions = [
 function readRecords() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (saved === null) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(initialRecords)
-      );
-      return initialRecords;
-    }
-
+    if (!saved) return [];
     const parsed = JSON.parse(saved);
-
-    if (Array.isArray(parsed) && parsed.length === 0) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(initialRecords)
-      );
-      return initialRecords;
-    }
-
-    return Array.isArray(parsed)
-      ? parsed
-      : initialRecords;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return initialRecords;
+    return [];
   }
 }
 
@@ -582,7 +502,7 @@ export default function PhotoShoot() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Sample records are available to explore and edit.
+                Track and manage all photo shoot bookings and assignments.
               </p>
             </div>
 
@@ -902,11 +822,11 @@ export default function PhotoShoot() {
               </div>
 
               <h3 className="mt-4 font-semibold text-slate-800">
-                No records found
+                {records.length === 0 ? "No photo shoot records found." : "No records match your filter."}
               </h3>
 
               <p className="mt-1 text-sm text-slate-500">
-                Try changing your search or filter.
+                {records.length === 0 ? "Get started by adding your first photo shoot record." : "Try changing your search or filter."}
               </p>
 
               <button

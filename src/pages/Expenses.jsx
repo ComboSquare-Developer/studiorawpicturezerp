@@ -6,6 +6,7 @@ import {
   calculateMonthlyIncome,
   calculateCategoryBreakdown,
   parseAmount,
+  syncStaffSalaryExpenses,
 } from "../services/financialService";
 import { createPortal } from "react-dom";
 import {
@@ -83,162 +84,7 @@ const inputClass =
    DEMO EXPENSES
 ========================================================= */
 
-const demoExpenses = [
-  {
-    id: "SAL-EXP-EMP-2026-001-2026-10",
-    title: "Monthly salary – Vignesh Sundaram",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-10-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Vignesh Sundaram",
-    notes: "October monthly salary for Vignesh Sundaram",
-    updatedAt: "2026-10-01T10:00:00.000Z",
-  },
-  {
-    id: "SAL-EXP-EMP-2026-002-2026-10",
-    title: "Monthly salary – Santhosh Kumar",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-10-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Santhosh Kumar",
-    notes: "October monthly salary for Santhosh Kumar",
-    updatedAt: "2026-10-01T10:00:00.000Z",
-  },
-  {
-    id: "SAL-EXP-EMP-2026-003-2026-10",
-    title: "Monthly salary – Priya Natarajan",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-10-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Priya Natarajan",
-    notes: "October monthly salary for Priya Natarajan",
-    updatedAt: "2026-10-01T10:00:00.000Z",
-  },
-  {
-    id: "SAL-EXP-EMP-2026-001-2026-11",
-    title: "Monthly salary – Vignesh Sundaram",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-11-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Vignesh Sundaram",
-    notes: "November monthly salary for Vignesh Sundaram",
-    updatedAt: "2026-11-01T10:00:00.000Z",
-  },
-  {
-    id: "SAL-EXP-EMP-2026-002-2026-11",
-    title: "Monthly salary – Santhosh Kumar",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-11-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Santhosh Kumar",
-    notes: "November monthly salary for Santhosh Kumar",
-    updatedAt: "2026-11-01T10:00:00.000Z",
-  },
-  {
-    id: "SAL-EXP-EMP-2026-003-2026-11",
-    title: "Monthly salary – Priya Natarajan",
-    category: "Staff Salary",
-    amount: 10000,
-    date: "2026-11-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Priya Natarajan",
-    notes: "November monthly salary for Priya Natarajan",
-    updatedAt: "2026-11-01T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-003",
-    title: "Wedding Album Materials",
-    category: "Album Materials",
-    amount: 6500,
-    date: "2026-10-08",
-    paymentMode: "UPI",
-    paidTo: "Classic Album Suppliers",
-    notes: "Premium album sheets and covers",
-    updatedAt: "2026-10-08T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-004",
-    title: "Camera Lens Maintenance",
-    category: "Maintenance",
-    amount: 3200,
-    date: "2026-10-10",
-    paymentMode: "Cash",
-    paidTo: "Camera Service Center",
-    notes: "Lens cleaning and servicing",
-    updatedAt: "2026-10-10T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-005",
-    title: "Studio Monthly Rent",
-    category: "Studio Rent",
-    amount: 12000,
-    date: "2026-10-01",
-    paymentMode: "Bank Transfer",
-    paidTo: "Studio Building Owner",
-    notes: "Monthly studio rental payment",
-    updatedAt: "2026-10-01T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-006",
-    title: "Photo Printing Charges",
-    category: "Printing",
-    amount: 1850,
-    date: "2026-10-12",
-    paymentMode: "UPI",
-    paidTo: "Digital Print Solutions",
-    notes: "Customer photo printing",
-    updatedAt: "2026-10-12T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-007",
-    title: "Social Media Promotion",
-    category: "Marketing",
-    amount: 2500,
-    date: "2026-10-15",
-    paymentMode: "Card",
-    paidTo: "Digital Marketing Services",
-    notes: "Studio advertisement campaign",
-    updatedAt: "2026-10-15T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-008",
-    title: "Photo Editing Software",
-    category: "Software",
-    amount: 1499,
-    date: "2026-10-18",
-    paymentMode: "UPI",
-    paidTo: "Software Subscription",
-    notes: "Monthly editing software subscription",
-    updatedAt: "2026-10-18T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-009",
-    title: "Client Photoshoot Travel",
-    category: "Travel",
-    amount: 950,
-    date: "2026-10-20",
-    paymentMode: "Cash",
-    paidTo: "Local Transport",
-    notes: "Travel expense for outdoor photoshoot",
-    updatedAt: "2026-10-20T10:00:00.000Z",
-  },
-  {
-    id: "EXP-DEMO-010",
-    title: "Office Stationery",
-    category: "Other",
-    amount: 650,
-    date: "2026-10-21",
-    paymentMode: "Cash",
-    paidTo: "City Stationery Shop",
-    notes: "Files, pens and office supplies",
-    updatedAt: "2026-10-21T10:00:00.000Z",
-  },
-];
+const demoExpenses = [];
 
 /* =========================================================
    HELPERS
@@ -309,24 +155,16 @@ function readPayments() {
 function readInitialExpenses() {
   try {
     const saved = localStorage.getItem(EXPENSE_KEY);
-    let list = demoExpenses;
-
     if (saved !== null) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) {
-        list = parsed;
+        return parsed;
       }
     }
-
-    // Filter out obsolete legacy salary demo entry if present
-    list = list.filter(
-      (item) => item.id !== "EXP-DEMO-002" && item.title !== "Photographer Salary"
-    );
-
-    return list;
   } catch {
-    return demoExpenses;
+    // ignore
   }
+  return [];
 }
 
 function createId() {
@@ -1384,6 +1222,31 @@ export default function Expenses() {
     };
   }, []);
 
+  /* ---------------- PAYROLL SYNC & STORAGE LISTENERS ---------------- */
+
+  useEffect(() => {
+    syncStaffSalaryExpenses();
+    setExpenses(readInitialExpenses());
+
+    const onUpdate = (e) => {
+      const key = e?.detail?.key || e?.key;
+      if (key === "studioraw_staff") {
+        syncStaffSalaryExpenses();
+        setExpenses(readInitialExpenses());
+      } else if (key === EXPENSE_KEY) {
+        const fresh = readInitialExpenses();
+        setExpenses((prev) => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
+      }
+    };
+
+    window.addEventListener(UPDATE_EVENT, onUpdate);
+    window.addEventListener("storage", onUpdate);
+    return () => {
+      window.removeEventListener(UPDATE_EVENT, onUpdate);
+      window.removeEventListener("storage", onUpdate);
+    };
+  }, []);
+
   /* ---------------- SAVE STORAGE ---------------- */
 
   useEffect(() => {
@@ -2021,7 +1884,7 @@ export default function Expenses() {
             </div>
 
             <h3 className="font-extrabold text-[#10264d]">
-              No expense records found
+              {expenses.length === 0 ? "No expenses recorded." : "No expense records found"}
             </h3>
 
             <p className="mt-2 text-sm text-[#8aa0b8]">

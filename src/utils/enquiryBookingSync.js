@@ -37,22 +37,23 @@ export function syncEnquiriesToBookings() {
   let customersChanged = false;
   let bookingsChanged = false;
   let customersAdded = 0;
-  let bookingsAdded = 0;
+
+  // Clean up any legacy auto-generated enquiry bookings so Bookings only has explicitly created records
+  const cleanBookings = bookings.filter((b) => {
+    const isAutoEnquiryBooking = String(b.id || "").startsWith("BOOK-ENQ-") && b.source === "Enquiry" && !b.isManualBooking;
+    if (isAutoEnquiryBooking) {
+      bookingsChanged = true;
+      return false;
+    }
+    return true;
+  });
 
   for (const enquiry of enquiries) {
     const isConfirmed = String(enquiry.status || "").trim().toLowerCase() === "confirmed";
     const id = String(enquiry.id);
 
-    // If enquiry is NOT confirmed, ensure it does NOT appear in Bookings or Customers
+    // If enquiry is NOT confirmed, ensure it does NOT create or keep an enquiry-derived customer
     if (!isConfirmed) {
-      const bIdx = bookings.findIndex((b) =>
-        (b.enquiryId != null && String(b.enquiryId) === id) ||
-        (enquiry.bookingId && String(b.id) === String(enquiry.bookingId))
-      );
-      if (bIdx >= 0) {
-        bookings.splice(bIdx, 1);
-        bookingsChanged = true;
-      }
       const cIdx = customers.findIndex((c) =>
         ((c.enquiryId != null && String(c.enquiryId) === id) ||
          (enquiry.customerId && String(c.id) === String(enquiry.customerId))) &&
@@ -68,7 +69,6 @@ export function syncEnquiriesToBookings() {
     const name = String(enquiry.name || "").trim();
     const phone = phoneOf(enquiry.number || enquiry.phone);
     if (!name || phone.length !== 10) continue;
-    const date = dateOf(enquiry.eventDate);
     const now = new Date().toISOString();
     const existingCustomerIndex = customers.findIndex((c) =>
       (enquiry.customerId && String(c.id) === String(enquiry.customerId)) ||
@@ -87,45 +87,19 @@ export function syncEnquiriesToBookings() {
       createdAt: existingCustomer?.createdAt || now.slice(0, 10),
       updatedAt: existingCustomer?.updatedAt || now,
       isDemo: false,
+      isConfirmedCustomer: true,
     };
     if (existingCustomerIndex < 0) {
       customers.unshift(nextCustomer); customersChanged = true; customersAdded++;
     } else if (["name", "phone", "email", "address"].some((key) => existingCustomer[key] !== nextCustomer[key])) {
       customers[existingCustomerIndex] = { ...nextCustomer, updatedAt: now }; customersChanged = true;
     }
-
-    // Booking Calendar needs a real event date to position a booking in the calendar.
-    if (!date) continue;
-    const eventName = String(enquiry.mainEvent || "Wedding Photography").trim();
-    const bookingIndex = bookings.findIndex((b) =>
-      (b.enquiryId != null && String(b.enquiryId) === id) ||
-      (enquiry.bookingId && String(b.id) === String(enquiry.bookingId)) ||
-      (!b.enquiryId && phoneOf(b.phone) === phone && dateOf(b.date) === date &&
-        String(b.event || "").trim().toLowerCase() === eventName.toLowerCase())
-    );
-    const old = bookings[bookingIndex];
-    const status = "Confirmed";
-    const nextBooking = {
-      ...(old || {}), id: old?.id || `BOOK-ENQ-${id}`, enquiryId: enquiry.id,
-      customerId, customer: name, phone, event: eventName, date,
-      time: old?.time || "10:00", location: enquiry.city || old?.location || "Nagercoil",
-      photographer: old?.photographer || "Not Assigned", totalAmount: amountOf(enquiry.budget),
-      status: ["Completed", "Cancelled"].includes(old?.status) ? old.status : status,
-      source: "Enquiry", weddingCoverage: enquiry.weddingCoverage || "",
-      notes: enquiry.notes || "", createdAt: old?.createdAt || now,
-      updatedAt: old?.updatedAt || now,
-    };
-    if (bookingIndex < 0) {
-      bookings.unshift(nextBooking); bookingsChanged = true; bookingsAdded++;
-    } else if (["customerId", "customer", "phone", "event", "date", "location", "totalAmount", "status"].some((key) => old[key] !== nextBooking[key])) {
-      bookings[bookingIndex] = { ...nextBooking, updatedAt: now }; bookingsChanged = true;
-    }
   }
 
-  // Write both keys before publishing events to avoid partially updated views.
+  // Write keys before publishing events to avoid partially updated views.
   if (customersChanged) localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customers));
-  if (bookingsChanged) localStorage.setItem(BOOKING_KEY, JSON.stringify(bookings));
+  if (bookingsChanged) localStorage.setItem(BOOKING_KEY, JSON.stringify(cleanBookings));
   if (customersChanged) notify(CUSTOMER_KEY);
   if (bookingsChanged) notify(BOOKING_KEY);
-  return { customers: customersAdded, bookings: bookingsAdded };
+  return { customers: customersAdded, bookings: 0 };
 }

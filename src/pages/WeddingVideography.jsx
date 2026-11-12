@@ -79,100 +79,10 @@ const VIDEOGRAPHERS = [
   "Not Assigned",
 ];
 
-const COUPLES = [
-  "Arun & Priya",
-  "Vijay & Meena",
-  "Sanjay & Divya",
-  "Ramesh & Anu",
-  "Karthik & Keerthana",
-  "Rahul & Swetha",
-  "Vignesh & Harini",
-  "Dinesh & Aishwarya",
-  "Ajay & Kavya",
-  "Naveen & Ramya",
-  "Surya & Abinaya",
-  "Aravind & Janani",
-  "Bala & Deepika",
-  "Ashwin & Pavithra",
-  "Gokul & Shalini",
-  "Sathish & Monisha",
-  "Manoj & Rithika",
-  "Hari & Gayathri",
-  "Prakash & Sneha",
-  "Praveen & Nithya",
-  "Akash & Dharshini",
-  "Vimal & Revathi",
-  "Suresh & Lakshmi",
-  "Rohith & Nandhini",
-  "Bharath & Yazhini",
-  "Krishna & Shreya",
-  "Nithin & Pooja",
-  "Vasanth & Hema",
-  "Ranjith & Sindhu",
-  "Abishek & Vaishnavi",
-];
-
-const NOTES = [
-  "Full wedding cinematic coverage",
-  "Reception highlights and family moments",
-  "Outdoor couple cinematic shoot",
-  "Traditional ceremony coverage",
-  "Drone shots and wedding highlights",
-  "Full HD video with edited highlights",
-  "Candid moments and cinematic teaser",
-  "Multi-camera wedding coverage",
-  "Couple shoot with slow-motion clips",
-  "Complete event documentary",
-];
-
-const AMOUNTS = [
-  65000, 45000, 25000, 30000, 85000,
-  55000, 70000, 42000, 28000, 95000,
-  60000, 35000, 75000, 110000, 48000,
-  82000, 40000, 58000, 32000, 120000,
-  68000, 45000, 90000, 38000, 52000,
-  105000, 62000, 44000, 78000, 98000,
-];
-
-const dummyBookings = COUPLES.map((customer, index) => {
-  const date = new Date(2026, 9, 12 + index * 4);
-
-  const dateString = [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-
-  const amount = AMOUNTS[index];
-
-  return {
-    id: `VID-DEMO-${String(index + 1).padStart(3, "0")}`,
-    customer,
-    phone: String(9000020001 + index),
-    event: EVENT_TYPES[index % (EVENT_TYPES.length - 1)],
-    date: dateString,
-    venue: VENUES[index % (VENUES.length - 1)],
-    packageName: PACKAGES[index % (PACKAGES.length - 1)],
-    videographer:
-      VIDEOGRAPHERS[index % (VIDEOGRAPHERS.length - 1)],
-    amount,
-    advance:
-      index % 6 === 0
-        ? amount
-        : Math.floor(
-            (amount * (0.25 + (index % 4) * 0.1)) / 1000
-          ) * 1000,
-    status: [
-      "Upcoming",
-      "Upcoming",
-      "In Progress",
-      "Completed",
-      "Upcoming",
-    ][index % 5],
-    notes: NOTES[index % NOTES.length],
-    isDemo: true,
-  };
-});
+const COUPLES = [];
+const NOTES = [];
+const AMOUNTS = [];
+const dummyBookings = [];
 
 const emptyForm = {
   customer: "",
@@ -220,28 +130,9 @@ function loadBookings() {
   try {
     const saved = localStorage.getItem(KEY);
     const parsed = saved ? JSON.parse(saved) : [];
-    const existing = Array.isArray(parsed) ? parsed : [];
-
-    if (localStorage.getItem(DEMO_KEY) === "true") {
-      return existing;
-    }
-
-    const existingIds = new Set(
-      existing.map((item) => String(item.id))
-    );
-
-    const missing = dummyBookings.filter(
-      (item) => !existingIds.has(String(item.id))
-    );
-
-    const merged = [...existing, ...missing];
-
-    localStorage.setItem(KEY, JSON.stringify(merged));
-    localStorage.setItem(DEMO_KEY, "true");
-
-    return merged;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return dummyBookings;
+    return [];
   }
 }
 
@@ -1449,7 +1340,7 @@ export default function WeddingVideography() {
               />
 
               <p className="mt-3 text-sm text-[#7893b3]">
-                No videography bookings found.
+                {bookings.length === 0 ? "No wedding videography bookings yet." : "No videography bookings found."}
               </p>
             </div>
           ) : (
@@ -1627,7 +1518,7 @@ export default function WeddingVideography() {
                     colSpan={9}
                     className="px-5 py-16 text-center text-sm text-[#7893b3]"
                   >
-                    No videography bookings found.
+                    {bookings.length === 0 ? "No wedding videography bookings yet." : "No videography bookings found."}
                   </td>
                 </tr>
               ) : (

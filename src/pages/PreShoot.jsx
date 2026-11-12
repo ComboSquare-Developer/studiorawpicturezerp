@@ -174,68 +174,7 @@ const formatTime = (value) => {
 
 /* SAMPLE SHOOT DATA */
 
-const createDemoShoots = () => [
-  {
-    id: "SHOOT-1001",
-    customer: "Arun & Priya",
-    event: "Wedding",
-    shootDate: dateOffset(2),
-    shootTime: "06:30",
-    location: "Taj Wedding Hall, Nagercoil",
-    photographer: "Arun Kumar",
-    team: "Full Wedding Photography Team",
-    equipment: "Wedding Photography Kit",
-    checklist: checklistItems.slice(0, 8),
-  },
-  {
-    id: "SHOOT-1002",
-    customer: "Rahul & Divya",
-    event: "Engagement",
-    shootDate: dateOffset(4),
-    shootTime: "10:00",
-    location: "Ocean View Convention Centre",
-    photographer: "Praveen Raj",
-    team: "Photographer + Videographer",
-    equipment: "Sony A7 IV + 24-70mm Lens",
-    checklist: checklistItems.slice(0, 5),
-  },
-  {
-    id: "SHOOT-1003",
-    customer: "Kavin Birthday Shoot",
-    event: "Birthday",
-    shootDate: dateOffset(6),
-    shootTime: "16:00",
-    location: "Happy Moments Party Hall",
-    photographer: "Divya Photography",
-    team: "Studio Photography Team",
-    equipment: "Studio Lighting + Softbox Kit",
-    checklist: checklistItems.slice(0, 3),
-  },
-  {
-    id: "SHOOT-1004",
-    customer: "Vijay & Nisha",
-    event: "Pre-Wedding",
-    shootDate: dateOffset(8),
-    shootTime: "07:00",
-    location: "Muttom Beach",
-    photographer: "Karthik S",
-    team: "Photographer + 2 Assistants",
-    equipment: "Drone + Aerial Photography Kit",
-    checklist: [],
-  },
-  {
-    id: "SHOOT-1005",
-    customer: "Meera Portrait Session",
-    event: "Portrait",
-    shootDate: dateOffset(10),
-    shootTime: "11:30",
-    location: "Studio Raw Picturez",
-    photographer: "Sanjay R",
-    team: "Photographer + 1 Assistant",
-    equipment: "Camera + Portrait Lens Kit",
-    checklist: checklistItems.slice(0, 10),
-  },
-];
+const createDemoShoots = () => [];
 
 function CustomDropdown({
   value,
@@ -468,12 +407,9 @@ export default function ShootReadiness() {
   const [shoots, setShoots] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-
-      return Array.isArray(saved) && saved.length > 0
-        ? saved
-        : createDemoShoots();
+      return Array.isArray(saved) ? saved : [];
     } catch {
-      return createDemoShoots();
+      return [];
     }
   });
 
@@ -717,7 +653,7 @@ export default function ShootReadiness() {
         {filtered.length === 0 ? (
           <div className="px-4 py-16 text-center">
             <ClipboardCheck size={42} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-sm text-slate-400">No shoot preparations found</p>
+            <p className="text-sm text-slate-400">{shoots.length === 0 ? "No shoot preparations scheduled yet." : "No shoot preparations found"}</p>
             <p className="mt-1 text-xs text-slate-400">Try another search or create a new preparation.</p>
           </div>
         ) : (

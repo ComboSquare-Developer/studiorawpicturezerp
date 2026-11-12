@@ -167,42 +167,7 @@ const dateOffset = (days) => {
   ].join("-");
 };
 
-const DEMO_DATA = DEMO_NAMES.map((customer, index) => {
-  const amount = 20000 + (index % 8) * 15000;
-
-  const advance = Math.round(
-    amount *
-      (index % 4 === 0
-        ? 1
-        : index % 3 === 0
-        ? 0.5
-        : 0.3)
-  );
-
-  return {
-    id: `FUNC-DEMO-${String(index + 1).padStart(3, "0")}`,
-    customer,
-    phone: `98765${String(10000 + index).slice(-5)}`,
-    eventType: DEMO_EVENTS[index],
-    eventDate: dateOffset(
-      index < 6 ? -(20 - index * 3) : index * 4
-    ),
-    venue: DEMO_VENUES[index % DEMO_VENUES.length],
-    guests: 80 + (index % 8) * 75,
-    services: DEMO_SERVICES[index],
-    amount,
-    advance,
-    status:
-      index < 4
-        ? "Completed"
-        : index === 4 || index === 5
-        ? "In Progress"
-        : index === 18
-        ? "Cancelled"
-        : "Upcoming",
-    notes: `Demo booking for ${DEMO_EVENTS[index]}`,
-  };
-});
+const DEMO_DATA = [];
 
 const emptyForm = {
   customer: "",
@@ -801,16 +766,11 @@ export default function FunctionsWeArrange() {
   const [functions, setFunctions] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-
-        return Array.isArray(parsed) ? parsed : DEMO_DATA;
-      }
-
-      return DEMO_DATA;
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return DEMO_DATA;
+      return [];
     }
   });
 
@@ -1384,7 +1344,7 @@ export default function FunctionsWeArrange() {
                 />
 
                 <p className="mt-3 text-sm text-[#829db9]">
-                  No functions found.
+                  {functions.length === 0 ? "No function bookings arranged yet." : "No functions found."}
                 </p>
               </div>
             ) : (
@@ -1565,7 +1525,7 @@ export default function FunctionsWeArrange() {
                       colSpan={10}
                       className="px-4 py-16 text-center text-[#91abc8]"
                     >
-                      No functions found.
+                      {functions.length === 0 ? "No function bookings arranged yet." : "No functions found."}
                     </td>
                   </tr>
                 ) : (
