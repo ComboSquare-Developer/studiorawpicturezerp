@@ -18,7 +18,7 @@ import {
   Mail,
 } from "lucide-react";
 import { api } from "../api/client";
-import { syncStaffSalaryExpenses } from "../services/financialService";
+import { syncStaffSalaryExpenses, removeLinkedSalaryExpenses } from "../services/financialService";
 
 const STAFF_KEY = "studioraw_staff";
 const UPDATE_EVENT = "studioraw:data-updated";
@@ -512,10 +512,15 @@ export default function Staff() {
     try {
       if (deleteStaff.id) {
         await api.staff.delete(deleteStaff.id);
+      } else if (deleteStaff.employee_id) {
+        await api.staff.delete(deleteStaff.employee_id);
       }
     } catch (err) {
       console.warn("Backend delete staff notice:", err.message);
     }
+
+    // Immediately remove linked auto-generated salary expenses from persistent storage
+    removeLinkedSalaryExpenses(deleteStaff);
 
     setStaffList((previous) => {
       const next = previous.filter(
@@ -528,7 +533,7 @@ export default function Staff() {
       return next;
     });
 
-    setToast("Staff member deleted.");
+    setToast("Staff member deleted successfully.");
     setDeleteStaff(null);
   };
 
@@ -1377,9 +1382,7 @@ export default function Staff() {
               </h3>
 
               <p className="mt-2 text-xs font-medium text-[#647c9d]">
-                Are you sure you want to remove{" "}
-                <strong>{deleteStaff.staff_name}</strong>? This action cannot
-                be undone.
+                Are you sure you want to delete this staff member? Their automatically generated salary expense records will also be removed from this demo dataset.
               </p>
 
               <div className="mt-6 flex items-center gap-3">

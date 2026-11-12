@@ -1197,18 +1197,19 @@ export default function Expenses() {
     api.expenses
       .list()
       .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setExpenses(
             data.map((item) => ({
+              ...item,
               id: item.id,
-              title: item.expense_title || "Expense",
+              title: item.title || item.expense_title || "Expense",
               category: item.category || "Other",
               amount: Number(item.amount || 0),
-              date: item.expense_date || localDate(),
-              paymentMode: item.payment_method || "Cash",
-              paidTo: item.paid_to || "",
+              date: item.date || item.expense_date || localDate(),
+              paymentMode: item.paymentMode || item.payment_method || "Cash",
+              paidTo: item.paidTo || item.paid_to || "",
               notes: item.notes || "",
-              updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+              updatedAt: item.updatedAt || item.updated_at || item.created_at || new Date().toISOString(),
             }))
           );
         }
@@ -1230,10 +1231,8 @@ export default function Expenses() {
 
     const onUpdate = (e) => {
       const key = e?.detail?.key || e?.key;
-      if (key === "studioraw_staff") {
+      if (key === "studioraw_staff" || key === EXPENSE_KEY || !key) {
         syncStaffSalaryExpenses();
-        setExpenses(readInitialExpenses());
-      } else if (key === EXPENSE_KEY) {
         const fresh = readInitialExpenses();
         setExpenses((prev) => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
       }
@@ -1884,11 +1883,17 @@ export default function Expenses() {
             </div>
 
             <h3 className="font-extrabold text-[#10264d]">
-              {expenses.length === 0 ? "No expenses recorded." : "No expense records found"}
+              {monthlyExpenses.length === 0
+                ? "No expenses recorded for this month."
+                : expenses.length === 0
+                ? "No expenses recorded."
+                : "No expense records found"}
             </h3>
 
             <p className="mt-2 text-sm text-[#8aa0b8]">
-              Add an expense or change your filters.
+              {monthlyExpenses.length === 0
+                ? "No expenses recorded for this month."
+                : "Add an expense or change your filters."}
             </p>
 
             <button

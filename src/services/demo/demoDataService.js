@@ -34,6 +34,7 @@ import {
 import {
   generateMonthlySalaries,
   getDeduplicatedMonthlyExpenses,
+  removeLinkedSalaryExpenses,
   STAFF_SALARIES,
   getInvoiceTotal,
   getInvoiceReceived,
@@ -312,7 +313,27 @@ export const demoDataService = {
     },
   },
   deliveries: createGenericResource(STORAGE_KEYS.deliveries, demoDeliveries, "DEL"),
-  staff: createGenericResource(STORAGE_KEYS.staff, demoEmployees, "EMP"),
+  staff: {
+    ...createGenericResource(STORAGE_KEYS.staff, demoEmployees, "EMP"),
+    async delete(id) {
+      const items = getStorageItems(STORAGE_KEYS.staff, demoEmployees);
+      const target = items.find(
+        (item) => String(item.id) === String(id) || String(item.employee_id) === String(id)
+      );
+      const filtered = items.filter(
+        (item) => String(item.id) !== String(id) && String(item.employee_id) !== String(id)
+      );
+      setStorageItems(STORAGE_KEYS.staff, filtered);
+
+      if (target) {
+        removeLinkedSalaryExpenses(target);
+      } else {
+        removeLinkedSalaryExpenses({ id, employee_id: id });
+      }
+
+      return { success: true, id };
+    },
+  },
   attendance: createGenericResource(STORAGE_KEYS.attendance, demoAttendance, "ATT"),
   leaves: createGenericResource(STORAGE_KEYS.leaves, demoLeaves, "LEV"),
   payroll: createGenericResource(STORAGE_KEYS.payroll, demoPayroll, "PAY"),
