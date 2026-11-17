@@ -23,7 +23,6 @@ import {
   Camera,
   RefreshCw,
   Download,
-  IndianRupee,
   ClipboardList,
   Search,
   MapPin,
@@ -1274,8 +1273,6 @@ export default function Reports() {
     [data.expenses, selectedMonth]
   );
 
-  const profit = round(paymentSummary.revenue - expenseTotal);
-
   /* DAILY GRAPH DATA FOR SELECTED MONTH */
 
   const dailyData = useMemo(() => {
@@ -1391,7 +1388,6 @@ export default function Reports() {
       ["Metric", "Amount"],
       ["Total Revenue (Received)", paymentSummary.revenue],
       ["Total Expenses", expenseTotal],
-      ["Net Profit", profit],
       ["Pending Balance (Invoices)", paymentSummary.pending],
       [],
       ["PAYMENT METHODS BREAKDOWN"],
@@ -1576,8 +1572,8 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* 3. FOUR SUMMARY KPI CARDS */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* 3. THREE SUMMARY KPI CARDS */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <KPICard
             title="Total Revenue"
             value={paymentSummary.revenue}
@@ -1592,14 +1588,6 @@ export default function Reports() {
             subtitle={`${monthly.expenses.length} records in ${monthLabel(selectedMonth)}`}
             icon={TrendingDown}
             color="red"
-            currency
-          />
-          <KPICard
-            title="Net Profit"
-            value={profit}
-            subtitle="Total Revenue − Total Expenses"
-            icon={IndianRupee}
-            color={profit >= 0 ? "blue" : "red"}
             currency
           />
           <KPICard
