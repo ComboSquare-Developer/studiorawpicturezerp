@@ -183,7 +183,7 @@ export function identifyStaffMember(item, staffList = null) {
  * - Cancels future unpaid payroll on deletion/deactivation
  * - Deduplication via unique reference SAL-EXP-{staffId}-{month}
  */
-export function syncStaffSalaryExpenses() {
+export function syncStaffSalaryExpenses(targetMonthStr = null) {
   if (typeof window === "undefined" || !window.localStorage) return [];
 
   const STAFF_KEY = "studioraw_staff";
@@ -205,8 +205,12 @@ export function syncStaffSalaryExpenses() {
 
   const todayStr = normalizeDate(new Date());
   const currentMonthStr = todayStr.slice(0, 7);
+  const endMonthStr =
+    targetMonthStr && /^\d{4}-\d{2}$/.test(targetMonthStr) && targetMonthStr > currentMonthStr
+      ? targetMonthStr
+      : currentMonthStr;
 
-  // All existing staff identifiers (active, on leave, inactive)
+  // All existing staff identifiers (active, inactive)
   const allStaffKeys = new Set();
   staffList.forEach((s) => {
     if (s.id) allStaffKeys.add(String(s.id));
@@ -244,13 +248,15 @@ export function syncStaffSalaryExpenses() {
     return false;
   };
 
-  // 1. Remove salary expenses for deleted staff or future/unpaid for inactive staff
+  // 1. Clean expenses: do not erase historical paid salary expenses when a staff member is deleted or deactivated.
+  // Only remove future or unclosed/unpaid entries for deleted or inactive staff.
   const cleanedExpenses = expenses.filter((e) => {
-    if (!isAutoSalaryExpense(e)) return true; // Keep manual expenses
+    if (!isAutoSalaryExpense(e)) return true; // Keep all manual expenses
 
     const eKey1 = e.staffId ? String(e.staffId) : "";
     const eKey2 = e.employee_id ? String(e.employee_id).toLowerCase() : "";
     const eName = String(e.paidTo || e.paid_to || "").trim().toLowerCase();
+    const eDate = normalizeDate(e.date || e.expense_date);
 
     // Check if linked staff member exists in staff roster
     const staffStillExists =
@@ -259,9 +265,13 @@ export function syncStaffSalaryExpenses() {
       (eName && allStaffKeys.has(eName));
 
     if (!staffStillExists) {
-      // Staff member was deleted! Remove this linked auto salary expense immediately
-      changed = true;
-      return false;
+      // Staff member was deleted: preserve historical paid salary expenses!
+      // Only remove future or unpaid entries.
+      if (eDate > todayStr || String(e.status || "").toLowerCase() !== "paid") {
+        changed = true;
+        return false;
+      }
+      return true;
     }
 
     const isStillActive =
@@ -270,9 +280,8 @@ export function syncStaffSalaryExpenses() {
       (eName && activeStaffKeys.has(eName));
 
     if (!isStillActive) {
-      // Inactive or on-leave staff: remove future or unpaid entries
-      const eDate = normalizeDate(e.date || e.expense_date);
-      if (eDate >= todayStr || String(e.status || "").toLowerCase() === "pending" || String(e.status || "").toLowerCase() === "unpaid") {
+      // Inactive staff: remove future or unpaid entries, preserve historical paid records
+      if (eDate > todayStr || String(e.status || "").toLowerCase() === "pending" || String(e.status || "").toLowerCase() === "unpaid") {
         changed = true;
         return false;
       }
@@ -282,7 +291,7 @@ export function syncStaffSalaryExpenses() {
 
   expenses = cleanedExpenses;
 
-  // 2. For each active staff member, generate monthly salary expenses
+  // 2. For each active staff member, generate monthly salary expenses up to endMonthStr
   for (const staff of activeStaff) {
     const salary = parseAmount(staff.salary);
     if (salary <= 0) continue;
@@ -292,33 +301,28 @@ export function syncStaffSalaryExpenses() {
     const joiningDate = normalizeDate(staff.joining_date) || todayStr;
     const joiningMonth = joiningDate.slice(0, 7) || currentMonthStr;
 
-    // Consider months from joiningMonth up to currentMonthStr (at most 12 months back)
-    const [curYear, curMonth] = currentMonthStr.split("-").map(Number);
+    // Consider months from joiningMonth up to endMonthStr (e.g. current month or future selected month)
+    const [curYear] = currentMonthStr.split("-").map(Number);
     const [joinYear, joinMonth] = joiningMonth.split("-").map(Number);
+    const [endYear, endMonth] = endMonthStr.split("-").map(Number);
 
     const startYear = Math.max(joinYear, curYear - 1);
     const startMonth = startYear === joinYear ? joinMonth : 1;
 
-    for (let y = startYear; y <= curYear; y++) {
+    for (let y = startYear; y <= endYear; y++) {
       const mStart = y === startYear ? startMonth : 1;
-      const mEnd = y === curYear ? curMonth : 12;
+      const mEnd = y === endYear ? endMonth : 12;
 
       for (let m = mStart; m <= mEnd; m++) {
         const monthStr = `${y}-${String(m).padStart(2, "0")}`;
+        if (monthStr < joiningMonth) continue; // Do not generate before employment begins
+
         let salaryDate = getStaffSalaryDateForMonth(staff, monthStr);
 
         // If joining was in this month and configured salaryDate is before joiningDate:
         if (monthStr === joiningMonth && salaryDate < joiningDate) {
-          salaryDate = joiningDate <= todayStr ? joiningDate : salaryDate;
+          salaryDate = joiningDate;
         }
-
-        // For current month, if salaryDate is in the future, use today's date if joined on or before today
-        if (monthStr === currentMonthStr && salaryDate > todayStr && joiningDate <= todayStr) {
-          salaryDate = todayStr;
-        }
-
-        if (salaryDate > todayStr) continue;
-        if (salaryDate < joiningDate) continue;
 
         const uniqueId = `SAL-EXP-${employeeId || staffId}-${monthStr}`;
 
@@ -499,8 +503,15 @@ export function removeLinkedSalaryExpenses(staffMember) {
           (targetId && itemId.startsWith(`sal-exp-${targetId.toLowerCase()}-`));
 
         if (matchId || matchEmpId || matchName || matchIdInExpenseId) {
-          anyModified = true;
-          return false; // Remove this linked salary expense
+          // Preserve historical paid salary records for deleted staff members!
+          // Only remove future or unclosed/unpaid entries.
+          const todayStr = normalizeDate(new Date());
+          const eDate = normalizeDate(item.date || item.expense_date);
+          if (eDate > todayStr || String(item.status || "").toLowerCase() !== "paid") {
+            anyModified = true;
+            return false; // Remove future or unpaid entry
+          }
+          return true; // Keep historical paid record
         }
 
         return true;
@@ -594,6 +605,57 @@ export function getDeduplicatedMonthlyExpenses(allExpenses = [], monthStr) {
       }
     } else {
       nonSalaryExpenses.push(item);
+    }
+  }
+
+  // 2. Ensure all active staff members eligible for this month (from joining month onward) are included
+  const activeStaff = staffList.filter((s) => {
+    const status = String(s.status || "Active").trim().toLowerCase();
+    return status === "active" && parseAmount(s.salary) > 0;
+  });
+
+  for (const staff of activeStaff) {
+    const staffKey = String(staff.employee_id || staff.id).trim().toLowerCase();
+    const joiningDate = normalizeDate(staff.joining_date) || "1970-01-01";
+    const joiningMonth = joiningDate.slice(0, 7) || "1970-01";
+
+    if (monthStr < joiningMonth) continue; // Do not generate before employment begins
+
+    if (!staffSalaryMap.has(staffKey)) {
+      let salaryDate = getStaffSalaryDateForMonth(staff, monthStr);
+      if (monthStr === joiningMonth && salaryDate < joiningDate) {
+        salaryDate = joiningDate;
+      }
+      const staffName = String(staff.staff_name || staff.name || "Staff Member").trim();
+      const staffRole = staff.specialization || staff.role || "Staff";
+      const employeeId = staff.employee_id || staff.id || "001";
+      const salary = parseAmount(staff.salary);
+
+      staffSalaryMap.set(staffKey, {
+        id: `SAL-EXP-${employeeId}-${monthStr}`,
+        title: `Monthly basic salary for ${staffName}`,
+        expense_title: `Monthly basic salary for ${staffName}`,
+        category: "Staff Salary",
+        amount: salary,
+        date: salaryDate,
+        expense_date: salaryDate,
+        paymentMode: "Bank Transfer",
+        payment_method: "Bank Transfer",
+        paidTo: staffName,
+        paid_to: staffName,
+        status: "Paid",
+        receipt_number: `SAL-${monthStr.replace("-", "")}-${String(employeeId).slice(-3)}`,
+        notes: `Monthly basic salary for ${staffName} (${staffRole})`,
+        staffId: String(staff.id || ""),
+        employee_id: String(employeeId),
+        isAutoSalary: true,
+        generatedByPayroll: true,
+        sourceType: "payroll",
+        expenseType: "salary",
+        salaryMonth: monthStr,
+        createdAt: `${salaryDate}T09:00:00.000Z`,
+        updatedAt: new Date().toISOString(),
+      });
     }
   }
 

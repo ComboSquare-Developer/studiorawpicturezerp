@@ -60,13 +60,26 @@ const locationOptions = [
   "Trivandrum",
 ];
 
-const photographerOptions = [
-  "Prathiksha",
-  "Arun",
-  "David",
-  "Rahul",
-  "Studio Team",
-];
+const STAFF_KEY = "studioraw_staff";
+
+function readActivePhotographers() {
+  try {
+    const raw = localStorage.getItem(STAFF_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((m) => String(m.status || "Active").trim().toLowerCase() === "active")
+      .map((m) => {
+        const name = String(m.staff_name || m.name || m.fullName || "").trim();
+        const empId = String(m.employee_id || "").trim();
+        return empId ? `${name} (${empId})` : name;
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 const packageOptions = [
   "Standard",
@@ -283,6 +296,27 @@ export default function PhotoShoot() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState(null);
+  const [activePhotographers, setActivePhotographers] = useState(readActivePhotographers);
+
+  useEffect(() => {
+    const refreshPhotographers = () => {
+      setActivePhotographers(readActivePhotographers());
+    };
+    window.addEventListener("storage", refreshPhotographers);
+    window.addEventListener("studioraw:data-updated", refreshPhotographers);
+    return () => {
+      window.removeEventListener("storage", refreshPhotographers);
+      window.removeEventListener("studioraw:data-updated", refreshPhotographers);
+    };
+  }, []);
+
+  const dynamicPhotographerOptions = useMemo(() => {
+    const list = [...activePhotographers];
+    if (form.photographer && !list.includes(form.photographer)) {
+      list.unshift(form.photographer);
+    }
+    return list;
+  }, [activePhotographers, form.photographer]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -960,7 +994,7 @@ export default function PhotoShoot() {
                     updateField("photographer", value)
                   }
                   placeholder="Select or type a name"
-                  options={photographerOptions}
+                  options={dynamicPhotographerOptions}
                   required
                 />
 

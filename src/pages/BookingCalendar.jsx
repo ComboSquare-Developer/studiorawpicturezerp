@@ -387,102 +387,8 @@ function readStaffMembers() {
 }
 
 function getStaffForServiceAndEvent(service, eventType, staffMembers) {
-  const s = String(service || "").trim().toLowerCase();
-  const e = String(eventType || "").trim().toLowerCase();
-
-  // If Others, all active staff members are eligible to be assigned
-  if (s === "others" || s === "other") {
-    return staffMembers;
-  }
-
-  return staffMembers.filter((member) => {
-    const mService = String(member.service || "").trim().toLowerCase();
-    const dept = String(member.department || "").trim().toLowerCase();
-    const role = String(
-      member.specialization || member.role || member.designation || ""
-    ).trim().toLowerCase();
-
-    // Direct match by service field
-    if (mService && mService === s) return true;
-
-    if (s.includes("wedding photography") || s === "photography") {
-      return (
-        mService.includes("wedding photography") ||
-        dept.includes("photography") ||
-        role.includes("photo") ||
-        role.includes("candid") ||
-        role.includes("traditional")
-      );
-    }
-
-    if (s.includes("wedding videography") || s === "videography") {
-      return (
-        mService.includes("wedding videography") ||
-        dept.includes("videography") ||
-        role.includes("video") ||
-        role.includes("cinema") ||
-        role.includes("drone")
-      );
-    }
-
-    if (s.includes("functions we arrange")) {
-      if (
-        e.includes("photo") ||
-        e.includes("candid") ||
-        e.includes("maternity") ||
-        e.includes("shoot")
-      ) {
-        return dept.includes("photography") || role.includes("photo");
-      }
-      if (
-        e.includes("video") ||
-        e.includes("cinema") ||
-        e.includes("drone") ||
-        e.includes("night") ||
-        e.includes("party")
-      ) {
-        return dept.includes("videography") || role.includes("video") || role.includes("cinema");
-      }
-      return (
-        mService.includes("functions we arrange") ||
-        dept.includes("photography") ||
-        dept.includes("videography") ||
-        dept.includes("operations") ||
-        role.includes("photo") ||
-        role.includes("video") ||
-        role.includes("coordinator")
-      );
-    }
-
-    if (s.includes("event management")) {
-      return (
-        mService.includes("event management") ||
-        dept.includes("management") ||
-        dept.includes("operations") ||
-        role.includes("event") ||
-        role.includes("coordinator") ||
-        role.includes("manager") ||
-        role.includes("production") ||
-        role.includes("lighting")
-      );
-    }
-
-    if (s.includes("customer gifts") || s.includes("gift")) {
-      return (
-        mService.includes("customer gifts") ||
-        dept.includes("post-production") ||
-        dept.includes("operations") ||
-        dept.includes("customer support") ||
-        role.includes("designer") ||
-        role.includes("album") ||
-        role.includes("gift") ||
-        role.includes("editor") ||
-        role.includes("support")
-      );
-    }
-
-    return mService === "others" || (dept && s.includes(dept));
-  });
+  // All active registered staff in Staff Management are eligible photographers
+  return staffMembers;
 }
 
 function getConflictingStaffSet(bookings, bookingDate, bookingTime, currentBookingId) {
@@ -609,29 +515,45 @@ function financialsFor(booking, payments) {
 }
 
 function mergeRemotePayments(local, remote) {
-  const byId = new Map(local.map((p) => [String(p.id), p]));
+  const byId = new Map((local || []).map((p) => [String(p.id), p]));
 
-  for (const p of remote) {
+  for (const p of remote || []) {
     const old = byId.get(String(p.id)) || {};
+    const existingTxs =
+      Array.isArray(old.transactions) && old.transactions.length
+        ? old.transactions
+        : Array.isArray(p.transactions) && p.transactions.length
+        ? p.transactions
+        : [];
+
+    const effectiveAdvance = amount(
+      old.advance ?? p.advance ?? p.paid_amount ?? old.paid_amount
+    );
+    const effectiveTotal = amount(
+      p.total_amount ?? p.amount ?? old.total ?? old.total_amount
+    );
+    const effectivePaid = Math.max(
+      amount(old.paidAmount ?? old.paid_amount ?? old.received),
+      effectiveAdvance,
+      amount(p.paid_amount)
+    );
 
     byId.set(String(p.id), {
       ...old,
-      id: p.id,
-      invoice: p.transaction_id || old.invoice || `SRP-${p.id}`,
+      ...p,
+      id: p.id || old.id,
+      invoice: p.invoice || p.transaction_id || old.invoice || `SRP-${p.id}`,
       bookingId: paymentBookingId(p) ?? old.bookingId ?? "",
-      customer: p.customer_name || old.customer || "",
-      total: amount(p.total_amount ?? p.amount ?? old.total),
-      advance: amount(p.paid_amount ?? old.advance),
-      paid_amount: amount(p.paid_amount ?? old.advance),
-      method: p.payment_method || old.method || "Cash",
-      date: p.payment_date || old.date || "",
+      customer: p.customer_name || p.customer || old.customer || "",
+      total: effectiveTotal,
+      total_amount: effectiveTotal,
+      advance: effectiveAdvance,
+      paidAmount: effectivePaid,
+      paid_amount: effectivePaid,
+      method: p.payment_method || p.method || old.method || "Cash",
+      date: p.payment_date || p.date || old.date || "",
       status: p.status || old.status || "Pending",
-      transactions:
-        Array.isArray(old.transactions) &&
-        old.transactions.length &&
-        Math.abs(paymentReceived(old) - amount(p.paid_amount)) < 0.01
-          ? old.transactions
-          : [],
+      transactions: existingTxs,
     });
   }
 
@@ -711,6 +633,9 @@ function BookingCard({
   financials,
 }) {
   const hasInvoice = Boolean(financials?.invoices && financials.invoices.length > 0);
+  const isCancelled =
+    String(booking?.status || "").toLowerCase() === "cancelled" ||
+    String(booking?.status || "").toLowerCase() === "canceled";
   const eventLabel =
     booking.service === "Others"
       ? (booking.customService || "Other Service")
@@ -764,9 +689,21 @@ function BookingCard({
         {hasInvoice && (
           <button
             type="button"
-            title="Download Invoice"
-            onClick={() => onInvoice?.(booking)}
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+            title={
+              isCancelled
+                ? "Invoice actions are unavailable for cancelled bookings."
+                : "Download Invoice"
+            }
+            disabled={isCancelled}
+            onClick={() => {
+              if (isCancelled) return;
+              onInvoice?.(booking);
+            }}
+            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold ${
+              isCancelled
+                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
+            }`}
           >
             <Download size={16} />
             Invoice
@@ -774,7 +711,7 @@ function BookingCard({
         )}
         <select
           value={booking.status || "Pending"}
-          onChange={(e) => onStatus(booking.id, e.target.value)}
+          onChange={(e) => onStatus(booking, e.target.value)}
           className="min-w-0 flex-1 rounded-xl border border-[#cfdef2] bg-white px-3 py-2.5 text-xs font-bold text-[#285a99]"
         >
           {statuses.map((s) => (
@@ -1001,6 +938,48 @@ function DeleteBookingModal({ booking, payments, onClose, onConfirm }) {
   );
 }
 
+function CancelBookingModal({ booking, onClose, onConfirm }) {
+  return (
+    <ModalShell
+      title="Cancel Booking?"
+      subtitle={
+        booking?.customer
+          ? `Customer: ${booking.customer}`
+          : "Booking Cancellation"
+      }
+      icon={AlertCircle}
+      onClose={onClose}
+    >
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f8fbff] p-5 sm:p-7">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-900">
+          <p className="text-sm font-bold text-amber-950">
+            Cancel Booking Confirmation
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-amber-900">
+            Are you sure you want to cancel this booking? The booking will be marked as cancelled, and invoice download and print actions will be disabled.
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 border-t bg-white px-5 py-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+        >
+          Keep Booking
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
+        >
+          Yes, Cancel Booking
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
 function BookingModal({
   booking,
   bookings = [],
@@ -1021,6 +1000,7 @@ function BookingModal({
 
   const [form, setForm] = useState(initial);
   const [staffMembers, setStaffMembers] = useState(() => readStaffMembers());
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -1060,7 +1040,8 @@ function BookingModal({
 
   const assignedStaffMember = useMemo(() => {
     if (!assignedStaffName) return null;
-    return staffMembers.find(
+    const allStaff = readArray(STAFF_KEY);
+    return allStaff.find(
       (m) =>
         (form.staffId && String(m.id) === String(form.staffId)) ||
         (form.employeeId &&
@@ -1068,7 +1049,7 @@ function BookingModal({
         staffDisplayName(m).trim().toLowerCase() ===
           assignedStaffName.trim().toLowerCase()
     );
-  }, [assignedStaffName, form.staffId, form.employeeId, staffMembers]);
+  }, [assignedStaffName, form.staffId, form.employeeId]);
 
   const isAssignedUnavailable = useMemo(() => {
     if (!assignedStaffName) return false;
@@ -1183,6 +1164,38 @@ function BookingModal({
     "canceled",
   ].includes(String(form.status || "").toLowerCase());
 
+  const totalInvoiceAmt = amount(form.totalAmount);
+  const advanceAmt = amount(form.advance);
+  const isAdvanceExceeding =
+    isInvoiceEligible &&
+    form.advance !== "" &&
+    form.totalAmount !== "" &&
+    advanceAmt > totalInvoiceAmt;
+  const isAdvanceNegative =
+    isInvoiceEligible && form.advance !== "" && Number(form.advance) < 0;
+  const isTotalZeroOrNegative =
+    isInvoiceEligible && form.totalAmount !== "" && Number(form.totalAmount) <= 0;
+
+  const additionalPayments = useMemo(() => {
+    if (!financials?.invoices?.length) return 0;
+    const inv = financials.invoices[0];
+    const txs = Array.isArray(inv.transactions) ? inv.transactions : [];
+    const nonAdvanceTxs = txs.filter(
+      (t) =>
+        !t.isAdvance &&
+        !String(t.note || "").toLowerCase().includes("advance") &&
+        !String(t.id || "").includes("ADV")
+    );
+    return nonAdvanceTxs.reduce((sum, t) => {
+      const status = String(t.status || "").toLowerCase();
+      if (["failed", "cancelled", "canceled", "void"].includes(status)) return sum;
+      return sum + amount(t.amount ?? t.paidAmount);
+    }, 0);
+  }, [financials]);
+
+  const currentReceived = Math.round((advanceAmt + additionalPayments) * 100) / 100;
+  const currentBalance = Math.max(0, Math.round((totalInvoiceAmt - currentReceived) * 100) / 100);
+
   const submit = (e) => {
     e.preventDefault();
     const name = String(form.customer || "").trim();
@@ -1210,9 +1223,15 @@ function BookingModal({
     const adv = amount(form.advance);
 
     if (isInvoiceEligible) {
-      if (tot < 0 || adv < 0) return setError("Enter valid invoice amount.");
-      if (adv > tot)
-        return setError("Advance cannot be greater than total amount.");
+      if (!form.totalAmount || Number(form.totalAmount) <= 0) {
+        return setError("Total invoice amount must be greater than zero.");
+      }
+      if (Number(form.advance) < 0) {
+        return setError("Advance received cannot be negative.");
+      }
+      if (adv > tot) {
+        return setError("Advance received cannot be greater than the total invoice amount.");
+      }
     }
 
     let invNumber = String(form.invoiceNumber || "").trim();
@@ -1502,20 +1521,22 @@ function BookingModal({
                   ) && (
                     <option value={currentSelectValue}>
                       {form.photographer}
-                      {form.staffRole ? ` – ${form.staffRole}` : ""}{" "}
+                      {form.employeeId || assignedStaffMember?.employee_id
+                        ? ` (${form.employeeId || assignedStaffMember?.employee_id})`
+                        : ""}{" "}
                       {isAssignedUnavailable ? "(Unavailable Slot)" : "(Assigned)"}
                     </option>
                   )}
                 {availableStaff.length === 0 &&
                 (!form.photographer || form.photographer === "Not Assigned") ? (
                   <option value="" disabled>
-                    No available staff for this service
+                    No available staff
                   </option>
                 ) : (
                   availableStaff.map((member) => (
                     <option key={member.id} value={String(member.id)}>
-                      {staffDisplayName(member)} –{" "}
-                      {member.specialization || member.role || "Staff"}
+                      {staffDisplayName(member)}
+                      {member.employee_id ? ` (${member.employee_id})` : ""}
                     </option>
                   ))
                 )}
@@ -1532,7 +1553,17 @@ function BookingModal({
             <select
               className={inputClass}
               value={form.status || "Confirmed"}
-              onChange={(e) => update("status", e.target.value)}
+              onChange={(e) => {
+                const nextVal = e.target.value;
+                if (
+                  String(nextVal).toLowerCase() === "cancelled" ||
+                  String(nextVal).toLowerCase() === "canceled"
+                ) {
+                  setShowCancelConfirm(true);
+                } else {
+                  update("status", nextVal);
+                }
+              }}
             >
               {statuses.map((v) => (
                 <option key={v}>{v}</option>
@@ -1577,13 +1608,19 @@ function BookingModal({
                   Total Invoice Amount (₹)
                 </span>
                 <input
-                  className={inputClass}
+                  className={`${inputClass} ${isTotalZeroOrNegative ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""}`}
                   type="number"
                   min="0"
                   step="0.01"
+                  placeholder="0.00"
                   value={form.totalAmount ?? ""}
                   onChange={(e) => update("totalAmount", e.target.value)}
                 />
+                {isTotalZeroOrNegative && (
+                  <p className="mt-1 text-xs font-semibold text-red-600">
+                    Total invoice amount must be greater than zero.
+                  </p>
+                )}
               </label>
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-xs font-bold text-[#38506f]">
@@ -1591,13 +1628,24 @@ function BookingModal({
                   Advance Received (₹)
                 </span>
                 <input
-                  className={inputClass}
+                  className={`${inputClass} ${isAdvanceExceeding || isAdvanceNegative ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""}`}
                   type="number"
                   min="0"
                   step="0.01"
+                  placeholder="0.00"
                   value={form.advance ?? ""}
                   onChange={(e) => update("advance", e.target.value)}
                 />
+                {isAdvanceExceeding && (
+                  <p className="mt-1 text-xs font-bold text-red-600">
+                    Advance received cannot be greater than the total invoice amount.
+                  </p>
+                )}
+                {isAdvanceNegative && (
+                  <p className="mt-1 text-xs font-bold text-red-600">
+                    Advance received cannot be negative.
+                  </p>
+                )}
               </label>
               <label className="block">
                 <span className="mb-2 block text-xs font-bold text-[#38506f]">
@@ -1624,18 +1672,13 @@ function BookingModal({
                 <div className="rounded-xl bg-[#edf5ff] p-3">
                   <p className="text-[10px] text-[#7890ac]">Received</p>
                   <p className="mt-1 font-black text-[#173f74]">
-                    {money(form.advance)}
+                    {money(currentReceived)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-[#fff4df] p-3">
                   <p className="text-[10px] text-[#9b7a43]">Balance</p>
                   <p className="mt-1 font-black text-[#9b6416]">
-                    {money(
-                      Math.max(
-                        0,
-                        amount(form.totalAmount) - amount(form.advance)
-                      )
-                    )}
+                    {money(currentBalance)}
                   </p>
                 </div>
               </div>
@@ -1674,6 +1717,16 @@ function BookingModal({
           </button>
         </div>
       </form>
+      {showCancelConfirm && (
+        <CancelBookingModal
+          booking={booking || form}
+          onClose={() => setShowCancelConfirm(false)}
+          onConfirm={() => {
+            update("status", "Cancelled");
+            setShowCancelConfirm(false);
+          }}
+        />
+      )}
     </ModalShell>
   );
 }
@@ -1681,6 +1734,10 @@ function BookingModal({
 function InvoicePreview({ booking, invoice, onClose }) {
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
+
+  const isCancelled =
+    String(booking?.status || "").toLowerCase() === "cancelled" ||
+    String(booking?.status || "").toLowerCase() === "canceled";
 
   const total = amount(invoice?.total ?? booking?.totalAmount);
   const received = paymentReceived(invoice || {});
@@ -1692,6 +1749,7 @@ function InvoicePreview({ booking, invoice, onClose }) {
     `SRP-${booking?.id || Date.now()}`;
 
   const handleDownload = async () => {
+    if (isCancelled) return;
     setDownloading(true);
     try {
       await generateInvoicePdf(invoice || { ...booking, total }, {
@@ -1704,6 +1762,7 @@ function InvoicePreview({ booking, invoice, onClose }) {
   };
 
   const handlePrint = async () => {
+    if (isCancelled) return;
     setPrinting(true);
     try {
       await generateInvoicePdf(invoice || { ...booking, total }, {
@@ -1872,8 +1931,17 @@ function InvoicePreview({ booking, invoice, onClose }) {
         <button
           type="button"
           onClick={handlePrint}
-          disabled={printing}
-          className="inline-flex items-center gap-2 rounded-xl border border-[#285a99] bg-white px-5 py-3 text-sm font-bold text-[#285a99] hover:bg-[#edf5ff]"
+          disabled={printing || isCancelled}
+          title={
+            isCancelled
+              ? "Invoice actions are unavailable for cancelled bookings."
+              : "Print Invoice"
+          }
+          className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold ${
+            isCancelled
+              ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+              : "border-[#285a99] bg-white text-[#285a99] hover:bg-[#edf5ff]"
+          }`}
         >
           <Printer size={17} />
           {printing ? "Preparing..." : "Print"}
@@ -1881,8 +1949,17 @@ function InvoicePreview({ booking, invoice, onClose }) {
         <button
           type="button"
           onClick={handleDownload}
-          disabled={downloading}
-          className={buttonClass}
+          disabled={downloading || isCancelled}
+          title={
+            isCancelled
+              ? "Invoice actions are unavailable for cancelled bookings."
+              : "Download Invoice (PDF)"
+          }
+          className={`${buttonClass} ${
+            isCancelled
+              ? "cursor-not-allowed opacity-50 bg-slate-400 hover:bg-slate-400"
+              : ""
+          }`}
         >
           <Download size={17} />
           {downloading ? "Generating..." : "Download Invoice (PDF)"}
@@ -2020,6 +2097,7 @@ export default function BookingCalendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [invoiceBooking, setInvoiceBooking] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [cancellationTarget, setCancellationTarget] = useState(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -2190,9 +2268,26 @@ export default function BookingCalendar() {
   };
 
   const openEdit = (b) => {
+    const linked = payments.find(
+      (p) => String(paymentBookingId(p) || "") === String(b?.id)
+    );
+    const existingAdvance =
+      b.advance !== undefined && b.advance !== "" && b.advance !== null
+        ? b.advance
+        : linked?.advance !== undefined && linked?.advance !== null
+        ? linked.advance
+        : linked?.paidAmount !== undefined
+        ? linked.paidAmount
+        : "";
+
     setEditingBooking({
       ...emptyForm,
       ...b,
+      totalAmount: b.totalAmount ?? linked?.total ?? linked?.total_amount ?? "",
+      advance: existingAdvance,
+      invoiceNumber: b.invoiceNumber || linked?.invoice || linked?.transaction_id || "",
+      invoiceDate: b.invoiceDate || linked?.date || linked?.payment_date || new Date().toISOString().slice(0, 10),
+      paymentMethod: b.paymentMethod || linked?.method || linked?.payment_method || "Cash",
       service: b.service || "Wedding Photography",
       customService: b.customService || b.custom_service || "",
       event: b.event || "Traditional Photography",
@@ -2203,6 +2298,12 @@ export default function BookingCalendar() {
   };
 
   const openInvoice = (b) => {
+    if (
+      String(b?.status || "").toLowerCase() === "cancelled" ||
+      String(b?.status || "").toLowerCase() === "canceled"
+    ) {
+      return;
+    }
     const inv = payments.find(
       (p) => String(paymentBookingId(p) || "") === String(b?.id)
     );
@@ -2307,35 +2408,66 @@ export default function BookingCalendar() {
 
     const saveInvoice = (bookingId) => {
       // Do not silently delete invoices if cancelled; only save/update when eligible
-      if (!isInvoiceEligible) return;
+      if (!isInvoiceEligible) return null;
       if (
         !bookingData.invoiceNumber &&
         !bookingData.totalAmount &&
         !bookingData.advance
       )
-        return;
+        return null;
 
       const oldPayments = readArray(PAYMENT_KEY);
       const existing = oldPayments.find(
         (p) => String(paymentBookingId(p) || "") === String(bookingId)
       );
-      const pStatus =
-        adv >= tot && tot > 0 ? "Paid" : adv > 0 ? "Partial" : "Unpaid";
 
-      const txs =
-        adv > 0
-          ? [
-              {
-                id: `TXN-${Date.now()}`,
-                amount: adv,
-                paidAmount: adv,
-                method: bookingData.paymentMethod || "Cash",
-                date: bookingData.invoiceDate || now.slice(0, 10),
-                status: "Paid",
-                note: "Booking Advance / Payment",
-              },
-            ]
-          : [];
+      // Separate existing advance transaction from any additional transactions
+      const currentTxs = Array.isArray(existing?.transactions) ? existing.transactions : [];
+      const existingAdvIndex = currentTxs.findIndex(
+        (t) =>
+          t.isAdvance ||
+          String(t.id || "").includes("ADV") ||
+          String(t.note || "").toLowerCase().includes("advance")
+      );
+
+      const additionalTxs = currentTxs.filter((_, idx) => idx !== existingAdvIndex);
+      const additionalReceived = additionalTxs.reduce((sum, t) => {
+        const status = String(t.status || "").toLowerCase();
+        if (["failed", "cancelled", "canceled", "void"].includes(status)) return sum;
+        return sum + amount(t.amount ?? t.paidAmount);
+      }, 0);
+
+      // Update or create the booking advance transaction
+      let advanceTx = null;
+      if (adv > 0) {
+        const existingAdv = existingAdvIndex >= 0 ? currentTxs[existingAdvIndex] : null;
+        advanceTx = {
+          id: existingAdv?.id || `TXN-ADV-${bookingId}`,
+          amount: adv,
+          paidAmount: adv,
+          method: bookingData.paymentMethod || existingAdv?.method || existing?.method || "Cash",
+          date: bookingData.invoiceDate || existingAdv?.date || existing?.date || now.slice(0, 10),
+          status: "Paid",
+          note: "Booking Advance / Payment",
+          isAdvance: true,
+          createdAt: existingAdv?.createdAt || now,
+          updatedAt: now,
+        };
+      }
+
+      const updatedTransactions = advanceTx
+        ? [advanceTx, ...additionalTxs]
+        : additionalTxs;
+
+      const totalReceived = Math.round((adv + additionalReceived) * 100) / 100;
+      const pendingBalance = Math.max(0, Math.round((tot - totalReceived) * 100) / 100);
+
+      const pStatus =
+        tot <= 0 || totalReceived <= 0
+          ? "Pending"
+          : totalReceived >= tot - 0.005
+          ? "Paid"
+          : "Partial";
 
       const invoice = {
         ...(existing || {}),
@@ -2343,18 +2475,30 @@ export default function BookingCalendar() {
         invoice:
           bookingData.invoiceNumber ||
           existing?.invoice ||
+          existing?.transaction_id ||
           `SRP-${new Date().getFullYear()}-${Math.floor(
             10000 + Math.random() * 90000
           )}`,
         bookingId,
         booking_id: bookingId,
         customer: bookingData.customer,
+        customer_name: bookingData.customer,
         phone: bookingData.phone,
         total: tot,
-        paidAmount: adv,
+        total_amount: tot,
+        amount: tot,
         advance: adv,
-        method: bookingData.paymentMethod || "Cash",
-        date: bookingData.invoiceDate || now.slice(0, 10),
+        advanceAmount: adv,
+        paidAmount: totalReceived,
+        paid_amount: totalReceived,
+        received: totalReceived,
+        receivedAmount: totalReceived,
+        balance: pendingBalance,
+        pending: pendingBalance,
+        method: bookingData.paymentMethod || existing?.method || "Cash",
+        payment_method: bookingData.paymentMethod || existing?.method || "Cash",
+        date: bookingData.invoiceDate || existing?.date || now.slice(0, 10),
+        payment_date: bookingData.invoiceDate || existing?.date || now.slice(0, 10),
         status: pStatus,
         paymentStatus: pStatus,
         service: bookingData.service,
@@ -2362,10 +2506,8 @@ export default function BookingCalendar() {
         event: bookingData.event,
         customEvent: bookingData.customEvent || "",
         packageName: formattedService,
-        transactions:
-          existing?.transactions && existing.transactions.length
-            ? existing.transactions
-            : txs,
+        transactions: updatedTransactions,
+        updatedAt: now,
       };
 
       const nextPayments = existing
@@ -2376,6 +2518,33 @@ export default function BookingCalendar() {
 
       writeArray(PAYMENT_KEY, nextPayments);
       setPayments(nextPayments);
+
+      try {
+        if (existing?.id) {
+          api.payments.update(existing.id, {
+            customer_name: bookingData.customer,
+            total_amount: tot,
+            paid_amount: totalReceived,
+            status: pStatus,
+            payment_method: invoice.method,
+            transaction_id: invoice.invoice,
+            notes: `Updated from Booking: ${formattedService}`,
+          }).catch(() => {});
+        } else {
+          api.payments.create({
+            id: invoice.id,
+            customer_name: bookingData.customer,
+            total_amount: tot,
+            paid_amount: totalReceived,
+            status: pStatus,
+            payment_method: invoice.method,
+            transaction_id: invoice.invoice,
+            booking: bookingId,
+          }).catch(() => {});
+        }
+      } catch {}
+
+      return { invoice, totalReceived, pendingBalance, pStatus };
     };
 
     if (editingBooking?.id) {
@@ -2384,8 +2553,19 @@ export default function BookingCalendar() {
       } catch (err) {
         console.warn("Backend booking update:", err);
       }
-      const updated = { ...editingBooking, ...bookingData, updatedAt: now };
-      saveInvoice(updated.id);
+      const invResult = saveInvoice(editingBooking.id);
+      const updated = {
+        ...editingBooking,
+        ...bookingData,
+        advance: adv,
+        received: invResult?.totalReceived ?? adv,
+        balance: invResult?.pendingBalance ?? Math.max(0, tot - adv),
+        paymentStatus: invResult?.pStatus ?? bookingPaymentStatus,
+        invoiceNumber: invResult?.invoice?.invoice || bookingData.invoiceNumber,
+        invoiceDate: invResult?.invoice?.date || bookingData.invoiceDate,
+        paymentMethod: invResult?.invoice?.method || bookingData.paymentMethod,
+        updatedAt: now,
+      };
       if (
         commit(
           bookings.map((b) =>
@@ -2404,9 +2584,22 @@ export default function BookingCalendar() {
     } catch (err) {
       console.warn("Backend booking create:", err);
     }
-    saveInvoice(id);
+    const invResult = saveInvoice(id);
+    const newBookingRecord = {
+      ...bookingData,
+      id,
+      advance: adv,
+      received: invResult?.totalReceived ?? adv,
+      balance: invResult?.pendingBalance ?? Math.max(0, tot - adv),
+      paymentStatus: invResult?.pStatus ?? bookingPaymentStatus,
+      invoiceNumber: invResult?.invoice?.invoice || bookingData.invoiceNumber,
+      invoiceDate: invResult?.invoice?.date || bookingData.invoiceDate,
+      paymentMethod: invResult?.invoice?.method || bookingData.paymentMethod,
+      createdAt: now,
+      updatedAt: now,
+    };
     if (
-      commit([{ ...bookingData, id, createdAt: now, updatedAt: now }, ...bookings])
+      commit([newBookingRecord, ...bookings])
     )
       closeForm();
   };
@@ -2421,6 +2614,36 @@ export default function BookingCalendar() {
     setDeleteTarget(null);
   };
 
+  const requestStatusChange = (bookingOrId, status) => {
+    const target =
+      typeof bookingOrId === "object" && bookingOrId !== null
+        ? bookingOrId
+        : bookings.find((b) => String(b.id) === String(bookingOrId));
+
+    if (!target) return;
+
+    if (
+      String(status).toLowerCase() === "cancelled" ||
+      String(status).toLowerCase() === "canceled"
+    ) {
+      setCancellationTarget({
+        booking: target,
+        newStatus: status,
+      });
+      return;
+    }
+
+    changeStatus(target.id, status);
+  };
+
+  const confirmCancellation = async () => {
+    if (!cancellationTarget?.booking) return;
+    const targetId = cancellationTarget.booking.id;
+    await changeStatus(targetId, "Cancelled");
+    setCancellationTarget(null);
+    setNotice("Booking marked as cancelled.");
+  };
+
   const changeStatus = async (id, status) => {
     const target = bookings.find((b) => String(b.id) === String(id));
     try {
@@ -2432,6 +2655,9 @@ export default function BookingCalendar() {
     commit(
       bookings.map((b) => (String(b.id) === String(id) ? { ...b, status } : b))
     );
+    notify(STORAGE_KEY);
+    notify(PAYMENT_KEY);
+    setPayments(readArray(PAYMENT_KEY));
 
     if (updatedBooking && String(status).toLowerCase() === "confirmed") {
       const currentPayments = readArray(PAYMENT_KEY);
@@ -2808,6 +3034,9 @@ export default function BookingCalendar() {
                   const hasInvoice = Boolean(
                     f?.invoices && f.invoices.length > 0
                   );
+                  const isCancelled =
+                    String(b.status || "").toLowerCase() === "cancelled" ||
+                    String(b.status || "").toLowerCase() === "canceled";
                   return (
                     <tr
                       key={b.id}
@@ -2834,8 +3063,21 @@ export default function BookingCalendar() {
                         {hasInvoice ? (
                           <button
                             type="button"
-                            onClick={() => openInvoice(b)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => {
+                              if (isCancelled) return;
+                              openInvoice(b);
+                            }}
+                            disabled={isCancelled}
+                            title={
+                              isCancelled
+                                ? "Invoice actions are unavailable for cancelled bookings."
+                                : "Download Invoice"
+                            }
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] font-bold ${
+                              isCancelled
+                                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
+                            }`}
                           >
                             <Download size={14} />
                             Download Invoice
@@ -2849,7 +3091,7 @@ export default function BookingCalendar() {
                       <td className="px-4 py-4">
                         <select
                           value={b.status || "Pending"}
-                          onChange={(e) => changeStatus(b.id, e.target.value)}
+                          onChange={(e) => requestStatusChange(b, e.target.value)}
                           className="rounded-xl border bg-white px-2 py-2 text-xs"
                         >
                           {statuses.map((s) => (
@@ -2889,7 +3131,7 @@ export default function BookingCalendar() {
                 index={i}
                 onEdit={openEdit}
                 onDelete={(target) => setDeleteTarget(target)}
-                onStatus={changeStatus}
+                onStatus={requestStatusChange}
                 onInvoice={openInvoice}
                 financials={financialMap.get(String(b.id))}
               />
@@ -2951,6 +3193,14 @@ export default function BookingCalendar() {
           payments={payments}
           onClose={() => setDeleteTarget(null)}
           onConfirm={confirmDeleteBooking}
+        />
+      )}
+
+      {cancellationTarget && (
+        <CancelBookingModal
+          booking={cancellationTarget.booking}
+          onClose={() => setCancellationTarget(null)}
+          onConfirm={confirmCancellation}
         />
       )}
     </div>

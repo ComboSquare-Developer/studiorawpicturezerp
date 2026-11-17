@@ -87,7 +87,7 @@ export const isOtherSpecialization = (spec) => {
   ].includes(spec);
 };
 
-const STATUSES = ["Active", "Inactive", "On Leave"];
+const STATUSES = ["Active", "Inactive"];
 
 const emptyForm = {
   staff_name: "",
@@ -95,12 +95,6 @@ const emptyForm = {
   email: "",
   phone: "",
   address: "",
-  service: "Wedding Photography",
-  specialization: "Candid Photographer",
-  custom_service: "",
-  custom_specialization: "",
-  role: "Candid Photographer",
-  department: "Wedding Photography",
   joining_date: new Date().toISOString().slice(0, 10),
   salary: "",
   salary_date: "",
@@ -120,11 +114,25 @@ function money(amount) {
   }).format(num);
 }
 
+function normalizeStaffRecord(staff) {
+  if (!staff || typeof staff !== "object") return staff;
+  const rawStatus = String(staff.status || "Active").trim();
+  const normalizedStatus =
+    rawStatus.toLowerCase() === "on leave" ? "Inactive" : rawStatus || "Active";
+  return {
+    ...staff,
+    status: normalizedStatus === "Inactive" ? "Inactive" : "Active",
+  };
+}
+
 function readStoredStaff() {
   try {
     const raw = localStorage.getItem(STAFF_KEY);
     const stored = raw ? JSON.parse(raw) : [];
-    return Array.isArray(stored) ? stored : [];
+    if (Array.isArray(stored)) {
+      return stored.map(normalizeStaffRecord);
+    }
+    return [];
   } catch (error) {
     console.error("Unable to read staff data:", error);
     return [];
@@ -175,8 +183,9 @@ export default function Staff() {
         : null;
 
       if (list) {
-        setStaffList(list);
-        saveLocalStaff(list);
+        const normalized = list.map(normalizeStaffRecord);
+        setStaffList(normalized);
+        saveLocalStaff(normalized);
       }
     } catch (err) {
       console.warn("Backend staff API notice:", err.message);
@@ -204,8 +213,8 @@ export default function Staff() {
       (staff) => staff.status === "Active"
     ).length;
 
-    const onLeaveStaff = staffList.filter(
-      (staff) => staff.status === "On Leave"
+    const inactiveStaff = staffList.filter(
+      (staff) => staff.status === "Inactive"
     ).length;
 
     const totalPayroll = staffList
@@ -218,7 +227,7 @@ export default function Staff() {
     return {
       totalStaff,
       activeStaff,
-      onLeaveStaff,
+      inactiveStaff,
       totalPayroll,
     };
   }, [staffList]);
@@ -227,51 +236,21 @@ export default function Staff() {
     return staffList.filter((item) => {
       const searchText = search.toLowerCase().trim();
 
-      const staffService = item.service || item.department || "";
-      const staffSpec = item.specialization || item.role || "";
-
       const matchesSearch =
         !searchText ||
         (item.staff_name || "").toLowerCase().includes(searchText) ||
         (item.employee_id || "").toLowerCase().includes(searchText) ||
         (item.phone || "").toLowerCase().includes(searchText) ||
         (item.email || "").toLowerCase().includes(searchText) ||
-        staffService.toLowerCase().includes(searchText) ||
-        staffSpec.toLowerCase().includes(searchText);
-
-      let matchesService = true;
-      if (serviceFilter !== "All") {
-        if (serviceFilter === "Others") {
-          matchesService =
-            item.service === "Others" ||
-            (!STAFF_SERVICES.slice(0, 5).includes(item.service) &&
-              !STAFF_SERVICES.slice(0, 5).includes(item.department));
-        } else {
-          matchesService =
-            item.service === serviceFilter ||
-            item.department === serviceFilter ||
-            (serviceFilter === "Wedding Photography" &&
-              (item.department === "Photography" || (item.role || "").toLowerCase().includes("photo"))) ||
-            (serviceFilter === "Wedding Videography" &&
-              (item.department === "Videography" || (item.role || "").toLowerCase().includes("video")));
-        }
-      }
+        (item.address || "").toLowerCase().includes(searchText) ||
+        (item.notes || "").toLowerCase().includes(searchText);
 
       const matchesStatus =
         statusFilter === "All" || item.status === statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesService &&
-        matchesStatus
-      );
+      return matchesSearch && matchesStatus;
     });
-  }, [
-    staffList,
-    search,
-    serviceFilter,
-    statusFilter,
-  ]);
+  }, [staffList, search, statusFilter]);
 
   const openAdd = () => {
     setEditingStaff(null);
@@ -283,10 +262,7 @@ export default function Staff() {
     setForm({
       ...emptyForm,
       employee_id: nextId,
-      service: "Wedding Photography",
-      specialization: "Traditional Photographer",
-      custom_service: "",
-      custom_specialization: "",
+      status: "Active",
     });
 
     setError("");
@@ -296,52 +272,9 @@ export default function Staff() {
   const openEdit = (staff) => {
     setEditingStaff(staff);
 
-    // Determine normalized service
-    let service = staff.service || "";
-    let customService = staff.custom_service || "";
-    let specialization = staff.specialization || staff.role || "";
-    let customSpecialization = staff.custom_specialization || "";
-
-    if (!service) {
-      const dept = String(staff.department || "").toLowerCase();
-      const role = String(staff.role || "").toLowerCase();
-      if (dept.includes("videography") || role.includes("video") || role.includes("cinema")) {
-        service = "Wedding Videography";
-      } else if (dept.includes("management") || role.includes("event")) {
-        service = "Event Management";
-      } else if (
-        dept.includes("gift") ||
-        dept.includes("post-production") ||
-        role.includes("album") ||
-        role.includes("designer")
-      ) {
-        service = "Customer Gifts";
-      } else if (role.includes("function") || dept.includes("function")) {
-        service = "Functions We Arrange";
-      } else if (dept === "other" || dept === "others") {
-        service = "Others";
-        customService = staff.role || staff.designation || "";
-      } else {
-        service = "Wedding Photography";
-      }
-    }
-
-    if (service === "Others") {
-      if (!customService) {
-        customService = staff.custom_service || staff.role || staff.designation || "";
-      }
-    } else {
-      const allowedSpecs = SERVICE_SPECIALIZATIONS[service] || [];
-      if (!allowedSpecs.includes(specialization)) {
-        if (specialization) {
-          const otherChoice = allowedSpecs.find((s) => s.toLowerCase().startsWith("other")) || "Other";
-          customSpecialization = specialization;
-          specialization = otherChoice;
-        } else {
-          specialization = allowedSpecs[0] || "";
-        }
-      }
-    }
+    const rawStatus = String(staff.status || "Active").trim();
+    const normalizedStatus =
+      rawStatus.toLowerCase() === "on leave" ? "Inactive" : rawStatus || "Active";
 
     setForm({
       staff_name: staff.staff_name || "",
@@ -349,32 +282,15 @@ export default function Staff() {
       email: staff.email || "",
       phone: staff.phone || "",
       address: staff.address || "",
-      service,
-      specialization,
-      custom_service: customService,
-      custom_specialization: customSpecialization,
-      role: specialization || staff.role || "",
-      department: service || staff.department || "",
       joining_date: staff.joining_date || new Date().toISOString().slice(0, 10),
       salary: staff.salary ?? "",
       salary_date: staff.salary_date || "",
-      status: staff.status || "Active",
+      status: normalizedStatus === "Inactive" ? "Inactive" : "Active",
       notes: staff.notes || "",
     });
 
     setError("");
     setFormOpen(true);
-  };
-
-  const handleServiceChange = (newService) => {
-    const allowedSpecs = SERVICE_SPECIALIZATIONS[newService] || [];
-    setForm((prev) => ({
-      ...prev,
-      service: newService,
-      specialization: allowedSpecs[0] || "",
-      custom_service: "",
-      custom_specialization: "",
-    }));
   };
 
   const handleSubmit = async (event) => {
@@ -388,20 +304,6 @@ export default function Staff() {
 
     if (!form.employee_id.trim()) {
       setError("Employee ID is required.");
-      return;
-    }
-
-    if (form.service === "Others" && !form.custom_service.trim()) {
-      setError("Please enter the custom service or designation.");
-      return;
-    }
-
-    if (
-      form.service !== "Others" &&
-      isOtherSpecialization(form.specialization) &&
-      !form.custom_specialization.trim()
-    ) {
-      setError("Please enter the custom department or specialization.");
       return;
     }
 
@@ -420,32 +322,18 @@ export default function Staff() {
     setSaving(true);
 
     try {
-      const finalService =
-        form.service === "Others"
-          ? form.custom_service.trim()
-          : form.service;
-
-      const finalSpecialization =
-        form.service === "Others"
-          ? form.custom_service.trim()
-          : isOtherSpecialization(form.specialization)
-          ? form.custom_specialization.trim()
-          : form.specialization;
-
       const payload = {
-        ...form,
+        ...(editingStaff || {}),
         staff_name: form.staff_name.trim(),
         employee_id: form.employee_id.trim(),
-        service: form.service,
-        custom_service: form.custom_service.trim(),
-        specialization: finalSpecialization,
-        custom_specialization: form.custom_specialization.trim(),
-        role: finalSpecialization,
-        designation: finalSpecialization,
-        department: finalService,
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        address: form.address.trim(),
         salary: parseFloat(form.salary) || 0,
         joining_date: form.joining_date || null,
         salary_date: form.salary_date || null,
+        status: form.status === "Inactive" ? "Inactive" : "Active",
+        notes: form.notes.trim(),
       };
 
       if (editingStaff) {
@@ -544,8 +432,6 @@ export default function Staff() {
       "ID",
       "Employee ID",
       "Staff Name",
-      "Service",
-      "Specialization",
       "Phone",
       "Email",
       "Joining Date",
@@ -558,8 +444,6 @@ export default function Staff() {
       staff.id || "",
       staff.employee_id || "",
       `"${(staff.staff_name || "").replace(/"/g, '""')}"`,
-      `"${(staff.service || staff.department || "").replace(/"/g, '""')}"`,
-      `"${(staff.specialization || staff.role || "").replace(/"/g, '""')}"`,
       staff.phone || "",
       staff.email || "",
       staff.joining_date || "",
@@ -663,12 +547,12 @@ export default function Staff() {
         </div>
 
         <div className="rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm">
-          <p className="text-xs font-bold text-[#647c9d]">On Leave</p>
-          <p className="mt-2 text-2xl font-black text-amber-500">
-            {stats.onLeaveStaff}
+          <p className="text-xs font-bold text-[#647c9d]">Inactive Staff</p>
+          <p className="mt-2 text-2xl font-black text-slate-500">
+            {stats.inactiveStaff}
           </p>
-          <p className="mt-1 text-[11px] font-semibold text-amber-600">
-            Temporary leave status
+          <p className="mt-1 text-[11px] font-semibold text-slate-500">
+            Not assigned to bookings
           </p>
         </div>
 
@@ -685,67 +569,6 @@ export default function Staff() {
         </div>
       </div>
 
-      {/* SERVICE SUMMARY CARDS */}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            name: "Wedding Photography",
-            count: staffList.filter(
-              (s) =>
-                (s.service || s.department) === "Wedding Photography" ||
-                s.department === "Photography"
-            ).length,
-          },
-          {
-            name: "Wedding Videography",
-            count: staffList.filter(
-              (s) =>
-                (s.service || s.department) === "Wedding Videography" ||
-                s.department === "Videography"
-            ).length,
-          },
-          {
-            name: "Functions & Events",
-            count: staffList.filter((s) =>
-              ["Functions We Arrange", "Event Management"].includes(
-                s.service || s.department
-              )
-            ).length,
-          },
-          {
-            name: "Gifts & Others",
-            count: staffList.filter(
-              (s) =>
-                ![
-                  "Wedding Photography",
-                  "Photography",
-                  "Wedding Videography",
-                  "Videography",
-                  "Functions We Arrange",
-                  "Event Management",
-                ].includes(s.service || s.department)
-            ).length,
-          },
-        ].map((team) => (
-          <button
-            key={team.name}
-            type="button"
-            onClick={() => {
-              if (team.name === "Wedding Photography") setServiceFilter("Wedding Photography");
-              else if (team.name === "Wedding Videography") setServiceFilter("Wedding Videography");
-              else setServiceFilter("All");
-            }}
-            className="rounded-2xl border border-[#dce7f5] bg-white p-4 text-left shadow-sm transition hover:border-[#9bb9df] hover:bg-[#f8fbff]"
-          >
-            <p className="text-xs font-bold text-[#647c9d]">{team.name}</p>
-            <p className="mt-1 text-2xl font-black text-[#10264d]">{team.count}</p>
-            <p className="mt-1 text-[11px] font-semibold text-[#7990af]">
-              Team members
-            </p>
-          </button>
-        ))}
-      </div>
-
       {/* FILTERS */}
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[#dce7f5] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
@@ -757,31 +580,16 @@ export default function Staff() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search staff by name, employee ID, phone, role or service..."
+            placeholder="Search staff by name, employee ID, phone, email..."
             className="w-full rounded-xl border border-[#dce7f5] bg-[#f9fbfe] py-2.5 pl-10 pr-4 text-xs font-semibold text-[#10264d] outline-none transition placeholder:text-[#9bb0cc] focus:border-[#244d8b] focus:bg-white"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#647c9d]">Service:</span>
-            <select
-              value={serviceFilter}
-              onChange={(event) => setServiceFilter(event.target.value)}
-              className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
-            >
-              <option value="All">All Services</option>
-              {STAFF_SERVICES.map((srv) => (
-                <option key={srv} value={srv}>
-                  {srv}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-[#647c9d]">Status:</span>
             <select
+              aria-label="Filter by staff status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
               className="rounded-xl border border-[#dce7f5] bg-[#f9fbfe] px-3 py-2 text-xs font-bold text-[#10264d] outline-none focus:border-[#244d8b]"
@@ -851,8 +659,6 @@ export default function Staff() {
                       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
                         staff.status === "Active"
                           ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : staff.status === "On Leave"
-                          ? "border border-amber-200 bg-amber-50 text-amber-700"
                           : "border border-slate-200 bg-slate-100 text-slate-600"
                       }`}
                     >
@@ -864,25 +670,19 @@ export default function Staff() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-xl bg-[#f8fbff] p-2.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">
-                        Designation
-                      </span>
-                      <p className="mt-1 font-bold text-[#10264d]">
-                        {staff.specialization || staff.role || "Staff Member"}
-                      </p>
-                      <p className="text-[11px] text-[#6d84a3]">
-                        {staff.service || staff.department || "Wedding Photography"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl bg-[#f8fbff] p-2.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">
                         Monthly Salary
                       </span>
                       <p className="mt-1 font-black text-[#10264d]">
                         {money(staff.salary)}
                       </p>
-                      <p className="text-[11px] text-[#6d84a3]">
-                        Joined: {staff.joining_date || "—"}
+                    </div>
+
+                    <div className="rounded-xl bg-[#f8fbff] p-2.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#7990af]">
+                        Joining Date
+                      </span>
+                      <p className="mt-1 font-semibold text-[#10264d]">
+                        {staff.joining_date || "—"}
                       </p>
                     </div>
                   </div>
@@ -939,7 +739,6 @@ export default function Staff() {
                 <thead>
                   <tr className="border-b border-[#e7eef7] bg-[#f8fbff] text-[11px] font-extrabold uppercase tracking-wider text-[#526b8b]">
                     <th className="px-5 py-4">Staff Member</th>
-                    <th className="px-4 py-4">Designation & Service</th>
                     <th className="px-4 py-4">Contact</th>
                     <th className="px-4 py-4">Status</th>
                     <th className="px-4 py-4 text-right">Monthly Salary</th>
@@ -964,15 +763,6 @@ export default function Staff() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <div className="font-extrabold text-[#10264d]">
-                          {staff.specialization || staff.role || "Staff Member"}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-[#6d84a3]">
-                          {staff.service || staff.department || "Wedding Photography"}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
                         <div className="flex items-center gap-1.5 font-bold text-[#10264d]">
                           <Phone size={13} className="text-[#244d8b]" />
                           {staff.phone || "—"}
@@ -991,8 +781,6 @@ export default function Staff() {
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${
                             staff.status === "Active"
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : staff.status === "On Leave"
-                              ? "border-amber-200 bg-amber-50 text-amber-700"
                               : "border-slate-200 bg-slate-100 text-slate-600"
                           }`}
                         >
@@ -1122,92 +910,6 @@ export default function Staff() {
                       className={inputClass}
                     />
                   </div>
-
-                  {/* SERVICE / DESIGNATION DROPDOWN */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                      Service / Designation
-                    </label>
-                    <select
-                      value={form.service}
-                      onChange={(event) => handleServiceChange(event.target.value)}
-                      className={inputClass}
-                    >
-                      {STAFF_SERVICES.map((srv) => (
-                        <option key={srv} value={srv}>
-                          {srv}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* DYNAMIC DEPARTMENT / SPECIALIZATION OR CUSTOM SERVICE INPUT */}
-                  {form.service === "Others" ? (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                        Enter Service / Designation <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Enter custom service or designation"
-                        value={form.custom_service}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            custom_service: event.target.value,
-                          })
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                        Department / Specialization
-                      </label>
-                      <select
-                        value={form.specialization}
-                        onChange={(event) =>
-                          setForm({
-                            ...form,
-                            specialization: event.target.value,
-                            custom_specialization: "",
-                          })
-                        }
-                        className={inputClass}
-                      >
-                        {(SERVICE_SPECIALIZATIONS[form.service] || []).map((spec) => (
-                          <option key={spec} value={spec}>
-                            {spec}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* CUSTOM SPECIALIZATION TEXT INPUT IF OTHER SELECTED */}
-                  {form.service !== "Others" &&
-                    isOtherSpecialization(form.specialization) && (
-                      <div className="sm:col-span-2">
-                        <label className="mb-1.5 block text-xs font-bold text-[#10264d]">
-                          Enter Specialization <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Enter custom department or specialization"
-                          value={form.custom_specialization}
-                          onChange={(event) =>
-                            setForm({
-                              ...form,
-                              custom_specialization: event.target.value,
-                            })
-                          }
-                          className={inputClass}
-                        />
-                      </div>
-                    )}
 
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-[#10264d]">

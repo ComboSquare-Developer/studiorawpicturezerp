@@ -1,4 +1,3 @@
-
 import {
   useCallback,
   useEffect,
@@ -22,24 +21,22 @@ import {
   Wallet,
   Receipt,
   Camera,
-  Video,
   RefreshCw,
   Download,
   IndianRupee,
   ClipboardList,
-  Package,
-  Building2,
-  Clock3,
-  Activity,
-  Heart,
-  CalendarCheck2,
-  Boxes,
   Search,
+  MapPin,
+  Mail,
+  Phone,
+  Clock3,
+  CheckCircle2,
+  CalendarCheck2,
 } from "lucide-react";
 
 /* ==========================================
-   STUDIO RAW PICTUREZ - RESPONSIVE REPORTS
-   React + Tailwind CSS + localStorage
+   STUDIO RAW ERP – REPORTS & ANALYTICS
+   Professional ERP Reporting & Data Insights
 ========================================== */
 
 const STORAGE = {
@@ -107,36 +104,28 @@ const money = (value) =>
   }).format(Number(value) || 0);
 
 const numberFormat = (value) =>
-  new Intl.NumberFormat("en-IN").format(
-    Math.round(Number(value) || 0)
-  );
+  new Intl.NumberFormat("en-IN").format(Math.round(Number(value) || 0));
 
 function currentMonth() {
   const date = new Date();
-  return `${date.getFullYear()}-${String(
-    date.getMonth() + 1
-  ).padStart(2, "0")}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function monthLabel(month) {
   if (!/^\d{4}-\d{2}$/.test(month || "")) {
     return "Selected Month";
   }
-
   const [year, monthNumber] = month.split("-").map(Number);
-
-  return new Date(year, monthNumber - 1, 1).toLocaleDateString(
-    "en-IN",
-    { month: "long", year: "numeric" }
-  );
+  return new Date(year, monthNumber - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function toDate(value) {
   if (!value) return "";
-
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return "";
-
     return [
       value.getFullYear(),
       String(value.getMonth() + 1).padStart(2, "0"),
@@ -150,27 +139,17 @@ function toDate(value) {
   }
 
   const text = String(value).trim();
-
   if (/^\d{4}-\d{2}-\d{2}/.test(text)) {
     return text.slice(0, 10);
   }
-
   if (/^\d{4}-\d{2}$/.test(text)) {
     return `${text}-01`;
   }
 
-  const indianDate = text.match(
-    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/
-  );
-
+  const indianDate = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
   if (indianDate) {
     const [, day, month, year] = indianDate;
-    const parsed = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
     if (
       parsed.getFullYear() === Number(year) &&
       parsed.getMonth() === Number(month) - 1 &&
@@ -178,7 +157,6 @@ function toDate(value) {
     ) {
       return toDate(parsed);
     }
-
     return "";
   }
 
@@ -188,17 +166,12 @@ function toDate(value) {
 
 function formatDate(value) {
   const date = toDate(value);
-
   if (!date) return "—";
-
-  return new Date(`${date}T12:00:00`).toLocaleDateString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function getDate(item) {
@@ -230,13 +203,13 @@ function getDate(item) {
 
 function getBookingDate(item) {
   return (
+    item?.date ||
     item?.eventDate ||
     item?.event_date ||
     item?.shootDate ||
     item?.shoot_date ||
     item?.orderDate ||
     item?.order_date ||
-    item?.date ||
     item?.bookingDate ||
     item?.booking_date ||
     item?.deliveryDate ||
@@ -273,7 +246,6 @@ function getName(item) {
     item?.projectName,
     item?.eventName,
     item?.itemName,
-    item?.branchName,
     item?.paidTo,
   ];
 
@@ -287,20 +259,53 @@ function getName(item) {
   return found?.trim() || "Not Specified";
 }
 
-function getBookingEvent(item) {
-  return (
-    item?.event ||
+function getBookingServiceAndEvent(item) {
+  const service = String(
     item?.service ||
+    item?.customService ||
+    item?.mainEvent ||
+    item?.category ||
+    ""
+  ).trim();
+
+  const event = String(
+    item?.event ||
+    item?.customEvent ||
     item?.eventType ||
     item?.event_type ||
-    item?.giftType ||
-    item?.gift_type ||
-    item?.mainEvent ||
-    item?.main_event ||
     item?.packageName ||
     item?.package ||
-    "Booking / Service"
-  );
+    ""
+  ).trim();
+
+  if (service && event && service.toLowerCase() !== event.toLowerCase()) {
+    return { service, event, label: `${service} – ${event}` };
+  }
+  const main = service || event || "Booking / Service";
+  return { service: main, event: event && event !== main ? event : "", label: main };
+}
+
+function getEnquiryServiceAndEvent(item) {
+  const service = String(
+    item?.service ||
+    item?.customService ||
+    item?.mainEvent ||
+    ""
+  ).trim();
+
+  const event = String(
+    item?.event ||
+    item?.customEvent ||
+    item?.eventType ||
+    item?.event_type ||
+    ""
+  ).trim();
+
+  if (service && event && service.toLowerCase() !== event.toLowerCase()) {
+    return { service, event, label: `${service} – ${event}` };
+  }
+  const main = service || event || "Enquiry";
+  return { service: main, event: event && event !== main ? event : "", label: main };
 }
 
 function getLocation(item) {
@@ -325,19 +330,9 @@ function getStatus(item) {
 }
 
 function amountNumber(value) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return 0;
-  }
-
+  if (value === null || value === undefined || value === "") return 0;
   const cleaned =
-    typeof value === "string"
-      ? value.replace(/[₹,\s]/g, "")
-      : value;
-
+    typeof value === "string" ? value.replace(/[₹,\s]/g, "") : value;
   const result = Number(cleaned);
   return Number.isFinite(result) ? result : 0;
 }
@@ -345,16 +340,10 @@ function amountNumber(value) {
 function firstAmount(item, fields) {
   for (const field of fields) {
     const value = item?.[field];
-
-    if (
-      value !== undefined &&
-      value !== null &&
-      value !== ""
-    ) {
+    if (value !== undefined && value !== null && value !== "") {
       return amountNumber(value);
     }
   }
-
   return 0;
 }
 
@@ -385,12 +374,11 @@ function getPaymentMethod(item) {
 }
 
 /* ==========================================
-   STORAGE CONNECTION
+   STORAGE EXTRACTION
 ========================================== */
 
 function extractArray(parsed) {
   if (Array.isArray(parsed)) return parsed;
-
   if (!parsed || typeof parsed !== "object") return [];
 
   const keys = [
@@ -404,10 +392,6 @@ function extractArray(parsed) {
     "bookings",
     "customers",
     "enquiries",
-    "events",
-    "staff",
-    "branches",
-    "deliveries",
   ];
 
   for (const key of keys) {
@@ -415,7 +399,6 @@ function extractArray(parsed) {
       return parsed[key];
     }
   }
-
   return [];
 }
 
@@ -441,12 +424,9 @@ function readStorage(keys) {
           null;
 
         const identity =
-          id !== null && id !== ""
-            ? String(id)
-            : JSON.stringify(item);
+          id !== null && id !== "" ? String(id) : JSON.stringify(item);
 
         if (seen.has(identity)) return;
-
         seen.add(identity);
         records.push(item);
       });
@@ -460,11 +440,9 @@ function readStorage(keys) {
 
 function loadAllData() {
   const result = {};
-
   Object.entries(STORAGE).forEach(([name, keys]) => {
     result[name] = readStorage(keys);
   });
-
   return result;
 }
 
@@ -527,7 +505,6 @@ function findTransactionArray(payment) {
       return payment[field];
     }
   }
-
   return null;
 }
 
@@ -543,34 +520,26 @@ function getPaymentDetails(payment, selectedMonth) {
 
   if (transactions !== null && transactions.length > 0) {
     const validTransactions = transactions.filter(
-      (transaction) =>
-        !FAILED_STATUSES.includes(getStatus(transaction))
+      (transaction) => !FAILED_STATUSES.includes(getStatus(transaction))
     );
 
     allReceived = round(
       validTransactions.reduce(
-        (sum, transaction) =>
-          sum +
-          Math.max(0, getTransactionAmount(transaction)),
+        (sum, transaction) => sum + Math.max(0, getTransactionAmount(transaction)),
         0
       )
     );
 
     monthlyTransactions = validTransactions
       .map((transaction, index) => {
-        const transactionDate =
-          toDate(getDate(transaction)) || invoiceDate;
-
+        const transactionDate = toDate(getDate(transaction)) || invoiceDate;
         return {
           id:
             transaction.id ||
             `${payment.id || payment.invoice || "payment"}-txn-${index}`,
           name: getName(payment),
           date: transactionDate,
-          amount: Math.max(
-            0,
-            getTransactionAmount(transaction)
-          ),
+          amount: Math.max(0, getTransactionAmount(transaction)),
           method:
             getPaymentMethod(transaction) !== "Other"
               ? getPaymentMethod(transaction)
@@ -589,23 +558,13 @@ function getPaymentDetails(payment, selectedMonth) {
     const status = getStatus(payment);
 
     if (!FAILED_STATUSES.includes(status)) {
-      allReceived = Math.max(
-        0,
-        getReceivedAmount(payment)
-      );
-
-      if (
-        allReceived === 0 &&
-        PAID_STATUSES.includes(status)
-      ) {
+      allReceived = Math.max(0, getReceivedAmount(payment));
+      if (allReceived === 0 && PAID_STATUSES.includes(status)) {
         allReceived = total;
       }
     }
 
-    if (
-      allReceived > 0 &&
-      invoiceMonth === selectedMonth
-    ) {
+    if (allReceived > 0 && invoiceMonth === selectedMonth) {
       monthlyTransactions = [
         {
           id: payment.id || payment.invoice || invoiceDate,
@@ -622,21 +581,12 @@ function getPaymentDetails(payment, selectedMonth) {
   }
 
   allReceived = round(allReceived);
-
-  const pending = Math.max(
-    0,
-    round(total - allReceived)
-  );
-
+  const pending = Math.max(0, round(total - allReceived));
   const monthlyReceived = round(
-    monthlyTransactions.reduce(
-      (sum, transaction) => sum + transaction.amount,
-      0
-    )
+    monthlyTransactions.reduce((sum, transaction) => sum + transaction.amount, 0)
   );
 
   let paymentStatus = "Pending";
-
   if (total > 0 && pending === 0) {
     paymentStatus = "Paid";
   } else if (allReceived > 0) {
@@ -656,21 +606,16 @@ function getPaymentDetails(payment, selectedMonth) {
 function getBookingFinancials(booking, payments = []) {
   const linked = (payments || []).filter(
     (payment) =>
-      payment.bookingId &&
-      String(payment.bookingId) === String(booking?.id)
+      payment.bookingId && String(payment.bookingId) === String(booking?.id)
   );
 
   let billed = round(
-    linked.reduce(
-      (sum, payment) => sum + getPaymentTotal(payment),
-      0
-    )
+    linked.reduce((sum, payment) => sum + getPaymentTotal(payment), 0)
   );
 
   let received = round(
     linked.reduce(
-      (sum, payment) =>
-        sum + getPaymentDetails(payment, "").allReceived,
+      (sum, payment) => sum + getPaymentDetails(payment, "").allReceived,
       0
     )
   );
@@ -697,13 +642,9 @@ function getBookingFinancials(booking, payments = []) {
     received = Math.min(directTotal, directAdvance);
   }
 
-  const pending = Math.max(
-    0,
-    round(billed - received)
-  );
+  const pending = Math.max(0, round(billed - received));
 
   let status = "Not Invoiced";
-
   if (linked.length || directTotal > 0) {
     if (billed > 0 && pending === 0) {
       status = "Paid";
@@ -724,39 +665,27 @@ function getBookingFinancials(booking, payments = []) {
 }
 
 /* ==========================================
-   COUNT ANIMATION
+   COUNT ANIMATION HOOK
 ========================================== */
 
-function useCountUp(target, duration = 1000) {
+function useCountUp(target, duration = 800) {
   const [value, setValue] = useState(0);
   const frameRef = useRef(null);
 
   useEffect(() => {
     const finalValue = Number(target) || 0;
-
-    if (
-      window.matchMedia?.(
-        "(prefers-reduced-motion: reduce)"
-      )?.matches
-    ) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
       setValue(finalValue);
       return;
     }
 
     let startTime = null;
-
     setValue(0);
 
     const animate = (time) => {
       if (startTime === null) startTime = time;
-
-      const progress = Math.min(
-        (time - startTime) / duration,
-        1
-      );
-
+      const progress = Math.min((time - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-
       setValue(finalValue * eased);
 
       if (progress < 1) {
@@ -768,7 +697,6 @@ function useCountUp(target, duration = 1000) {
     };
 
     frameRef.current = requestAnimationFrame(animate);
-
     return () => {
       if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current);
@@ -780,221 +708,84 @@ function useCountUp(target, duration = 1000) {
 }
 
 /* ==========================================
-   STYLES
+   UI COMPONENTS
 ========================================== */
 
-const reportStyles = `
-  @keyframes reportFadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes reportFloat {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-4px);
-    }
-  }
-
-  .report-animate-in {
-    animation: reportFadeUp .5s ease both;
-  }
-
-  .report-icon-float {
-    animation: reportFloat 4.5s ease-in-out infinite;
-  }
-
-  .report-card {
-    transition:
-      transform .3s ease,
-      box-shadow .3s ease,
-      border-color .3s ease;
-  }
-
-  .report-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgba(30,78,139,.11);
-    border-color: #a9cbf0;
-  }
-
-  @media (max-width: 767px) {
-    .report-card:hover {
-      transform: none;
-    }
-
-    .report-icon-float {
-      animation: none;
-    }
-
-    .report-mobile-chart {
-      width: 100%;
-      overflow: hidden;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .report-animate-in,
-    .report-icon-float {
-      animation: none !important;
-    }
-
-    .report-card {
-      transition: none !important;
-    }
-  }
-`;
-
-const cardThemes = {
-  blue: {
-    bg: "from-[#eff7ff] via-[#e1efff] to-[#cde4ff]",
-    icon: "bg-[#cce3ff] text-[#245e9e]",
-    text: "text-[#164579]",
-    bar: "bg-[#377bc5]",
-  },
-  green: {
-    bg: "from-[#f0fcf8] via-[#e0f6ed] to-[#c9ebdd]",
-    icon: "bg-[#cff0e2] text-[#138365]",
-    text: "text-[#12775e]",
-    bar: "bg-[#28a484]",
-  },
-  red: {
-    bg: "from-[#fff7f8] via-[#ffebef] to-[#fbd8e0]",
-    icon: "bg-[#ffe0e7] text-[#c44c68]",
-    text: "text-[#bd4962]",
-    bar: "bg-[#d75d78]",
-  },
-  purple: {
-    bg: "from-[#f8f6ff] via-[#f0ebff] to-[#dfd7fa]",
-    icon: "bg-[#e6ddff] text-[#7456b4]",
-    text: "text-[#6246a2]",
-    bar: "bg-[#866bc9]",
-  },
-  cyan: {
-    bg: "from-[#f0faff] via-[#e3f5ff] to-[#cceafb]",
-    icon: "bg-[#d1eeff] text-[#2581aa]",
-    text: "text-[#176f98]",
-    bar: "bg-[#429fc9]",
-  },
-  amber: {
-    bg: "from-[#fffbf2] via-[#fff2da] to-[#ffe4bd]",
-    icon: "bg-[#ffebc9] text-[#b47b2d]",
-    text: "text-[#986a25]",
-    bar: "bg-[#d7a04b]",
-  },
-};
-
-/* ==========================================
-   STAT CARD - MOBILE FULL WIDTH
-========================================== */
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  currency = false,
-  color = "blue",
-}) {
+function KPICard({ title, value, subtitle, icon: Icon, color = "blue", currency = true }) {
   const animated = useCountUp(value);
-  const theme = cardThemes[color] || cardThemes.blue;
+
+  const colors = {
+    green: {
+      border: "border-[#cceee2]",
+      text: "text-[#107354]",
+      iconBg: "bg-[#dcf6ec] text-[#107354]",
+    },
+    red: {
+      border: "border-[#fcd0d7]",
+      text: "text-[#c2334d]",
+      iconBg: "bg-[#fee2e7] text-[#c2334d]",
+    },
+    blue: {
+      border: "border-[#d0e2f7]",
+      text: "text-[#184e8e]",
+      iconBg: "bg-[#e2effd] text-[#184e8e]",
+    },
+    purple: {
+      border: "border-[#e3d8fc]",
+      text: "text-[#6941b8]",
+      iconBg: "bg-[#ede6fc] text-[#6941b8]",
+    },
+  };
+
+  const theme = colors[color] || colors.blue;
 
   return (
-    <div
-      className={`report-card report-animate-in relative w-full min-w-0 overflow-hidden rounded-[22px] border border-white bg-gradient-to-br ${theme.bg} p-5 shadow-[0_8px_25px_rgba(34,83,142,.07)]`}
-    >
-      <div
-        className={`absolute left-5 right-5 top-0 h-1 rounded-b-full ${theme.bar}`}
-      />
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-[#6582a1]">
-            {title}
-          </p>
-
-          <h3
-            className={`mt-3 break-words text-2xl font-black tracking-tight ${theme.text}`}
-          >
-            {currency
-              ? money(animated)
-              : numberFormat(animated)}
-          </h3>
-        </div>
-
-        <div
-          className={`report-icon-float flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 shadow-sm ${theme.icon}`}
-        >
-          <Icon size={22} />
+    <div className={`rounded-2xl border ${theme.border} bg-white p-5 shadow-sm transition hover:shadow-md`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-bold uppercase tracking-wider text-[#647c9d]">{title}</span>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.iconBg}`}>
+          <Icon size={20} />
         </div>
       </div>
-
-      <div className="mt-5 border-t border-white/80 pt-3">
-        <p className="text-xs leading-5 text-[#7290ad]">
-          {subtitle}
+      <div className="mt-3">
+        <p className={`text-2xl font-black ${theme.text}`}>
+          {currency ? money(animated) : numberFormat(animated)}
         </p>
+        <p className="mt-1 text-xs text-[#7e95b0]">{subtitle}</p>
       </div>
     </div>
   );
 }
 
-/* ==========================================
-   PANELS
-========================================== */
-
 function Panel({ children, className = "" }) {
   return (
-    <section
-      className={`w-full min-w-0 overflow-hidden rounded-[23px] border border-[#d5e5f8] bg-gradient-to-br from-white via-[#f9fcff] to-[#edf5ff] shadow-[0_8px_28px_rgba(30,76,130,.055)] ${className}`}
-    >
+    <section className={`w-full min-w-0 rounded-2xl border border-[#dce7f5] bg-white shadow-sm ${className}`}>
       {children}
     </section>
   );
 }
 
-function SectionTitle({
-  title,
-  subtitle,
-  icon: Icon,
-  right,
-}) {
+function SectionTitle({ title, subtitle, icon: Icon, right }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#e0efff] text-[#2767ad]">
-          <Icon size={21} />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#244d8b]">
+          <Icon size={20} />
         </div>
-
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-base font-black text-[#10264d] sm:text-lg">
-            {title}
-          </h2>
-
-          <p className="mt-1 text-xs text-[#819bb5]">
-            {subtitle}
-          </p>
+          <h2 className="text-base font-black text-[#10264d]">{title}</h2>
+          <p className="text-xs text-[#7e95b0]">{subtitle}</p>
         </div>
       </div>
-
       {right}
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  const value = String(status || "Pending")
-    .trim()
-    .toLowerCase();
+  const value = String(status || "Pending").trim().toLowerCase();
 
-  let theme = "bg-[#e7f0fb] text-[#52769c]";
-
+  let theme = "bg-[#f0f4fa] text-[#4d6b8c]";
   if (
     [
       ...PAID_STATUSES,
@@ -1011,6 +802,8 @@ function StatusBadge({ status }) {
       "partial",
       "partially paid",
       "unpaid",
+      "new",
+      "in discussion",
     ].includes(value)
   ) {
     theme = "bg-[#fff0d9] text-[#ae782a]";
@@ -1019,161 +812,89 @@ function StatusBadge({ status }) {
   }
 
   return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-bold ${theme}`}
-    >
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${theme}`}>
       {status || "Pending"}
     </span>
   );
 }
 
 /* ==========================================
-   RESPONSIVE REVENUE / EXPENSE GRAPH
-
-   Mobile:
-   - Fits screen width
-   - No 900px forced width
-   - All days visible
-   - Graph and legend stacked properly
+   REVENUE & EXPENSE OVERVIEW CHART
 ========================================== */
 
 function RevenueExpenseChart({ dailyData, month }) {
-  const [animate, setAnimate] = useState(false);
-
-  useEffect(() => {
-    setAnimate(false);
-
-    const frame = requestAnimationFrame(() => {
-      setAnimate(true);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [dailyData, month]);
-
   const maxValue = Math.max(
     1,
-    ...dailyData.flatMap((item) => [
-      item.revenue,
-      item.expenses,
-    ])
+    ...dailyData.flatMap((item) => [item.revenue, item.expenses])
   );
 
-  const hasData = dailyData.some(
-    (item) => item.revenue > 0 || item.expenses > 0
-  );
+  const hasData = dailyData.some((item) => item.revenue > 0 || item.expenses > 0);
+  const chartRevenue = round(dailyData.reduce((sum, item) => sum + item.revenue, 0));
+  const chartExpenses = round(dailyData.reduce((sum, item) => sum + item.expenses, 0));
 
-  const chartRevenue = round(
-    dailyData.reduce(
-      (sum, item) => sum + item.revenue,
-      0
-    )
-  );
-
-  const chartExpenses = round(
-    dailyData.reduce(
-      (sum, item) => sum + item.expenses,
-      0
-    )
-  );
+  if (!hasData) {
+    return (
+      <div className="flex min-h-[260px] flex-col items-center justify-center p-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f0f5fc] text-[#557a9e]">
+          <BarChart3 size={24} />
+        </div>
+        <p className="mt-3 text-sm font-bold text-[#10264d]">No Activity Recorded</p>
+        <p className="mt-1 text-xs text-[#7e95b0]">
+          There are no revenue or expense records for {monthLabel(month)}.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-w-0">
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:gap-5">
-        <span className="flex items-center gap-2 text-xs font-bold text-[#6985a3]">
-          <span className="h-3 w-3 rounded-full bg-[#377ac4]" />
-          Revenue
-        </span>
-
-        <span className="flex items-center gap-2 text-xs font-bold text-[#6985a3]">
-          <span className="h-3 w-3 rounded-full bg-[#e37c94]" />
-          Expenses
-        </span>
-      </div>
-
-      {/* SUMMARY BOXES - MOBILE ONE BY ONE */}
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="w-full min-w-0 rounded-2xl border border-[#cce7da] bg-[#e9f9f1] p-4">
-          <p className="text-xs font-bold text-[#4c9679]">
-            Graph Revenue
-          </p>
-
-          <p className="mt-2 break-words text-xl font-black text-[#168368]">
-            {money(chartRevenue)}
-          </p>
-        </div>
-
-        <div className="w-full min-w-0 rounded-2xl border border-[#f6d6df] bg-[#fff0f4] p-4">
-          <p className="text-xs font-bold text-[#c47b90]">
-            Graph Expenses
-          </p>
-
-          <p className="mt-2 break-words text-xl font-black text-[#cb5573]">
-            {money(chartExpenses)}
-          </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-4 text-xs font-bold text-[#647c9d]">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#244d8b]" />
+            Revenue ({money(chartRevenue)})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#c2334d]" />
+            Expenses ({money(chartExpenses)})
+          </span>
         </div>
       </div>
 
-      {/* GRAPH - FULLY RESPONSIVE */}
-
-      <div className="report-mobile-chart mt-5 w-full min-w-0">
-        <div className="relative h-64 w-full min-w-0 overflow-hidden rounded-2xl border border-[#e0ecfa] bg-gradient-to-b from-[#f9fcff] to-[#eaf4ff] px-2 pb-3 pt-5 sm:h-72 sm:px-4">
-          {/* GRID LINES */}
-
-          <div className="pointer-events-none absolute inset-x-2 bottom-10 top-5 flex flex-col justify-between sm:inset-x-4">
-            {[0, 1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="border-t border-dashed border-[#d5e5f7]"
-              />
+      <div className="mt-5 w-full min-w-0">
+        <div className="relative h-60 w-full overflow-hidden rounded-xl border border-[#e2edf9] bg-[#f8fbfe] px-2 pb-3 pt-5 sm:h-64 sm:px-4">
+          <div className="pointer-events-none absolute inset-x-2 bottom-8 top-4 flex flex-col justify-between sm:inset-x-4">
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="border-t border-dashed border-[#dce7f5]" />
             ))}
           </div>
 
           <div className="relative z-10 flex h-full w-full items-end gap-[2px] sm:gap-1">
             {dailyData.map((item) => {
-              const revenueHeight =
-                (item.revenue / maxValue) * 100;
-
-              const expenseHeight =
-                (item.expenses / maxValue) * 100;
+              const revenueHeight = (item.revenue / maxValue) * 100;
+              const expenseHeight = (item.expenses / maxValue) * 100;
 
               return (
                 <div
                   key={item.day}
-                  className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
-                  title={`Day ${item.day} | Revenue: ${money(
-                    item.revenue
-                  )} | Expenses: ${money(item.expenses)}`}
+                  className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
+                  title={`Day ${item.day} | Revenue: ${money(item.revenue)} | Expenses: ${money(item.expenses)}`}
                 >
                   <div className="flex h-full w-full items-end justify-center gap-[1px] sm:gap-[2px]">
                     <div
-                      className="w-[45%] max-w-6 rounded-t-sm bg-gradient-to-t from-[#245eaa] to-[#85bcf5] transition-[height] duration-[1200ms] ease-out"
+                      className="w-[45%] max-w-5 rounded-t-sm bg-[#244d8b] transition-[height] duration-700 ease-out"
                       style={{
-                        height: animate
-                          ? `${
-                              item.revenue > 0
-                                ? Math.max(3, revenueHeight)
-                                : 0
-                            }%`
-                          : "0%",
+                        height: item.revenue > 0 ? `${Math.max(4, revenueHeight)}%` : "0%",
                       }}
                     />
-
                     <div
-                      className="w-[45%] max-w-6 rounded-t-sm bg-gradient-to-t from-[#ce5875] to-[#ffb2c1] transition-[height] duration-[1200ms] ease-out"
+                      className="w-[45%] max-w-5 rounded-t-sm bg-[#c2334d] transition-[height] duration-700 ease-out"
                       style={{
-                        height: animate
-                          ? `${
-                              item.expenses > 0
-                                ? Math.max(3, expenseHeight)
-                                : 0
-                            }%`
-                          : "0%",
+                        height: item.expenses > 0 ? `${Math.max(4, expenseHeight)}%` : "0%",
                       }}
                     />
                   </div>
-
-                  <span className="text-[7px] font-bold text-[#7693b0] sm:text-[10px]">
+                  <span className="text-[8px] font-semibold text-[#8ca4bc] sm:text-[10px]">
                     {item.day % 2 === 1 ? item.day : ""}
                   </span>
                 </div>
@@ -1183,122 +904,85 @@ function RevenueExpenseChart({ dailyData, month }) {
         </div>
       </div>
 
-      <p className="mt-3 text-xs leading-5 text-[#8ba2ba]">
-        {hasData
-          ? "Daily revenue and expenses. Tap or hover over bars to check values."
-          : "No recorded revenue or expense activity for the selected month."}
+      <p className="mt-3 text-xs text-[#7e95b0]">
+        Daily recorded revenue and expenses for {monthLabel(month)}. Hover over any bar to view exact amounts.
       </p>
     </div>
   );
 }
 
 /* ==========================================
-   PROGRESS ROWS
+   PAYMENT METHODS PANEL
 ========================================== */
 
-function ProgressRows({
-  items,
-  total,
-  color = "blue",
-  emptyText = "No records available.",
-}) {
-  const [animate, setAnimate] = useState(false);
-
-  useEffect(() => {
-    setAnimate(false);
-
-    const frame = requestAnimationFrame(() => {
-      setAnimate(true);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [items]);
-
-  const gradient =
-    color === "green"
-      ? "from-[#1d967d] to-[#89d9c5]"
-      : color === "rose"
-        ? "from-[#d45e79] to-[#f5a8b9]"
-        : "from-[#2b68af] to-[#91c4f7]";
-
-  if (!items.length) {
-    return (
-      <div className="flex min-h-32 items-center justify-center text-center text-sm text-[#8aa3bc]">
-        {emptyText}
-      </div>
-    );
-  }
+function PaymentMethodsPanel({ methods, totalRevenue }) {
+  const methodItems = useMemo(
+    () =>
+      Object.entries(methods || {})
+        .map(([name, value]) => ({ name, value: round(value) }))
+        .sort((a, b) => b.value - a.value),
+    [methods]
+  );
 
   return (
-    <div className="w-full space-y-5">
-      {items.map((item) => {
-        const percentage =
-          total > 0
-            ? Math.min(100, (item.value / total) * 100)
-            : 0;
+    <Panel className="p-5 sm:p-6">
+      <SectionTitle
+        title="Payment Methods"
+        subtitle="Revenue collected by payment mode"
+        icon={Wallet}
+      />
 
-        return (
-          <div key={item.name} className="min-w-0">
-            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="break-words text-sm font-semibold text-[#587693]">
-                {item.name}
-              </p>
-
-              <p className="break-words text-sm font-extrabold text-[#163e72]">
-                {money(item.value)}
-              </p>
-            </div>
-
-            <div className="h-3 w-full overflow-hidden rounded-full bg-[#e1edfa]">
-              <div
-                className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-[width] duration-[1200ms] ease-out`}
-                style={{
-                  width: animate ? `${percentage}%` : "0%",
-                }}
-              />
-            </div>
-
-            <p className="mt-1.5 text-[11px] text-[#8ca4bc]">
-              {percentage.toFixed(1)}%
-            </p>
+      {methodItems.length === 0 ? (
+        <div className="flex min-h-[220px] flex-col items-center justify-center p-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f0f5fc] text-[#557a9e]">
+            <Wallet size={24} />
           </div>
-        );
-      })}
-    </div>
+          <p className="mt-3 text-sm font-bold text-[#10264d]">No Payment Records</p>
+          <p className="mt-1 text-xs text-[#7e95b0]">No payments recorded for this month.</p>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          <div className="space-y-4">
+            {methodItems.map((item) => {
+              const percentage =
+                totalRevenue > 0 ? Math.min(100, (item.value / totalRevenue) * 100) : 0;
+
+              return (
+                <div key={item.name} className="min-w-0">
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#38506f]">{item.name}</span>
+                    <span className="font-bold text-[#10264d]">{money(item.value)}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-[#eaf1f8]">
+                    <div
+                      className="h-full rounded-full bg-[#244d8b] transition-[width] duration-700 ease-out"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="mt-0.5 block text-[10px] text-[#8ca4bc]">{percentage.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] p-4">
+            <p className="text-xs font-bold text-[#647c9d]">Total Collected</p>
+            <p className="mt-1 text-xl font-black text-[#10264d]">{money(totalRevenue)}</p>
+          </div>
+        </div>
+      )}
+    </Panel>
   );
 }
 
 /* ==========================================
-   RESPONSIVE DATA TABLE
-
-   Mobile:
-   - Each record = separate card
-   - Each field = one by one
-   - No horizontal scrolling
-
-   Desktop:
-   - Normal table layout
+   DATA TABLE COMPONENT (HORIZONTALLY SCROLLABLE ON MOBILE)
 ========================================== */
 
-const thClass =
-  "whitespace-nowrap bg-[#eaf3ff] px-4 py-3.5 text-left text-[11px] font-extrabold uppercase tracking-wider text-[#587a9e]";
-
-const tdClass =
-  "px-4 py-4 text-sm text-[#617f9e]";
-
-function DataTable({
-  title,
-  subtitle,
-  icon,
-  columns,
-  rows,
-  empty,
-  count,
-  extraRight,
-}) {
+function DataTable({ title, subtitle, icon, columns, rows, empty, count, extraRight }) {
   return (
     <Panel>
-      <div className="p-4 sm:p-6">
+      <div className="border-b border-[#eef4fb] p-4 sm:p-5">
         <SectionTitle
           title={title}
           subtitle={subtitle}
@@ -1306,7 +990,7 @@ function DataTable({
           right={
             <div className="flex flex-wrap items-center gap-2">
               {extraRight}
-              <span className="rounded-xl bg-[#e3f0ff] px-3 py-2 text-xs font-bold text-[#2d6bac]">
+              <span className="rounded-xl border border-[#dce7f5] bg-[#f8fbfe] px-3 py-1.5 text-xs font-bold text-[#244d8b]">
                 {count} records
               </span>
             </div>
@@ -1315,91 +999,42 @@ function DataTable({
       </div>
 
       {rows.length ? (
-        <>
-          {/* MOBILE CARDS */}
-
-          <div className="space-y-3 px-3 pb-4 sm:px-4 lg:hidden">
-            {rows.map((row, index) => (
-              <div
-                key={`mobile-${row.id ?? index}-${index}`}
-                className="w-full min-w-0 rounded-[20px] border border-[#d8e7f8] bg-white p-4 shadow-sm"
-              >
-                <div className="mb-4 flex items-center justify-between border-b border-[#e8f0fa] pb-3">
-                  <span className="text-xs font-black text-[#245e9e]">
-                    Record #{index + 1}
-                  </span>
-
-                  <span className="rounded-lg bg-[#edf5ff] px-2.5 py-1 text-[10px] font-bold text-[#5b82ad]">
-                    {title}
-                  </span>
-                </div>
-
-                {/* EACH FIELD ONE BY ONE */}
-
-                <div className="flex flex-col">
-                  {columns.map((column, columnIndex) => (
-                    <div
-                      key={`${column.key}-${columnIndex}`}
-                      className="flex min-w-0 flex-col gap-1.5 border-b border-[#edf3fb] py-3 last:border-b-0"
-                    >
-                      <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#8ca4bc]">
-                        {column.label}
-                      </p>
-
-                      <div className="min-w-0 break-words text-sm font-semibold text-[#173e73]">
-                        {column.render
-                          ? column.render(row)
-                          : row[column.key] ?? "—"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* DESKTOP TABLE */}
-
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr>
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[700px] border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b border-[#e2edf9] bg-[#f5f8fc]">
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    className="whitespace-nowrap px-4 py-3.5 text-xs font-bold text-[#4d6b8c]"
+                  >
+                    {column.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#eef4fb]">
+              {rows.map((row, index) => (
+                <tr
+                  key={`${row.id ?? "row"}-${index}`}
+                  className="transition-colors hover:bg-[#f8fbfe]"
+                >
                   {columns.map((column) => (
-                    <th
+                    <td
                       key={column.key}
-                      className={thClass}
+                      className="whitespace-nowrap px-4 py-3.5 text-xs text-[#264466]"
                     >
-                      {column.label}
-                    </th>
+                      {column.render ? column.render(row) : row[column.key] ?? "—"}
+                    </td>
                   ))}
                 </tr>
-              </thead>
-
-              <tbody className="divide-y divide-[#e5eef9]">
-                {rows.map((row, index) => (
-                  <tr
-                    key={`${row.id ?? "row"}-${index}`}
-                    className="transition-colors hover:bg-[#edf6ff]"
-                  >
-                    {columns.map((column) => (
-                      <td
-                        key={column.key}
-                        className={tdClass}
-                      >
-                        {column.render
-                          ? column.render(row)
-                          : row[column.key] ?? "—"}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <div className="px-5 py-14 text-center text-sm text-[#8aa3bc]">
-          {empty}
+        <div className="flex min-h-[160px] flex-col items-center justify-center p-6 text-center">
+          <p className="text-sm font-semibold text-[#7e95b0]">{empty}</p>
         </div>
       )}
     </Panel>
@@ -1407,16 +1042,12 @@ function DataTable({
 }
 
 /* ==========================================
-   MAIN REPORTS
+   MAIN REPORTS & ANALYTICS COMPONENT
 ========================================== */
 
 export default function Reports() {
-  const [selectedMonth, setSelectedMonth] = useState(
-    currentMonth
-  );
-
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [data, setData] = useState(loadAllData);
-  const [backendSummary, setBackendSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [bookingFilterScope, setBookingFilterScope] = useState("all");
@@ -1426,72 +1057,40 @@ export default function Reports() {
   const dataRef = useRef(data);
   dataRef.current = data;
 
-  useEffect(() => {
-    let isMounted = true;
-    api.reports
-      .summary({ month: selectedMonth })
-      .then((res) => {
-        if (isMounted && res) {
-          setBackendSummary(res);
-        }
-      })
-      .catch((err) => {
-        console.warn("Using local report calculations:", err.message);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedMonth]);
-
-  /* LIVE MODULE CONNECTION */
-
   const loadReports = useCallback(() => {
-    syncStaffSalaryExpenses();
+    syncStaffSalaryExpenses(selectedMonth);
     const latest = loadAllData();
-
-    if (
-      JSON.stringify(latest) !==
-      JSON.stringify(dataRef.current)
-    ) {
+    if (JSON.stringify(latest) !== JSON.stringify(dataRef.current)) {
       dataRef.current = latest;
       setData(latest);
     }
-  }, []);
+  }, [selectedMonth]);
 
   const manualRefresh = () => {
     setLoading(true);
     loadReports();
     api.reports
       .summary({ month: selectedMonth })
-      .then((res) => {
-        if (res) setBackendSummary(res);
-      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     const handleUpdate = () => loadReports();
-
     window.addEventListener("storage", handleUpdate);
     window.addEventListener(UPDATE_EVENT, handleUpdate);
     window.addEventListener("focus", handleUpdate);
-
     const interval = window.setInterval(loadReports, 3000);
 
     return () => {
       window.removeEventListener("storage", handleUpdate);
-      window.removeEventListener(
-        UPDATE_EVENT,
-        handleUpdate
-      );
+      window.removeEventListener(UPDATE_EVENT, handleUpdate);
       window.removeEventListener("focus", handleUpdate);
       window.clearInterval(interval);
     };
   }, [loadReports]);
 
-  /* UNIFIED ALL BOOKINGS ACROSS MODULES */
+  /* ALL BOOKINGS ACROSS MODULES */
 
   const allBookings = useMemo(() => {
     const result = [];
@@ -1500,8 +1099,7 @@ export default function Reports() {
     const add = (item, moduleSource) => {
       if (!item || typeof item !== "object") return;
       const key = String(
-        item.id ||
-          `${getName(item)}-${getBookingDate(item)}-${getBookingEvent(item)}`
+        item.id || `${getName(item)}-${getBookingDate(item)}-${item.service || item.event}`
       );
       if (seen.has(key)) return;
       seen.add(key);
@@ -1529,17 +1127,15 @@ export default function Reports() {
         _module: moduleSource,
         _normalizedName: getName(item),
         _normalizedDate: toDate(getBookingDate(item)),
-        _normalizedEvent: getBookingEvent(item),
         _normalizedLocation: getLocation(item),
         _normalizedAmount: amount,
         _normalizedAdvance: advance,
-        _normalizedPhone:
-          item.phone || item.number || item.customerPhone || "",
-        _normalizedStatus: item.status || "Pending",
+        _normalizedPhone: item.phone || item.number || item.customerPhone || "",
+        _normalizedStatus: item.status || "Confirmed",
       });
     };
 
-    (data.bookings || []).forEach((item) => add(item, "Calendar"));
+    (data.bookings || []).forEach((item) => add(item, "Bookings"));
     (data.photography || []).forEach((item) => add(item, "Photography"));
     (data.videography || []).forEach((item) => add(item, "Videography"));
     (data.events || []).forEach((item) => add(item, "Events"));
@@ -1549,7 +1145,7 @@ export default function Reports() {
     return result;
   }, [data]);
 
-  /* UNIFIED ALL ENQUIRIES */
+  /* ENQUIRIES */
 
   const allEnquiries = useMemo(() => {
     return (data.enquiries || []).map((item, idx) => ({
@@ -1559,68 +1155,55 @@ export default function Reports() {
       _normalizedName: getName(item),
       _normalizedPhone: item.number || item.phone || "",
       _normalizedEmail: item.email || "",
-      _normalizedEvent:
-        item.mainEvent || item.event || item.eventType || "Enquiry",
       _normalizedDate: toDate(getDate(item)),
-      _normalizedLocation:
-        item.city || item.location || item.address || "—",
-      _normalizedCoverage:
-        item.weddingCoverage || item.coverage || item.notes || "—",
+      _normalizedLocation: item.city || item.location || item.address || "—",
       _normalizedBudget:
-        item.budget || (item.amount ? money(item.amount) : "—"),
+        item.budget ? (typeof item.budget === "number" || !isNaN(Number(item.budget)) ? money(Number(item.budget)) : item.budget) : (item.amount ? money(item.amount) : "—"),
       _normalizedStatus: item.status || "New",
     }));
   }, [data.enquiries]);
 
-  /* UNIFIED ALL CUSTOMERS */
+  /* CUSTOMERS DIRECTORY (FETCHED FROM CUSTOMERS DATA SOURCE) */
 
   const allCustomers = useMemo(() => {
-    const result = [];
+    const list = Array.isArray(data.customers) ? data.customers : [];
+    const fromCustomers = list.map((c, idx) => ({
+      id: c.id || c.customerId || `CUST-${String(idx + 1).padStart(3, "0")}`,
+      name: getName(c),
+      phone: c.phone || c.mobile || c.contactNumber || "",
+      email: c.email || "",
+      address: c.address || c.city || c.location || "Tamil Nadu",
+      createdAt: toDate(getDate(c)) || toDate(new Date()),
+    }));
+
+    if (fromCustomers.length > 0) {
+      return fromCustomers;
+    }
+
+    // Fallback: extract distinct customers from bookings if no customer table records exist
     const seen = new Set();
-
-    const add = (c, sourceModule) => {
-      if (!c) return;
-      const phoneDigits = String(c.phone || c.number || "").replace(/\D/g, "").slice(-10);
-      const name = getName(c);
-      if (!name || name === "Not Specified") return;
-      const identifier =
-        phoneDigits && phoneDigits.length === 10
-          ? `p:${phoneDigits}`
-          : `n:${name.toLowerCase().trim()}`;
-      if (seen.has(identifier)) return;
-      seen.add(identifier);
-
+    const result = [];
+    allBookings.forEach((b) => {
+      const name = b._normalizedName || getName(b);
+      const phone = b._normalizedPhone || b.phone || "";
+      const key = `${name.toLowerCase()}-${phone}`;
+      if (!name || name === "Not Specified" || seen.has(key)) return;
+      seen.add(key);
       result.push({
-        id: c.id || `CUS-${result.length + 1}`,
+        id: b.customerId || `CUST-${String(result.length + 1).padStart(3, "0")}`,
         name,
-        phone: c.phone || c.number || "",
-        email: c.email || "",
-        address: c.address || c.city || c.location || c.venue || "Tamil Nadu",
-        source: c.source || sourceModule || "Direct",
-        createdAt: toDate(getDate(c)) || toDate(new Date()),
-        notes: c.notes || "",
-        gender: c.gender || "",
-        language: c.language || "Tamil",
+        phone,
+        email: b.email || "",
+        address: b._normalizedLocation || b.location || "Tamil Nadu",
+        createdAt: b._normalizedDate || toDate(new Date()),
       });
-    };
-
-    (data.customers || []).forEach((c) => add(c, c.source || "Customer Directory"));
-    allBookings.forEach((b) => add(b, b._module || "Booking"));
-    allEnquiries
-      .filter((e) => String(e.status || e._normalizedStatus || "").trim().toLowerCase() === "confirmed")
-      .forEach((e) => add(e, "Enquiry"));
-
+    });
     return result;
-  }, [data.customers, allBookings, allEnquiries]);
+  }, [data.customers, allBookings]);
 
-  /* MONTHLY RECORDS */
+  /* MONTHLY FILTERED RECORDS */
 
   const monthly = useMemo(() => {
-    const filter = (items) =>
-      (items || []).filter(
-        (item) => getMonth(item) === selectedMonth
-      );
-
     const deduplicatedExpenses = getDeduplicatedMonthlyExpenses(data.expenses, selectedMonth);
 
     return {
@@ -1634,16 +1217,10 @@ export default function Reports() {
       enquiries: allEnquiries.filter(
         (e) => e._normalizedDate && e._normalizedDate.slice(0, 7) === selectedMonth
       ),
-      photography: filter(data.photography),
-      videography: filter(data.videography),
-      events: filter(data.events),
-      functions: filter(data.functions),
-      gifts: filter(data.gifts),
-      deliveries: filter(data.deliveries),
     };
-  }, [data, allBookings, allCustomers, allEnquiries, selectedMonth]);
+  }, [data.expenses, allBookings, allCustomers, allEnquiries, selectedMonth]);
 
-  /* PAYMENT SUMMARY */
+  /* FINANCIAL CALCULATIONS */
 
   const paymentSummary = useMemo(() => {
     let revenue = 0;
@@ -1656,11 +1233,7 @@ export default function Reports() {
     const methods = {};
 
     data.payments.forEach((payment) => {
-      const details = getPaymentDetails(
-        payment,
-        selectedMonth
-      );
-
+      const details = getPaymentDetails(payment, selectedMonth);
       revenue += details.received;
       pending += details.pending;
       billed += details.total;
@@ -1672,11 +1245,8 @@ export default function Reports() {
 
       details.monthlyTransactions.forEach((transaction) => {
         entries.push(transaction);
-
         const method = transaction.method || "Other";
-
-        methods[method] =
-          (methods[method] || 0) + transaction.amount;
+        methods[method] = (methods[method] || 0) + transaction.amount;
       });
     });
 
@@ -1691,112 +1261,38 @@ export default function Reports() {
     };
   }, [data.payments, selectedMonth]);
 
-  /* BOOKING FINANCIALS */
-
   const bookingFinancials = useMemo(() => {
     const map = new Map();
-
     allBookings.forEach((booking) => {
-      map.set(
-        String(booking.id),
-        getBookingFinancials(booking, data.payments)
-      );
+      map.set(String(booking.id), getBookingFinancials(booking, data.payments));
     });
-
     return map;
   }, [allBookings, data.payments]);
-
-  /* EXPENSE SUMMARY */
 
   const expenseTotal = useMemo(
     () => calculateMonthlyExpenseTotal(data.expenses, selectedMonth),
     [data.expenses, selectedMonth]
   );
 
-  const profit = round(
-    paymentSummary.revenue - expenseTotal
-  );
+  const profit = round(paymentSummary.revenue - expenseTotal);
 
-  /* BOOKING SUMMARY */
-
-  const confirmedBookings = allBookings.filter(
-    (item) =>
-      ["confirmed", "completed", "booked", "delivered"].includes(
-        getStatus(item)
-      )
-  ).length;
-
-  const pendingBookings = allBookings.filter(
-    (item) =>
-      ["pending", "new", "upcoming", "in progress"].includes(
-        getStatus(item)
-      )
-  ).length;
-
-  /* EXPENSE CATEGORIES */
-
-  const categorySummary = useMemo(() => {
-    const totals = {};
-
-    monthly.expenses.forEach((item) => {
-      const category = item.category || "Other";
-
-      totals[category] =
-        (totals[category] || 0) + getExpenseAmount(item);
-    });
-
-    return Object.entries(totals)
-      .map(([name, value]) => ({
-        name,
-        value: round(value),
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [monthly.expenses]);
-
-  /* PAYMENT METHODS */
-
-  const methodSummary = useMemo(
-    () =>
-      Object.entries(paymentSummary.methods)
-        .map(([name, value]) => ({
-          name,
-          value: round(value),
-        }))
-        .sort((a, b) => b.value - a.value),
-    [paymentSummary.methods]
-  );
-
-  /* DAILY GRAPH DATA */
+  /* DAILY GRAPH DATA FOR SELECTED MONTH */
 
   const dailyData = useMemo(() => {
-    const [year, month] = selectedMonth
-      .split("-")
-      .map(Number);
-
+    const [year, month] = selectedMonth.split("-").map(Number);
     if (!year || !month) return [];
 
-    const daysInMonth = new Date(
-      year,
-      month,
-      0
-    ).getDate();
-
-    const daily = Array.from(
-      { length: daysInMonth },
-      (_, index) => ({
-        day: index + 1,
-        revenue: 0,
-        expenses: 0,
-      })
-    );
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const daily = Array.from({ length: daysInMonth }, (_, index) => ({
+      day: index + 1,
+      revenue: 0,
+      expenses: 0,
+    }));
 
     paymentSummary.entries.forEach((item) => {
       const date = toDate(item.date);
-
       if (!date.startsWith(selectedMonth)) return;
-
       const day = Number(date.slice(8, 10));
-
       if (day >= 1 && day <= daysInMonth) {
         daily[day - 1].revenue += amountNumber(item.amount);
       }
@@ -1804,11 +1300,8 @@ export default function Reports() {
 
     monthly.expenses.forEach((item) => {
       const date = toDate(getDate(item));
-
       if (!date.startsWith(selectedMonth)) return;
-
       const day = Number(date.slice(8, 10));
-
       if (day >= 1 && day <= daysInMonth) {
         daily[day - 1].expenses += getExpenseAmount(item);
       }
@@ -1819,250 +1312,70 @@ export default function Reports() {
       revenue: round(item.revenue),
       expenses: round(item.expenses),
     }));
-  }, [
-    selectedMonth,
-    paymentSummary.entries,
-    monthly.expenses,
-  ]);
+  }, [selectedMonth, paymentSummary.entries, monthly.expenses]);
 
-  /* FINANCIAL CARDS */
-
-  const stats = [
-    {
-      title: "Total Revenue",
-      value: paymentSummary.revenue,
-      subtitle: "Received payments this month",
-      icon: TrendingUp,
-      color: "green",
-      currency: true,
-    },
-    {
-      title: "Total Expenses",
-      value: expenseTotal,
-      subtitle: `${monthly.expenses.length} expense records`,
-      icon: TrendingDown,
-      color: "red",
-      currency: true,
-    },
-    {
-      title: "Net Profit",
-      value: profit,
-      subtitle: "Revenue minus expenses",
-      icon: IndianRupee,
-      color: profit >= 0 ? "blue" : "red",
-      currency: true,
-    },
-    {
-      title: "Pending Balance",
-      value: paymentSummary.pending,
-      subtitle: `${paymentSummary.pendingCount} unpaid invoices across all months`,
-      icon: Wallet,
-      color: "purple",
-      currency: true,
-    },
-    {
-      title: "Total Bookings",
-      value: allBookings.length,
-      subtitle: `${monthly.bookings.length} in ${monthLabel(selectedMonth)}`,
-      icon: CalendarCheck2,
-      color: "cyan",
-    },
-    {
-      title: "Total Customers",
-      value: allCustomers.length,
-      subtitle: `${monthly.customers.length} registered in ${monthLabel(selectedMonth)}`,
-      icon: Users,
-      color: "blue",
-    },
-    {
-      title: "Total Enquiries",
-      value: allEnquiries.length,
-      subtitle: `${monthly.enquiries.length} in ${monthLabel(selectedMonth)}`,
-      icon: ClipboardList,
-      color: "amber",
-    },
-    {
-      title: "Pending Bookings",
-      value: pendingBookings,
-      subtitle: "Awaiting confirmation across studio",
-      icon: Clock3,
-      color: "purple",
-    },
-  ];
-
-  /* MODULE OVERVIEW */
-
-  const moduleStats = [
-    {
-      title: "All Bookings",
-      value: allBookings.length,
-      icon: CalendarCheck2,
-    },
-    {
-      title: "All Enquiries",
-      value: allEnquiries.length,
-      icon: ClipboardList,
-    },
-    {
-      title: "Total Customers",
-      value: allCustomers.length,
-      icon: Users,
-    },
-    {
-      title: "Wedding Photography",
-      value: data.photography.length,
-      icon: Camera,
-    },
-    {
-      title: "Wedding Videography",
-      value: data.videography.length,
-      icon: Video,
-    },
-    {
-      title: "Event Management",
-      value: data.events.length,
-      icon: CalendarDays,
-    },
-    {
-      title: "Functions",
-      value: data.functions.length,
-      icon: Heart,
-    },
-    {
-      title: "Customized Gifts",
-      value: data.gifts.length,
-      icon: Package,
-    },
-    {
-      title: "Inventory Items",
-      value: data.inventory.length,
-      icon: Boxes,
-    },
-    {
-      title: "Equipment",
-      value: data.equipment.length,
-      icon: Camera,
-    },
-    {
-      title: "Staff Members",
-      value: data.staff.length,
-      icon: Users,
-    },
-    {
-      title: "Branches",
-      value: data.branches.length,
-      icon: Building2,
-    },
-    {
-      title: "Deliveries",
-      value: data.deliveries.length,
-      icon: Package,
-    },
-  ];
-
-  /* SEARCH */
+  /* SEARCH MATCHER */
 
   const matchesSearch = useCallback(
     (item) => {
       const query = search.trim().toLowerCase();
-
       if (!query) return true;
+
+      const seBooking = getBookingServiceAndEvent(item);
+      const seEnquiry = getEnquiryServiceAndEvent(item);
 
       return [
         getName(item),
         item?._normalizedName,
         item?.name,
         item?.customer,
-        item?.bride,
-        item?.groom,
         item?.phone,
         item?.number,
         item?._normalizedPhone,
         item?.email,
         item?._normalizedEmail,
-        item?.category,
         item?.status,
         item?._normalizedStatus,
         item?.paymentStatus,
-        item?.service,
-        item?.event,
-        item?.eventType,
-        item?.mainEvent,
-        item?.giftType,
-        item?._normalizedEvent,
-        item?._module,
+        seBooking.service,
+        seBooking.event,
+        seEnquiry.service,
+        seEnquiry.event,
         item?.location,
         item?.venue,
         item?.city,
         item?.address,
         item?._normalizedLocation,
-        item?.notes,
-        item?._normalizedCoverage,
-        item?.method,
-        item?.invoice,
-        item?.bookingId,
         item?.id,
-      ].some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
+      ].some((value) => String(value || "").toLowerCase().includes(query));
     },
     [search]
   );
 
-  const recentPayments = useMemo(() => {
-    return [...paymentSummary.entries]
-      .filter(matchesSearch)
-      .sort((a, b) =>
-        String(b.date).localeCompare(String(a.date))
-      )
-      .slice(0, 8);
-  }, [paymentSummary.entries, matchesSearch]);
-
-  const recentExpenses = useMemo(() => {
-    return [...monthly.expenses]
-      .filter(matchesSearch)
-      .sort((a, b) =>
-        toDate(getDate(b)).localeCompare(toDate(getDate(a)))
-      )
-      .slice(0, 8);
-  }, [monthly.expenses, matchesSearch]);
-
   const displayBookings = useMemo(() => {
-    const list =
-      bookingFilterScope === "month" ? monthly.bookings : allBookings;
-
+    const list = bookingFilterScope === "month" ? monthly.bookings : allBookings;
     return [...list]
       .filter(matchesSearch)
       .sort((a, b) =>
-        String(b._normalizedDate || "").localeCompare(
-          String(a._normalizedDate || "")
-        )
+        String(b._normalizedDate || "").localeCompare(String(a._normalizedDate || ""))
       );
   }, [bookingFilterScope, monthly.bookings, allBookings, matchesSearch]);
 
   const displayEnquiries = useMemo(() => {
-    const list =
-      enquiryFilterScope === "month" ? monthly.enquiries : allEnquiries;
-
+    const list = enquiryFilterScope === "month" ? monthly.enquiries : allEnquiries;
     return [...list]
       .filter(matchesSearch)
       .sort((a, b) =>
-        String(b._normalizedDate || "").localeCompare(
-          String(a._normalizedDate || "")
-        )
+        String(b._normalizedDate || "").localeCompare(String(a._normalizedDate || ""))
       );
   }, [enquiryFilterScope, monthly.enquiries, allEnquiries, matchesSearch]);
 
   const displayCustomers = useMemo(() => {
-    const list =
-      customerFilterScope === "month" ? monthly.customers : allCustomers;
-
+    const list = customerFilterScope === "month" ? monthly.customers : allCustomers;
     return [...list]
       .filter(matchesSearch)
       .sort((a, b) =>
-        String(b.createdAt || "").localeCompare(
-          String(a.createdAt || "")
-        )
+        String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
       );
   }, [customerFilterScope, monthly.customers, allCustomers, matchesSearch]);
 
@@ -2070,478 +1383,271 @@ export default function Reports() {
 
   const exportCSV = () => {
     const rows = [
-      ["STUDIO RAW PICTUREZ - CONNECTED REPORT"],
-      ["Month", selectedMonth],
-      ["Generated", new Date().toLocaleString("en-IN")],
+      ["STUDIO RAW PICTUREZ – REPORTS & ANALYTICS"],
+      ["Period", `${monthLabel(selectedMonth)} (${selectedMonth})`],
+      ["Generated At", new Date().toLocaleString("en-IN")],
       [],
       ["FINANCIAL SUMMARY"],
       ["Metric", "Amount"],
-      ["Monthly Revenue", paymentSummary.revenue],
-      ["Monthly Expenses", expenseTotal],
-      ["Monthly Net Profit", profit],
-      ["All Invoice Billed", paymentSummary.billed],
-      ["All Invoice Received", paymentSummary.allReceived],
-      ["All Invoice Pending", paymentSummary.pending],
+      ["Total Revenue (Received)", paymentSummary.revenue],
+      ["Total Expenses", expenseTotal],
+      ["Net Profit", profit],
+      ["Pending Balance (Invoices)", paymentSummary.pending],
       [],
-      ["BOOKINGS, ENQUIRIES & CUSTOMERS SUMMARY"],
-      ["Metric", "Count"],
-      ["All Bookings", allBookings.length],
-      ["Monthly Bookings", monthly.bookings.length],
-      ["Confirmed Bookings", confirmedBookings],
-      ["Pending Bookings", pendingBookings],
-      ["All Customers", allCustomers.length],
-      ["Monthly Customers", monthly.customers.length],
-      ["All Enquiries", allEnquiries.length],
-      ["Monthly Enquiries", monthly.enquiries.length],
+      ["PAYMENT METHODS BREAKDOWN"],
+      ["Payment Method", "Collected Amount"],
+      ...Object.entries(paymentSummary.methods || {}).map(([m, val]) => [m, val]),
       [],
-      ["ALL MODULE RECORDS"],
-      ["Module", "Total"],
-      ...moduleStats.map((item) => [
-        item.title,
-        item.value,
-      ]),
-      [],
-      ["PAYMENT TRANSACTIONS"],
+      ["BOOKING REPORT"],
       [
-        "Date",
-        "Customer",
-        "Invoice",
-        "Booking ID",
-        "Received",
-        "Method",
-      ],
-      ...paymentSummary.entries.map((item) => [
-        item.date,
-        item.name,
-        item.invoice,
-        item.bookingId,
-        item.amount,
-        item.method,
-      ]),
-      [],
-      ["EXPENSES"],
-      ["Date", "Title", "Category", "Amount"],
-      ...monthly.expenses.map((item) => [
-        toDate(getDate(item)),
-        getName(item),
-        item.category || "Other",
-        getExpenseAmount(item),
-      ]),
-      [],
-      ["ALL BOOKINGS REPORT"],
-      [
-        "Booking Date",
-        "Source Module",
         "Customer",
         "Phone",
-        "Event / Service",
+        "Service",
+        "Event Type",
+        "Booking Date",
         "Location",
-        "Booking Status",
-        "Booking Amount",
-        "Billed",
+        "Invoice Amount",
         "Received",
-        "Pending",
+        "Balance",
         "Payment Status",
+        "Booking Status",
       ],
-      ...allBookings.map((item) => {
-        const financials = bookingFinancials.get(
-          String(item.id)
-        ) || {
+      ...displayBookings.map((b) => {
+        const fin = bookingFinancials.get(String(b.id)) || {
           billed: 0,
           received: 0,
           pending: 0,
           status: "Not Invoiced",
         };
-
+        const se = getBookingServiceAndEvent(b);
         return [
-          item._normalizedDate,
-          item._module,
-          item._normalizedName,
-          item._normalizedPhone,
-          item._normalizedEvent,
-          item._normalizedLocation,
-          item._normalizedStatus,
-          item._normalizedAmount,
-          financials.billed,
-          financials.received,
-          financials.pending,
-          financials.status,
+          b._normalizedName || getName(b),
+          b._normalizedPhone || b.phone || "",
+          se.service,
+          se.event,
+          b._normalizedDate || getBookingDate(b),
+          b._normalizedLocation || b.location || "",
+          fin.billed > 0 ? fin.billed : b._normalizedAmount || 0,
+          fin.received,
+          fin.pending,
+          fin.status,
+          b._normalizedStatus || b.status || "Confirmed",
         ];
       }),
       [],
       ["ENQUIRIES REPORT"],
       [
-        "Enquiry / Event Date",
         "Customer",
         "Phone",
         "Email",
+        "Service",
         "Event Type",
+        "Event Date",
         "City / Location",
-        "Budget",
-        "Coverage / Requirements",
-        "Status",
+        "Estimated Budget",
+        "Enquiry Status",
       ],
-      ...allEnquiries.map((item) => [
-        item._normalizedDate,
-        item._normalizedName,
-        item._normalizedPhone,
-        item._normalizedEmail,
-        item._normalizedEvent,
-        item._normalizedLocation,
-        item._normalizedBudget,
-        item._normalizedCoverage,
-        item._normalizedStatus,
-      ]),
+      ...displayEnquiries.map((e) => {
+        const se = getEnquiryServiceAndEvent(e);
+        return [
+          e._normalizedName || getName(e),
+          e._normalizedPhone || e.phone || "",
+          e._normalizedEmail || e.email || "",
+          se.service,
+          se.event,
+          e._normalizedDate || getDate(e),
+          e._normalizedLocation || e.city || "",
+          e._normalizedBudget || e.budget || "",
+          e._normalizedStatus || e.status || "New",
+        ];
+      }),
       [],
       ["CUSTOMER DIRECTORY REPORT"],
       [
         "Customer ID",
-        "Name",
-        "Phone",
-        "Email",
-        "Address / City",
-        "Acquisition Source",
+        "Customer Name",
+        "Phone Number",
+        "Email Address",
+        "Location / Address",
         "Registered Date",
       ],
-      ...allCustomers.map((item) => [
-        item.id,
-        item.name,
-        item.phone,
-        item.email,
-        item.address,
-        item.source,
-        formatDate(item.createdAt),
+      ...displayCustomers.map((c) => [
+        c.id,
+        c.name,
+        c.phone,
+        c.email,
+        c.address,
+        formatDate(c.createdAt),
       ]),
     ];
 
     const escapeCSV = (value) => {
       const raw = String(value ?? "");
-
-      const safe = /^\s*[=+\-@\t\r]/.test(raw)
-        ? `'${raw}`
-        : raw;
-
+      const safe = /^\s*[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
       return `"${safe.replace(/"/g, '""')}"`;
     };
 
-    const csv = rows
-      .map((row) => row.map(escapeCSV).join(","))
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;",
-    });
-
+    const csv = rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
     link.download = `StudioRaw-Reports-${selectedMonth}.csv`;
-
     document.body.appendChild(link);
     link.click();
     link.remove();
-
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   /* ==========================================
-     RENDER
+     PAGE ARRANGEMENT:
+     1. Page Header – Reports & Analytics
+     2. Centralized Month Filter, Refresh and Export CSV
+     3. Four Summary KPI Cards
+     4. Revenue & Expense Overview and Payment Methods
+     5. Booking Report
+     6. Enquiries Report
+     7. Customer Directory Report
   ========================================== */
 
   return (
-    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-gradient-to-br from-[#f5faff] via-[#edf5ff] to-[#e5f0ff] px-3 py-5 text-[#10264d] sm:px-5 sm:py-7 lg:px-8">
-      <style>{reportStyles}</style>
+    <div className="min-h-screen w-full bg-[#f5f8fc] px-4 py-6 font-sans text-[#10264d] sm:px-8 sm:py-8">
+      <div className="mx-auto w-full max-w-7xl space-y-6">
 
-      <div className="mx-auto w-full max-w-[1650px] space-y-6 sm:space-y-7">
-
-        {/* TOP ACTIONS - MOBILE ONE BY ONE */}
-
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <div className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-2xl border border-[#d3e5f8] bg-white px-4 shadow-sm sm:w-auto">
-            <CalendarDays
-              size={18}
-              className="shrink-0 text-[#3476bb]"
-            />
-
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(event) => {
-                if (event.target.value) {
-                  setSelectedMonth(event.target.value);
-                }
-              }}
-              className="w-full min-w-0 flex-1 bg-transparent py-3 text-sm font-bold text-[#173e73] outline-none sm:w-auto"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={manualRefresh}
-            disabled={loading}
-            title="Refresh reports"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#d3e5f8] bg-white px-5 text-sm font-bold text-[#275d96] transition hover:bg-[#e7f2ff] sm:w-auto"
-          >
-            <RefreshCw
-              size={17}
-              className={loading ? "animate-spin" : ""}
-            />
-            Refresh
-          </button>
-
-          <button
-            type="button"
-            onClick={exportCSV}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#173766] to-[#2c609e] px-5 text-sm font-bold text-white shadow-lg transition hover:brightness-110 sm:w-auto"
-          >
-            <Download size={17} />
-            Export CSV
-          </button>
-        </div>
-
-        {/* FINANCIAL STATS - MOBILE ONE COLUMN */}
-
-        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-
-        {/* REVENUE GRAPH + PAYMENT METHODS */}
-
-        <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-3">
-          <Panel className="p-4 sm:p-6 xl:col-span-2">
-            <SectionTitle
-              title="Revenue & Expense Activity"
-              subtitle={`Daily performance - ${monthLabel(
-                selectedMonth
-              )}`}
-              icon={BarChart3}
-            />
-
-            <RevenueExpenseChart
-              dailyData={dailyData}
-              month={selectedMonth}
-            />
-          </Panel>
-
-          <Panel className="p-4 sm:p-6">
-            <SectionTitle
-              title="Payment Methods"
-              subtitle="Collected amount by payment mode"
-              icon={Wallet}
-            />
-
-            <div className="mt-7">
-              <ProgressRows
-                items={methodSummary}
-                total={paymentSummary.revenue}
-                color="blue"
-                emptyText="No payment records available."
-              />
-            </div>
-
-            <div className="mt-6 rounded-[20px] border border-[#d2e5fa] bg-gradient-to-br from-[#eaf4ff] to-[#d4e8ff] p-5">
-              <p className="text-xs font-bold text-[#6384a6]">
-                Collected Revenue
-              </p>
-
-              <p className="mt-2 break-words text-2xl font-black text-[#174477]">
-                {money(paymentSummary.revenue)}
-              </p>
-            </div>
-          </Panel>
-        </div>
-
-        {/* EXPENSE CATEGORIES */}
-
-        <Panel className="p-4 sm:p-6">
-          <SectionTitle
-            title="Category-wise Expenses"
-            subtitle="Monthly expense distribution"
-            icon={TrendingDown}
-          />
-
-          <div className="mt-7 w-full">
-            <ProgressRows
-              items={categorySummary}
-              total={expenseTotal}
-              color="rose"
-              emptyText="No expenses for this month."
-            />
-          </div>
-        </Panel>
-
-        {/* ALL MODULE OVERVIEW */}
-
-        <div className="w-full">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="shrink-0 rounded-2xl bg-[#e0efff] p-3 text-[#2767ad]">
-              <Activity size={21} />
-            </div>
-
-            <div className="min-w-0">
-              <h2 className="text-lg font-black text-[#10264d]">
-                All Module Overview
-              </h2>
-
-              <p className="mt-1 text-xs text-[#839bb4]">
-                Total available records across studio modules
-              </p>
-            </div>
-          </div>
-
-          {/* MOBILE: ALL BOXES ONE BY ONE */}
-
-          <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {moduleStats.map((item) => (
-              <StatCard
-                key={item.title}
-                title={item.title}
-                value={item.value}
-                subtitle="Total stored records"
-                icon={item.icon}
-                color="blue"
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* DETAILED REPORTS + SEARCH */}
-
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* 1. PAGE HEADER */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-black text-[#10264d]">
-              Detailed Reports
-            </h2>
-
-            <p className="mt-1 text-xs text-[#839bb4]">
-              Monthly payments, expenses and booking records
+            <h1 className="text-2xl font-black tracking-tight text-[#10264d]">
+              Reports &amp; Analytics
+            </h1>
+            <p className="mt-1 text-xs text-[#647c9d]">
+              Financial performance, booking activity, enquiries, and customer analytics
             </p>
+          </div>
+        </div>
+
+        {/* 2. CENTRALIZED MONTH FILTER, SEARCH, REFRESH & EXPORT CSV */}
+        <div className="flex flex-col gap-3 rounded-2xl border border-[#dce7f5] bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] px-3 py-2 text-xs font-bold text-[#10264d]">
+              <CalendarDays size={16} className="text-[#244d8b]" />
+              <span>Month:</span>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => e.target.value && setSelectedMonth(e.target.value)}
+                className="bg-transparent text-xs font-bold text-[#10264d] outline-none"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={manualRefresh}
+              disabled={loading}
+              title="Refresh reports"
+              className="flex items-center gap-1.5 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] px-3 py-2 text-xs font-bold text-[#244d8b] transition hover:bg-[#edf4ff]"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <span>Refresh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={exportCSV}
+              className="flex items-center gap-1.5 rounded-xl bg-[#244d8b] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#183968]"
+            >
+              <Download size={14} />
+              <span>Export CSV</span>
+            </button>
           </div>
 
           <div className="relative w-full sm:w-72">
             <Search
-              size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#87a0bb]"
+              size={15}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9bb0cc]"
             />
-
             <input
-              type="search"
+              type="text"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Search records..."
-              className="w-full rounded-2xl border border-[#d3e5f8] bg-white py-3 pl-11 pr-4 text-sm text-[#173e73] outline-none transition focus:border-[#82b2e7] focus:ring-4 focus:ring-[#e0efff]"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search reports by customer, service, city..."
+              className="w-full rounded-xl border border-[#dce7f5] bg-[#f8fbfe] py-2 pl-9 pr-3 text-xs font-semibold text-[#10264d] outline-none transition placeholder:text-[#9bb0cc] focus:border-[#244d8b] focus:bg-white"
             />
           </div>
         </div>
 
-        {/* PAYMENT AND EXPENSE RECORDS */}
-
-        <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-2">
-          <DataTable
-            title="Recent Payments"
-            subtitle="Collected payment transactions"
-            icon={Receipt}
-            count={paymentSummary.entries.length}
-            empty="No payment records for this month."
-            rows={recentPayments}
-            columns={[
-              {
-                key: "name",
-                label: "Customer",
-              },
-              {
-                key: "date",
-                label: "Date",
-                render: (row) => formatDate(row.date),
-              },
-              {
-                key: "amount",
-                label: "Amount",
-                render: (row) => (
-                  <span className="font-extrabold text-[#168368]">
-                    {money(row.amount)}
-                  </span>
-                ),
-              },
-              {
-                key: "method",
-                label: "Method",
-              },
-              {
-                key: "status",
-                label: "Status",
-                render: (row) => (
-                  <StatusBadge status={row.status} />
-                ),
-              },
-            ]}
+        {/* 3. FOUR SUMMARY KPI CARDS */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            title="Total Revenue"
+            value={paymentSummary.revenue}
+            subtitle={`Received in ${monthLabel(selectedMonth)}`}
+            icon={TrendingUp}
+            color="green"
+            currency
           />
-
-          <DataTable
-            title="Recent Expenses"
-            subtitle="Studio expense records"
+          <KPICard
+            title="Total Expenses"
+            value={expenseTotal}
+            subtitle={`${monthly.expenses.length} records in ${monthLabel(selectedMonth)}`}
             icon={TrendingDown}
-            count={monthly.expenses.length}
-            empty="No expenses for this month."
-            rows={recentExpenses}
-            columns={[
-              {
-                key: "title",
-                label: "Expense",
-                render: (row) => getName(row),
-              },
-              {
-                key: "date",
-                label: "Date",
-                render: (row) =>
-                  formatDate(getDate(row)),
-              },
-              {
-                key: "category",
-                label: "Category",
-                render: (row) =>
-                  row.category || "Other",
-              },
-              {
-                key: "amount",
-                label: "Amount",
-                render: (row) => (
-                  <span className="font-extrabold text-[#d35b75]">
-                    {money(getExpenseAmount(row))}
-                  </span>
-                ),
-              },
-            ]}
+            color="red"
+            currency
+          />
+          <KPICard
+            title="Net Profit"
+            value={profit}
+            subtitle="Total Revenue − Total Expenses"
+            icon={IndianRupee}
+            color={profit >= 0 ? "blue" : "red"}
+            currency
+          />
+          <KPICard
+            title="Pending Balance"
+            value={paymentSummary.pending}
+            subtitle={`${paymentSummary.pendingCount} unpaid invoice balances`}
+            icon={Wallet}
+            color="purple"
+            currency
           />
         </div>
 
-        {/* CONNECTED BOOKING REPORT */}
+        {/* 4. REVENUE & EXPENSE OVERVIEW AND PAYMENT METHODS */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <Panel className="p-5 sm:p-6 lg:col-span-2">
+            <SectionTitle
+              title="Revenue & Expense Overview"
+              subtitle={`Daily performance for ${monthLabel(selectedMonth)}`}
+              icon={BarChart3}
+            />
+            <RevenueExpenseChart dailyData={dailyData} month={selectedMonth} />
+          </Panel>
 
+          <PaymentMethodsPanel
+            methods={paymentSummary.methods}
+            totalRevenue={paymentSummary.revenue}
+          />
+        </div>
+
+        {/* 5. BOOKING REPORT */}
         <DataTable
           title="Booking Report"
           subtitle={
             bookingFilterScope === "all"
-              ? "All photography, videography, functions and event bookings"
-              : `Photography and event bookings - ${monthLabel(selectedMonth)}`
+              ? "All registered studio bookings across all categories"
+              : `Bookings for ${monthLabel(selectedMonth)}`
           }
           icon={Camera}
           count={displayBookings.length}
           extraRight={
-            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+            <div className="flex items-center gap-1 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] p-1">
               <button
                 type="button"
                 onClick={() => setBookingFilterScope("all")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   bookingFilterScope === "all"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 All ({allBookings.length})
@@ -2551,8 +1657,8 @@ export default function Reports() {
                 onClick={() => setBookingFilterScope("month")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   bookingFilterScope === "month"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 {monthLabel(selectedMonth)} ({monthly.bookings.length})
@@ -2561,142 +1667,120 @@ export default function Reports() {
           }
           empty={
             bookingFilterScope === "month"
-              ? "No booking records for this month. Click 'All' to view all bookings."
+              ? `No booking records found for ${monthLabel(selectedMonth)}.`
               : "No booking records found matching search."
           }
           rows={displayBookings}
           columns={[
             {
               key: "customer",
-              label: "Customer Name",
+              label: "Customer",
               render: (row) => (
                 <div>
-                  <p className="font-extrabold text-[#173f74]">
+                  <p className="font-bold text-[#10264d]">
                     {row._normalizedName || getName(row)}
                   </p>
-
-                  <p className="mt-1 text-xs text-[#8aa0b8]">
+                  <p className="mt-0.5 text-[11px] text-[#7e95b0]">
                     {row._normalizedPhone || row.phone || "—"}
                   </p>
                 </div>
               ),
             },
             {
-              key: "event",
-              label: "Event & Module",
-              render: (row) => (
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-[#285a99]">
-                    {row._normalizedEvent || getBookingEvent(row)}
-                  </span>
-                  <span className="inline-flex w-fit items-center rounded-md bg-[#edf5ff] px-2 py-0.5 text-[10px] font-bold text-[#356ca6]">
-                    {row._module || "Booking"}
-                  </span>
-                </div>
-              ),
+              key: "serviceEvent",
+              label: "Service / Event",
+              render: (row) => {
+                const se = getBookingServiceAndEvent(row);
+                return (
+                  <div>
+                    <p className="font-semibold text-[#10264d]">{se.service}</p>
+                    {se.event && se.event !== se.service && (
+                      <p className="mt-0.5 text-[11px] text-[#647c9d]">{se.event}</p>
+                    )}
+                  </div>
+                );
+              },
             },
             {
               key: "date",
               label: "Booking Date",
-              render: (row) =>
-                formatDate(row._normalizedDate || getBookingDate(row)),
+              render: (row) => formatDate(row._normalizedDate || getBookingDate(row)),
             },
             {
               key: "location",
               label: "Location",
-              render: (row) =>
-                row._normalizedLocation || row.location || row.venue || "—",
+              render: (row) => row._normalizedLocation || row.location || "—",
             },
             {
-              key: "bookingAmount",
-              label: "Booking Amount",
-              render: (row) =>
-                money(
-                  row._normalizedAmount ||
-                    firstAmount(row, [
-                      "totalAmount",
-                      "total",
-                      "amount",
-                    ])
-                ),
+              key: "invoiceAmount",
+              label: "Invoice Amount",
+              render: (row) => {
+                const fin = bookingFinancials.get(String(row.id));
+                const total = fin?.billed > 0 ? fin.billed : row._normalizedAmount || 0;
+                return <span className="font-bold text-[#10264d]">{money(total)}</span>;
+              },
             },
             {
               key: "received",
               label: "Received",
               render: (row) => {
-                const financials = bookingFinancials.get(
-                  String(row.id)
-                );
-
+                const fin = bookingFinancials.get(String(row.id));
                 return (
-                  <span className="font-extrabold text-[#168368]">
-                    {money(financials?.received || 0)}
+                  <span className="font-bold text-[#107354]">
+                    {money(fin?.received || 0)}
                   </span>
                 );
               },
             },
             {
-              key: "pending",
-              label: "Pending",
+              key: "balance",
+              label: "Balance",
               render: (row) => {
-                const financials = bookingFinancials.get(
-                  String(row.id)
-                );
-
+                const fin = bookingFinancials.get(String(row.id));
                 return (
-                  <span className="font-extrabold text-[#c47b28]">
-                    {money(financials?.pending || 0)}
+                  <span className="font-bold text-[#c2334d]">
+                    {money(fin?.pending || 0)}
                   </span>
                 );
               },
             },
             {
               key: "paymentStatus",
-              label: "Payment",
+              label: "Payment Status",
               render: (row) => {
-                const financials = bookingFinancials.get(
-                  String(row.id)
-                );
-
-                return (
-                  <StatusBadge
-                    status={
-                      financials?.status || "Not Invoiced"
-                    }
-                  />
-                );
+                const fin = bookingFinancials.get(String(row.id));
+                return <StatusBadge status={fin?.status || "Not Invoiced"} />;
               },
             },
             {
               key: "status",
               label: "Booking Status",
               render: (row) => (
-                <StatusBadge status={row._normalizedStatus || row.status} />
+                <StatusBadge status={row._normalizedStatus || row.status || "Confirmed"} />
               ),
             },
           ]}
         />
 
-        {/* ENQUIRIES REPORT */}
-
+        {/* 6. ENQUIRIES REPORT (NO COVERAGE COLUMN) */}
         <DataTable
           title="Enquiries Report"
           subtitle={
             enquiryFilterScope === "all"
-              ? "All customer enquiries and service requests"
-              : `Customer enquiries - ${monthLabel(selectedMonth)}`
+              ? "All customer enquiries and service leads"
+              : `Enquiries for ${monthLabel(selectedMonth)}`
           }
           icon={ClipboardList}
           count={displayEnquiries.length}
           extraRight={
-            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+            <div className="flex items-center gap-1 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] p-1">
               <button
                 type="button"
                 onClick={() => setEnquiryFilterScope("all")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   enquiryFilterScope === "all"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 All ({allEnquiries.length})
@@ -2706,8 +1790,8 @@ export default function Reports() {
                 onClick={() => setEnquiryFilterScope("month")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   enquiryFilterScope === "month"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 {monthLabel(selectedMonth)} ({monthly.enquiries.length})
@@ -2716,98 +1800,89 @@ export default function Reports() {
           }
           empty={
             enquiryFilterScope === "month"
-              ? "No enquiries found for this month. Click 'All' to view all enquiry records."
+              ? `No enquiry records found for ${monthLabel(selectedMonth)}.`
               : "No enquiries found matching search."
           }
           rows={displayEnquiries}
           columns={[
             {
-              key: "name",
+              key: "customerContact",
               label: "Customer & Contact",
               render: (row) => (
                 <div>
-                  <p className="font-extrabold text-[#173f74]">
+                  <p className="font-bold text-[#10264d]">
                     {row._normalizedName || getName(row)}
                   </p>
-                  <p className="mt-1 text-xs text-[#8aa0b8]">
-                    {row._normalizedPhone || row.phone || row.number || "—"}
+                  <p className="mt-0.5 text-[11px] text-[#7e95b0]">
+                    {row._normalizedPhone || row.phone || "—"}
                     {row._normalizedEmail || row.email ? ` · ${row._normalizedEmail || row.email}` : ""}
                   </p>
                 </div>
               ),
             },
             {
-              key: "event",
-              label: "Enquiry Event",
-              render: (row) => (
-                <span className="font-semibold text-[#285a99]">
-                  {row._normalizedEvent || row.mainEvent || row.event || "Enquiry"}
-                </span>
-              ),
+              key: "serviceEvent",
+              label: "Service / Event",
+              render: (row) => {
+                const se = getEnquiryServiceAndEvent(row);
+                return (
+                  <div>
+                    <p className="font-semibold text-[#10264d]">{se.service}</p>
+                    {se.event && se.event !== se.service && (
+                      <p className="mt-0.5 text-[11px] text-[#647c9d]">{se.event}</p>
+                    )}
+                  </div>
+                );
+              },
             },
             {
               key: "date",
               label: "Event Date",
-              render: (row) =>
-                formatDate(row._normalizedDate || getDate(row)),
+              render: (row) => formatDate(row._normalizedDate || getDate(row)),
             },
             {
               key: "city",
-              label: "Location",
-              render: (row) =>
-                row._normalizedLocation || row.city || row.location || "—",
+              label: "City / Location",
+              render: (row) => row._normalizedLocation || row.city || row.location || "—",
             },
             {
               key: "budget",
-              label: "Budget",
+              label: "Estimated Budget",
               render: (row) => (
-                <span className="font-extrabold text-[#168368]">
+                <span className="font-bold text-[#107354]">
                   {row._normalizedBudget || row.budget || "—"}
                 </span>
               ),
             },
             {
-              key: "coverage",
-              label: "Coverage / Requirements",
-              render: (row) => (
-                <span
-                  className="inline-block max-w-[200px] truncate text-xs text-[#627d99]"
-                  title={row._normalizedCoverage || row.weddingCoverage || row.notes || "—"}
-                >
-                  {row._normalizedCoverage || row.weddingCoverage || row.notes || "—"}
-                </span>
-              ),
-            },
-            {
               key: "status",
-              label: "Status",
+              label: "Enquiry Status",
               render: (row) => (
-                <StatusBadge status={row._normalizedStatus || row.status} />
+                <StatusBadge status={row._normalizedStatus || row.status || "New"} />
               ),
             },
           ]}
         />
 
-        {/* CUSTOMER DIRECTORY REPORT */}
-
+        {/* 7. CUSTOMER DIRECTORY REPORT (NO ACQUISITION CHANNEL) */}
         <DataTable
           title="Customer Directory Report"
           subtitle={
             customerFilterScope === "all"
-              ? "All registered studio customers & acquired clients"
+              ? "All registered customer profiles and records"
               : `Customers registered in ${monthLabel(selectedMonth)}`
           }
           icon={Users}
           count={displayCustomers.length}
           extraRight={
-            <div className="flex items-center gap-1 rounded-xl border border-[#d8e6f7] bg-[#f2f7ff] p-1">
+            <div className="flex items-center gap-1 rounded-xl border border-[#dce7f5] bg-[#f8fbfe] p-1">
               <button
                 type="button"
                 onClick={() => setCustomerFilterScope("all")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   customerFilterScope === "all"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 All ({allCustomers.length})
@@ -2817,8 +1892,8 @@ export default function Reports() {
                 onClick={() => setCustomerFilterScope("month")}
                 className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
                   customerFilterScope === "month"
-                    ? "bg-[#1f5697] text-white shadow-sm"
-                    : "text-[#4a729e] hover:bg-[#e4effd]"
+                    ? "bg-[#244d8b] text-white shadow-sm"
+                    : "text-[#647c9d] hover:bg-[#eaf1f8]"
                 }`}
               >
                 {monthLabel(selectedMonth)} ({monthly.customers.length})
@@ -2827,61 +1902,40 @@ export default function Reports() {
           }
           empty={
             customerFilterScope === "month"
-              ? "No customer records for this month. Click 'All' to view all customers."
+              ? `No customers registered in ${monthLabel(selectedMonth)}.`
               : "No customer records found matching search."
           }
           rows={displayCustomers}
           columns={[
             {
-              key: "name",
-              label: "Customer Name & ID",
+              key: "nameId",
+              label: "Customer",
               render: (row) => (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e5efff] text-xs font-black text-[#265e9e]">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#edf4ff] text-xs font-black text-[#244d8b]">
                     {String(row.name || "C").slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-extrabold text-[#173f74]">
-                      {row.name}
-                    </p>
-                    <p className="text-[11px] font-semibold text-[#8aa0b8]">
-                      {row.id}
-                    </p>
+                    <p className="font-bold text-[#10264d]">{row.name}</p>
+                    <p className="text-[10px] text-[#7e95b0]">{row.id}</p>
                   </div>
                 </div>
               ),
             },
             {
-              key: "contact",
-              label: "Contact Info",
-              render: (row) => (
-                <div>
-                  <p className="text-xs font-bold text-[#1a4473]">
-                    {row.phone || "—"}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-[#8aa0b8]">
-                    {row.email || "No email"}
-                  </p>
-                </div>
-              ),
+              key: "phone",
+              label: "Phone Number",
+              render: (row) => row.phone || "—",
+            },
+            {
+              key: "email",
+              label: "Email Address",
+              render: (row) => row.email || "—",
             },
             {
               key: "address",
               label: "Location / Address",
-              render: (row) => (
-                <span className="text-xs text-[#52708f]">
-                  {row.address || "Tamil Nadu"}
-                </span>
-              ),
-            },
-            {
-              key: "source",
-              label: "Acquisition Channel",
-              render: (row) => (
-                <span className="inline-flex rounded-full bg-[#eaf4ff] px-3 py-1 text-[11px] font-bold text-[#2a68ab]">
-                  {row.source || "Direct"}
-                </span>
-              ),
+              render: (row) => row.address || row.city || "—",
             },
             {
               key: "createdAt",

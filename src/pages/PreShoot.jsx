@@ -25,15 +25,26 @@ import {
 
 const STORAGE_KEY = "studioraw_shoot_readiness";
 
-const photographers = [
-  "Arun Kumar",
-  "Praveen Raj",
-  "Karthik S",
-  "Vignesh Kumar",
-  "Sanjay R",
-  "Rahul Photography",
-  "Divya Photography",
-];
+const STAFF_KEY = "studioraw_staff";
+
+function readActivePhotographers() {
+  try {
+    const raw = localStorage.getItem(STAFF_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((m) => String(m.status || "Active").trim().toLowerCase() === "active")
+      .map((m) => {
+        const name = String(m.staff_name || m.name || m.fullName || "").trim();
+        const empId = String(m.employee_id || "").trim();
+        return empId ? `${name} (${empId})` : name;
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 const equipmentOptions = [
   "Sony A7 IV + 24-70mm Lens",
@@ -419,6 +430,27 @@ export default function ShootReadiness() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
+  const [activePhotographers, setActivePhotographers] = useState(readActivePhotographers);
+
+  useEffect(() => {
+    const refreshPhotographers = () => {
+      setActivePhotographers(readActivePhotographers());
+    };
+    window.addEventListener("storage", refreshPhotographers);
+    window.addEventListener("studioraw:data-updated", refreshPhotographers);
+    return () => {
+      window.removeEventListener("storage", refreshPhotographers);
+      window.removeEventListener("studioraw:data-updated", refreshPhotographers);
+    };
+  }, []);
+
+  const dynamicPhotographers = useMemo(() => {
+    const list = [...activePhotographers];
+    if (form.photographer && !list.includes(form.photographer)) {
+      list.unshift(form.photographer);
+    }
+    return list;
+  }, [activePhotographers, form.photographer]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(shoots));
@@ -902,7 +934,7 @@ export default function ShootReadiness() {
                 <FormField label="Photographer">
                   <CustomDropdown
                     value={form.photographer}
-                    options={photographers}
+                    options={dynamicPhotographers}
                     onChange={(value) => update("photographer", value)}
                     placeholder="Choose photographer"
                   />

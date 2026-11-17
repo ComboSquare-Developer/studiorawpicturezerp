@@ -138,6 +138,12 @@ function moneyString(amount) {
 export async function generateInvoicePdf(invoice, options = {}) {
   const { booking = null, customer = null, action = "download" } = options;
 
+  const bStatus = String(booking?.status || booking?.bookingStatus || invoice?.bookingStatus || "").trim().toLowerCase();
+  if (bStatus === "cancelled" || bStatus === "canceled") {
+    console.warn("Invoice actions are unavailable for cancelled bookings.");
+    return null;
+  }
+
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -567,6 +573,9 @@ export async function generateInvoicePdf(invoice, options = {}) {
   const filename = `Invoice-${safeInvoiceName}.pdf`;
 
   if (action === "print") {
+    try {
+      doc.autoPrint();
+    } catch {}
     const blobUrl = doc.output("bloburl");
     if (!window.open(blobUrl, "_blank")) {
       doc.save(filename);

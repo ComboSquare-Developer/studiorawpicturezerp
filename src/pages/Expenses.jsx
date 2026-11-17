@@ -1226,13 +1226,13 @@ export default function Expenses() {
   /* ---------------- PAYROLL SYNC & STORAGE LISTENERS ---------------- */
 
   useEffect(() => {
-    syncStaffSalaryExpenses();
+    syncStaffSalaryExpenses(selectedMonth);
     setExpenses(readInitialExpenses());
 
     const onUpdate = (e) => {
       const key = e?.detail?.key || e?.key;
       if (key === "studioraw_staff" || key === EXPENSE_KEY || !key) {
-        syncStaffSalaryExpenses();
+        syncStaffSalaryExpenses(selectedMonth);
         const fresh = readInitialExpenses();
         setExpenses((prev) => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh));
       }
@@ -1244,7 +1244,7 @@ export default function Expenses() {
       window.removeEventListener(UPDATE_EVENT, onUpdate);
       window.removeEventListener("storage", onUpdate);
     };
-  }, []);
+  }, [selectedMonth]);
 
   /* ---------------- SAVE STORAGE ---------------- */
 
