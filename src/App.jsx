@@ -10,6 +10,8 @@ import {
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import GlobalSound from "./components/GlobalSound";
+import CharacterCursor from "./components/CharacterCursor";
+import AIChatAssistant from "./components/ai/AIChatAssistant";
 import { apiRequest } from "./api/client";
 
 const files = import.meta.glob("./pages/*.jsx");
@@ -33,13 +35,11 @@ const pageNames = {
   payments: "Payments",
   deliveries: "Delivery",
   delivery: "Delivery",
-  inventory: "Inventory",
   equipment: "Equipment",
   expenses: "Expenses",
 
   // MANAGEMENT
   staff: "Staff",
-  branches: "Branches",
   reports: "Reports",
   notifications: "Notifications",
   settings: "Settings",
@@ -262,6 +262,9 @@ export default function App() {
       {/* GLOBAL SOUND - WORKS ON ALL PAGES */}
       <GlobalSound />
 
+      {/* APPLICATION-WIDE ANIMATED CHARACTER CURSOR */}
+      <CharacterCursor />
+
       {!loggedIn ? (
         <Suspense fallback={<Loader />}>
           {Login ? (
@@ -336,6 +339,12 @@ export default function App() {
                 )}
               </Suspense>
             </main>
+
+            {/* GLOBAL FLOATING STUDIO AI ASSISTANT */}
+            <AIChatAssistant
+              activePage={activePage}
+              onNavigate={handleNavigation}
+            />
 
             {/* MOBILE BOTTOM NAVIGATION DOCK */}
             <nav

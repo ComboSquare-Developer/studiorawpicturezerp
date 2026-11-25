@@ -30,6 +30,7 @@ const initialStudio = {
   address: "Studio Raw Picturez, Main Road",
   city: "Nagercoil",
   state: "Tamil Nadu",
+  udyamRegistrationNumber: "",
   gst: "",
   currency: "INR",
   description:
@@ -113,6 +114,7 @@ function Field({
   type = "text",
   required = false,
   maxLength,
+  placeholder,
   iconColor = "text-violet-500",
   iconBg = "bg-violet-50",
 }) {
@@ -143,7 +145,7 @@ function Field({
           }
           required={required}
           maxLength={maxLength}
-          placeholder={label}
+          placeholder={placeholder || label}
           className={`${inputClass} ${
             Icon ? "pl-12" : ""
           }`}
@@ -525,16 +527,30 @@ export default function Settings() {
                 iconColor="text-[#ea580c]"
               />
 
-              <Field
-                label="GST Number"
-                value={studio.gst}
-                onChange={(value) =>
-                  updateStudio("gst", value)
-                }
-                icon={FileText}
-                iconBg="bg-orange-50"
-                iconColor="text-orange-500"
-              />
+              <div className="space-y-4">
+                <Field
+                  label="Udyam Registration Number"
+                  value={studio.udyamRegistrationNumber}
+                  onChange={(value) =>
+                    updateStudio("udyamRegistrationNumber", value)
+                  }
+                  placeholder="Enter Udyam Registration Number"
+                  icon={FileText}
+                  iconBg="bg-blue-50"
+                  iconColor="text-blue-600"
+                />
+
+                <Field
+                  label="GST Number"
+                  value={studio.gst}
+                  onChange={(value) =>
+                    updateStudio("gst", value)
+                  }
+                  icon={FileText}
+                  iconBg="bg-orange-50"
+                  iconColor="text-orange-500"
+                />
+              </div>
 
               <div className="mt-5 flex flex-1 flex-col">
                 <label className="mb-2 text-[12px] font-bold text-slate-600">

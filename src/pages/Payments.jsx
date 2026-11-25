@@ -674,7 +674,6 @@ function PaymentsInner() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [monthFilter, setMonthFilter] = useState("All");
 
   const [modal, setModal] = useState("");
   const [selected, setSelected] = useState(null);
@@ -686,6 +685,14 @@ function PaymentsInner() {
     date: today(),
     note: "",
   });
+  const [exportRangeType, setExportRangeType] = useState("6m");
+  const [exportFromDate, setExportFromDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+  const [exportToDate, setExportToDate] = useState(() => today());
+  const [exportError, setExportError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -1288,21 +1295,11 @@ function PaymentsInner() {
     ? Math.min(100, (summary.received / summary.total) * 100)
     : 0;
 
-  const months = useMemo(
-    () =>
-      [...new Set(invoices.map((i) => dateOf(i.date).slice(0, 7)).filter(Boolean))]
-        .sort()
-        .reverse(),
-    [invoices]
-  );
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return invoices
       .filter((i) => {
         if (statusFilter !== "All" && i.status !== statusFilter) return false;
-        if (monthFilter !== "All" && String(i.date).slice(0, 7) !== monthFilter)
-          return false;
         if (!q) return true;
         return (
           String(i.invoice || "").toLowerCase().includes(q) ||
@@ -1315,35 +1312,139 @@ function PaymentsInner() {
         );
       })
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  }, [invoices, search, statusFilter, monthFilter]);
+  }, [invoices, search, statusFilter]);
 
-  const exportCSV = () => {
+  const openExportModal = () => {
+    setExportError("");
+    setExportRangeType("6m");
+    setExportToDate(today());
+    setModal("export");
+  };
+
+  const handleExportCSV = () => {
+    setExportError("");
+    const now = new Date();
+    const todayStr = today();
+    let fromStr = "";
+    let toStr = todayStr;
+
+    if (exportRangeType === "6m") {
+      const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      fromStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+    } else if (exportRangeType === "12m") {
+      const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      fromStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+    } else {
+      if (!exportFromDate || !exportToDate) {
+        setExportError("Please select both From Date and To Date.");
+        return;
+      }
+      if (exportFromDate > exportToDate) {
+        setExportError("From Date cannot be later than To Date.");
+        return;
+      }
+      fromStr = exportFromDate;
+      toStr = exportToDate;
+    }
+
+    const INVALID_TX = new Set(["failed", "cancelled", "canceled", "refunded", "void", "reversed"]);
+    const exportRows = [];
+
+    for (const inv of invoices) {
+      const invStatus = statusOf(inv);
+      const txs = Array.isArray(inv.transactions) ? inv.transactions : [];
+
+      if (txs.length > 0) {
+        const matchingTxs = txs.filter((tx) => {
+          const st = String(tx?.status || "").trim().toLowerCase();
+          if (INVALID_TX.has(st)) return false;
+          const txDate = dateOf(tx.date || tx.paymentDate || tx.createdAt || inv.date);
+          return txDate && txDate >= fromStr && txDate <= toStr;
+        });
+
+        if (matchingTxs.length === 0) continue;
+
+        const periodReceived = Math.round(
+          matchingTxs.reduce((sum, tx) => sum + num(tx.amount ?? tx.paidAmount ?? tx.receivedAmount), 0) * 100
+        ) / 100;
+        const latestTxDate = matchingTxs
+          .map((tx) => dateOf(tx.date || tx.paymentDate || tx.createdAt || inv.date))
+          .sort()
+          .pop();
+        const methods = [
+          ...new Set(
+            matchingTxs
+              .map((tx) => String(tx.method || tx.paymentMode || inv.method || "Cash").trim())
+              .filter(Boolean)
+          ),
+        ].join(" / ");
+        const historySummary = matchingTxs
+          .map((tx) => {
+            const d = dateOf(tx.date || tx.paymentDate || tx.createdAt || inv.date);
+            const amt = num(tx.amount ?? tx.paidAmount ?? tx.receivedAmount);
+            const m = tx.method || tx.paymentMode || inv.method || "Cash";
+            return `${d}: ${money(amt)} (${m})`;
+          })
+          .join("; ");
+
+        exportRows.push([
+          inv.invoice || inv.id,
+          inv.customer || "",
+          inv.phone || "",
+          inv.bookingId || "",
+          latestTxDate || dateOf(inv.date),
+          getInvoiceServiceDisplay(inv, getLinkedBooking(inv)),
+          totalOf(inv),
+          periodReceived,
+          balanceOf(inv),
+          methods || inv.method || "Cash",
+          invStatus,
+          historySummary,
+        ]);
+      } else {
+        const invDate = dateOf(inv.date);
+        if (!invDate || invDate < fromStr || invDate > toStr) continue;
+        const receivedAmt = paidOf(inv);
+        exportRows.push([
+          inv.invoice || inv.id,
+          inv.customer || "",
+          inv.phone || "",
+          inv.bookingId || "",
+          invDate,
+          getInvoiceServiceDisplay(inv, getLinkedBooking(inv)),
+          totalOf(inv),
+          receivedAmt,
+          balanceOf(inv),
+          inv.method || "Cash",
+          invStatus,
+          receivedAmt > 0 ? `${invDate}: ${money(receivedAmt)} (${inv.method || "Cash"})` : "No payments received",
+        ]);
+      }
+    }
+
+    if (exportRows.length === 0) {
+      setExportError("No payment records found in the selected date range.");
+      return;
+    }
+
     const rows = [
       [
-        "Invoice",
-        "Date",
-        "Customer",
-        "Phone",
-        "Booking ID",
-        "Service",
-        "Total",
-        "Received",
-        "Pending",
-        "Status",
+        "Invoice Number",
+        "Customer Name",
+        "Customer Contact",
+        "Booking Reference",
+        "Payment Date",
+        "Service / Event",
+        "Total Invoice Amount (INR)",
+        "Amount Received (INR)",
+        "Pending Balance (INR)",
+        "Payment Method",
+        "Payment Status",
+        "Payment History",
       ],
-      ...filtered.map((i) => [
-        i.invoice,
-        i.date,
-        i.customer,
-        i.phone,
-        i.bookingId,
-        getInvoiceServiceDisplay(i, getLinkedBooking(i)),
-        totalOf(i),
-        paidOf(i),
-        balanceOf(i),
-        statusOf(i),
-      ]),
+      ...exportRows,
     ];
+
     const esc = (v) => {
       const raw = String(v ?? "");
       const safe = /^\s*[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
@@ -1356,11 +1457,15 @@ function PaymentsInner() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `StudioRaw-Payments-${today()}.csv`;
+    a.download = `StudioRaw-Payments-${fromStr}-to-${toStr}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setModal("");
+    setNotice(
+      `Exported ${exportRows.length} payment ${exportRows.length === 1 ? "record" : "records"} (${fromStr} to ${toStr}).`
+    );
   };
 
   return (
@@ -1424,7 +1529,7 @@ function PaymentsInner() {
             </button>
             <button
               type="button"
-              onClick={exportCSV}
+              onClick={openExportModal}
               className="flex items-center gap-2 rounded-xl border border-[#d5e5f5] bg-white px-4 py-3 text-sm font-bold text-[#2867a7] transition hover:bg-[#f3f8fe]"
             >
               <Download size={17} />
@@ -1538,24 +1643,11 @@ function PaymentsInner() {
             aria-label="Filter by payment status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className={`${inputClass} lg:w-44`}
+            className={`${inputClass} sm:w-52`}
           >
             {["All", "Paid", "Partial", "Pending", "Unpaid"].map((s) => (
               <option key={s} value={s}>
                 {s === "All" ? "All Status" : s}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filter by month"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            className={`${inputClass} lg:w-48`}
-          >
-            <option value="All">All Months</option>
-            {months.map((m) => (
-              <option key={m} value={m}>
-                {m}
               </option>
             ))}
           </select>
@@ -2207,6 +2299,100 @@ function PaymentsInner() {
                 Download Updated Invoice
               </button>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {/* EXPORT CSV DATE RANGE MODAL */}
+      {modal === "export" && (
+        <Modal
+          title="Export Payment Records (CSV)"
+          subtitle="Choose a date range for exporting actual payment records"
+          icon={Download}
+          onClose={close}
+          width="max-w-lg"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              {[
+                { id: "6m", label: "Last 6 Months" },
+                { id: "12m", label: "Last 12 Months" },
+                { id: "custom", label: "Custom Date Range" },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setExportRangeType(opt.id);
+                    setExportError("");
+                  }}
+                  className={`rounded-xl border px-3 py-3 text-xs font-bold transition ${
+                    exportRangeType === opt.id
+                      ? "border-[#10264d] bg-[#10264d] text-white shadow-sm"
+                      : "border-[#d5e4f4] bg-white text-[#10264d] hover:bg-[#f3f8fe]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {exportRangeType === "custom" && (
+              <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#dce8f6] bg-[#f8fbff] p-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-[#355d8d]">
+                    From Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={exportFromDate}
+                    onChange={(e) => {
+                      setExportFromDate(e.target.value);
+                      setExportError("");
+                    }}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-[#355d8d]">
+                    To Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={exportToDate}
+                    onChange={(e) => {
+                      setExportToDate(e.target.value);
+                      setExportError("");
+                    }}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+
+            {exportError && (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                {exportError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={close}
+                className="rounded-xl border border-[#d5e4f4] bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className={primaryButtonClass}
+              >
+                <Download size={16} />
+                Export CSV
+              </button>
+            </div>
           </div>
         </Modal>
       )}

@@ -11,6 +11,7 @@ export const demoSettings = {
   city: "Nagercoil",
   state: "Tamil Nadu",
   pincode: "629001",
+  udyamRegistrationNumber: "",
   gst: "33AAAAA0000A1Z5",
   currency: "INR",
   date_format: "DD-MM-YYYY",

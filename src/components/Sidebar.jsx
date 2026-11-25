@@ -8,10 +8,8 @@ import {
   CalendarDays,
   Wallet,
   PackageCheck,
-  Boxes,
   Wrench,
   Receipt,
-  Building2,
   BarChart3,
   Settings,
   LogOut,
@@ -45,7 +43,6 @@ const menuGroups = [
     items: [
       { id: "payments", label: "Payments", icon: Wallet },
       { id: "deliveries", label: "Deliveries", icon: PackageCheck },
-      { id: "inventory", label: "Inventory", icon: Boxes },
       { id: "equipment", label: "Equipment", icon: Wrench },
       { id: "expenses", label: "Expenses", icon: Receipt },
     ],
@@ -54,7 +51,6 @@ const menuGroups = [
     title: "MANAGEMENT",
     items: [
       { id: "staff", label: "Staff", icon: Users },
-      { id: "branches", label: "Branches", icon: Building2 },
       { id: "reports", label: "Reports", icon: BarChart3 },
       { id: "settings", label: "Settings", icon: Settings },
     ],

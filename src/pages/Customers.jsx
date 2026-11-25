@@ -23,7 +23,6 @@ import {
   ArrowRight,
   PackageCheck,
   IndianRupee,
-  RefreshCw,
 } from "lucide-react";
 
 /* =========================================
@@ -1323,17 +1322,7 @@ export default function Customers() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={refreshBackend}
-              disabled={loadingSync}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#dce5f1] bg-white px-4 py-3 text-xs font-bold text-[#102b53] shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              <RefreshCw size={15} className={loadingSync ? "animate-spin" : ""} />
-              {loadingSync ? "Syncing..." : "Refresh Payments"}
-            </button>
-
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={openAdd}

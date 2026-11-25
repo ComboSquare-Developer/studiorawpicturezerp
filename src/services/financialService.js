@@ -368,11 +368,14 @@ export function syncStaffSalaryExpenses(targetMonthStr = null) {
 
         if (existingIdx >= 0) {
           const existing = expenses[existingIdx];
+          // Preserve manually created Staff Salary expenses without overwriting or duplicating them
+          if (!isAutoSalaryExpense(existing)) {
+            continue;
+          }
           if (
             existing.amount !== salary ||
             existing.date !== salaryDate ||
-            !existing.staffId ||
-            !existing.isAutoSalary
+            !existing.staffId
           ) {
             expenses[existingIdx] = {
               ...existing,

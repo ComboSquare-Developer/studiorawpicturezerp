@@ -38,6 +38,7 @@ import {
   getCustomServiceValidationError,
   formatServiceDisplay,
 } from "../config/servicesConfig";
+import { getEnquiryStatusStyles } from "../utils/statusColors";
 
 /* =========================================
    STORAGE
@@ -374,13 +375,10 @@ const eventIcons = {
 };
 
 const statusStyles = {
-  New: "border-violet-200 bg-violet-50 text-violet-700",
-  "In Discussion":
-    "border-amber-200 bg-amber-50 text-amber-700",
-  "Follow-up":
-    "border-blue-200 bg-blue-50 text-blue-700",
-  Confirmed:
-    "border-emerald-200 bg-emerald-50 text-emerald-700",
+  New: getEnquiryStatusStyles("New").badgeClass,
+  "In Discussion": getEnquiryStatusStyles("In Discussion").badgeClass,
+  "Follow-up": getEnquiryStatusStyles("Follow-up").badgeClass,
+  Confirmed: getEnquiryStatusStyles("Confirmed").badgeClass,
 };
 
 const inputClass =
@@ -2056,8 +2054,10 @@ export default function Enquiries() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((item) => (
+                <tbody className="divide-y divide-white/15">
+                  {filtered.map((item) => {
+                    const rowStyle = getEnquiryStatusStyles(item.status);
+                    return (
                     <tr
                       key={item.id}
                       tabIndex={0}
@@ -2066,20 +2066,20 @@ export default function Enquiries() {
                       onKeyDown={(event) =>
                         handleRowKey(event, item)
                       }
-                      className="cursor-pointer transition hover:bg-[#eef5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                      className={`cursor-pointer transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${rowStyle.rowClass}`}
                     >
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e1ecff] text-xs font-extrabold text-[#2b62a9]">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-xs font-extrabold text-white">
                             {initials(item.name)}
                           </div>
 
                           <div className="min-w-0">
-                            <p className="whitespace-nowrap text-xs font-extrabold text-[#102b53]">
+                            <p className="whitespace-nowrap text-xs font-extrabold text-white">
                               {item.name}
                             </p>
 
-                            <p className="mt-1 text-[10px] text-slate-400">
+                            <p className="mt-1 text-[10px] text-white/75">
                               #ENQ-
                               {String(item.id).padStart(
                                 4,
@@ -2096,16 +2096,16 @@ export default function Enquiries() {
                           onClick={(event) =>
                             event.stopPropagation()
                           }
-                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-700"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-white"
                         >
                           <Phone
                             size={13}
-                            className="text-emerald-500"
+                            className="text-emerald-300"
                           />
                           {item.number}
                         </a>
 
-                        <p className="mt-2 max-w-[160px] truncate text-[11px] text-slate-400">
+                        <p className="mt-2 max-w-[160px] truncate text-[11px] text-white/75">
                           {item.email || "—"}
                         </p>
                       </td>
@@ -2117,15 +2117,15 @@ export default function Enquiries() {
                         />
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-4 text-xs font-medium text-slate-600">
+                      <td className="whitespace-nowrap px-4 py-4 text-xs font-medium text-white/90">
                         {formatDate(item.eventDate)}
                       </td>
 
-                      <td className="px-4 py-4 text-xs font-medium text-slate-600">
+                      <td className="px-4 py-4 text-xs font-medium text-white/90">
                         {item.city || "—"}
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-4 text-xs font-extrabold text-emerald-700">
+                      <td className="whitespace-nowrap px-4 py-4 text-xs font-extrabold text-emerald-200">
                         {item.budget || "—"}
                       </td>
 
@@ -2147,7 +2147,7 @@ export default function Enquiries() {
                           </select>
                           <ChevronDown
                             size={12}
-                            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 opacity-60"
+                            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/80"
                           />
                         </div>
                       </td>
@@ -2163,7 +2163,7 @@ export default function Enquiries() {
                               setSelected(null);
                               setEditing({ ...item });
                             }}
-                            className="rounded-xl border border-[#102b53] p-2.5 text-[#102b53] transition hover:bg-[#eef5ff]"
+                            className="rounded-xl border border-white/30 bg-white/95 p-2.5 text-[#102b53] transition hover:bg-white"
                           >
                             <Pencil size={16} />
                           </button>
@@ -2176,14 +2176,15 @@ export default function Enquiries() {
                               event.stopPropagation();
                               deleteEnquiry(item.id);
                             }}
-                            className="rounded-xl bg-red-50 p-2.5 text-red-500 transition hover:bg-red-100"
+                            className="rounded-xl bg-white/95 p-2.5 text-rose-600 transition hover:bg-white"
                           >
                             <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

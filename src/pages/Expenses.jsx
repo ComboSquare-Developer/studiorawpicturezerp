@@ -9,6 +9,12 @@ import {
   syncStaffSalaryExpenses,
 } from "../services/financialService";
 import { createPortal } from "react-dom";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 import {
   Wallet,
   TrendingUp,
@@ -1184,6 +1190,11 @@ export default function Expenses() {
   });
 
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const isPersistingRef = useRef(false);
   const [viewId, setViewId] = useState(null);
 
   const viewedExpense = expenses.find(
@@ -1230,6 +1241,7 @@ export default function Expenses() {
     setExpenses(readInitialExpenses());
 
     const onUpdate = (e) => {
+      if (isPersistingRef.current) return;
       const key = e?.detail?.key || e?.key;
       if (key === "studioraw_staff" || key === EXPENSE_KEY || !key) {
         syncStaffSalaryExpenses(selectedMonth);
@@ -1246,29 +1258,23 @@ export default function Expenses() {
     };
   }, [selectedMonth]);
 
-  /* ---------------- SAVE STORAGE ---------------- */
+  /* ---------------- SAVE STORAGE HELPER ---------------- */
 
-  useEffect(() => {
+  const persistExpenses = (nextList) => {
     try {
-      localStorage.setItem(
-        EXPENSE_KEY,
-        JSON.stringify(expenses)
-      );
-
+      isPersistingRef.current = true;
+      localStorage.setItem(EXPENSE_KEY, JSON.stringify(nextList));
       window.dispatchEvent(
         new CustomEvent(UPDATE_EVENT, {
-          detail: {
-            key: EXPENSE_KEY,
-          },
+          detail: { key: EXPENSE_KEY },
         })
       );
-    } catch (error) {
-      console.error(
-        "Unable to save expenses:",
-        error
-      );
+    } catch (err) {
+      console.error("Unable to save expenses:", err);
+    } finally {
+      isPersistingRef.current = false;
     }
-  }, [expenses]);
+  };
 
   /* ---------------- PAYMENT REFRESH ---------------- */
 
@@ -1400,6 +1406,8 @@ export default function Expenses() {
   const saveExpense = async (event) => {
     event.preventDefault();
 
+    if (savingRef.current) return;
+
     const amount = Number(form.amount);
 
     if (
@@ -1416,25 +1424,27 @@ export default function Expenses() {
     }
 
     const payload = {
+      title: form.title.trim(),
       expense_title: form.title.trim(),
       category: form.category || "Other",
       amount,
+      date: form.date,
       expense_date: form.date || null,
+      paidTo: form.paidTo || "",
       paid_to: form.paidTo || "",
+      paymentMode: form.paymentMode || "Cash",
       payment_method: form.paymentMode || "Cash",
       status: "Paid",
       notes: form.notes || "",
     };
 
+    savingRef.current = true;
+    setIsSaving(true);
+    setError("");
+
     try {
       if (editingId) {
-        if (typeof editingId === "number") {
-          try {
-            await api.expenses.update(editingId, payload);
-          } catch (apiErr) {
-            console.warn("Backend update expense notice:", apiErr.message);
-          }
-        }
+        await api.expenses.update(editingId, payload);
 
         const record = {
           ...form,
@@ -1444,40 +1454,43 @@ export default function Expenses() {
           updatedAt: new Date().toISOString(),
         };
 
-        setExpenses((previous) =>
-          previous.map((item) =>
-            item.id === editingId
-              ? record
-              : item
-          )
-        );
+        setExpenses((previous) => {
+          const next = previous.map((item) =>
+            item.id === editingId ? record : item
+          );
+          persistExpenses(next);
+          return next;
+        });
+        setNotice(`Expense "${record.title}" updated successfully.`);
       } else {
-        let createdId = createId();
-        try {
-          const res = await api.expenses.create(payload);
-          if (res?.id) createdId = res.id;
-        } catch (apiErr) {
-          console.warn("Backend create expense notice:", apiErr.message);
-        }
+        const res = await api.expenses.create(payload);
+        const createdId = res?.id || createId();
 
         const record = {
           ...form,
           id: createdId,
           title: form.title.trim(),
           amount,
-          updatedAt: new Date().toISOString(),
+          createdAt: res?.createdAt || new Date().toISOString(),
+          updatedAt: res?.updatedAt || new Date().toISOString(),
         };
 
-        setExpenses((previous) => [
-          record,
-          ...previous,
-        ]);
+        setExpenses((previous) => {
+          const deduped = previous.filter((item) => item.id !== createdId);
+          const next = [record, ...deduped];
+          persistExpenses(next);
+          return next;
+        });
+        setNotice(`Expense "${record.title}" saved successfully.`);
       }
 
       closeForm();
     } catch (err) {
       console.error("Save expense error:", err);
       setError(err.message || "Failed to save expense.");
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -1489,18 +1502,18 @@ export default function Expenses() {
     if (!confirmed) return;
 
     try {
-      if (typeof item.id === "number") {
-        await api.expenses.delete(item.id);
-      }
+      await api.expenses.delete(item.id);
     } catch (err) {
       console.warn("Backend delete expense notice:", err.message);
     }
 
-    setExpenses((previous) =>
-      previous.filter(
+    setExpenses((previous) => {
+      const next = previous.filter(
         (record) => record.id !== item.id
-      )
-    );
+      );
+      persistExpenses(next);
+      return next;
+    });
 
     if (viewId === item.id) {
       setViewId(null);
@@ -1576,60 +1589,54 @@ export default function Expenses() {
 
   /* ---------------- CSV EXPORT ---------------- */
 
-  const exportCSV = () => {
-    const rows = [
-      [
-        "Date",
-        "Expense",
-        "Category",
-        "Amount",
-        "Payment Mode",
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const q = search.trim().toLowerCase();
+    const matching = expenses.filter((item) => {
+      if (!isDateInRange(item.date || item.expense_date, fromDate, toDate)) {
+        return false;
+      }
+      if (categoryFilter !== "All" && item.category !== categoryFilter) {
+        return false;
+      }
+      if (q) {
+        const hay = `${item.title || ""} ${item.paidTo || ""} ${item.category || ""} ${item.notes || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (matching.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
+    downloadCsvFile({
+      headers: [
+        "Expense ID",
+        "Expense Title",
+        "Expense Category",
+        "Expense Date",
         "Paid To",
+        "Payment Mode",
+        "Amount",
         "Notes",
       ],
-
-      ...filteredExpenses.map((item) => [
-        item.date,
-        item.title,
-        item.category,
-        item.amount,
-        item.paymentMode,
-        item.paidTo,
-        item.notes,
+      rows: matching.map((item) => [
+        item.id || "",
+        item.title || item.expense_title || "",
+        item.category || "",
+        item.date || item.expense_date || "",
+        item.paidTo || item.paid_to || "",
+        item.paymentMode || item.payment_method || "",
+        Number(item.amount || 0),
+        item.notes || "",
       ]),
-    ];
+      filename: buildExportFilename("Expenses", { rangeType, fromDate, toDate }),
+    });
 
-    const csv = rows
-      .map((row) =>
-        row.map(csvCell).join(",")
-      )
-      .join("\r\n");
-
-    const blob = new Blob(
-      ["\uFEFF", csv],
-      {
-        type: "text/csv;charset=utf-8;",
-      }
+    setNotice(
+      `Exported ${matching.length} expense ${matching.length === 1 ? "record" : "records"} (${fromDate} to ${toDate}).`
     );
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
-    link.href = url;
-
-    link.download =
-      `studio-expenses-${selectedMonth}.csv`;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
+    return { count: matching.length };
   };
 
   /* ---------------- STAT DATA ---------------- */
@@ -1709,6 +1716,21 @@ export default function Expenses() {
           </button>
         </div>
       </div>
+
+      {/* SUCCESS NOTICE */}
+      {notice && (
+        <div className="relative z-10 mb-5 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 shadow-xs">
+          <span>{notice}</span>
+          <button
+            type="button"
+            onClick={() => setNotice("")}
+            aria-label="Dismiss notice"
+            className="rounded-lg p-1 text-emerald-700 hover:bg-emerald-100"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* STAT CARDS */}
 
@@ -2236,11 +2258,14 @@ export default function Expenses() {
 
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#173766] to-[#2b5b98] px-7 py-3 text-sm font-semibold text-white transition hover:shadow-lg"
+                  disabled={isSaving}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#173766] to-[#2b5b98] px-7 py-3 text-sm font-semibold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Save size={17} />
 
-                  {editingId
+                  {isSaving
+                    ? "Saving..."
+                    : editingId
                     ? "Update Expense"
                     : "Save Expense"}
                 </button>

@@ -7,6 +7,12 @@ import {
   getInvoiceStatus,
 } from "../services/financialService";
 import {
+  buildMonthlyBuckets,
+  getPresetDateRange,
+  isDateInRange,
+  toLocalDateKey,
+} from "../utils/dateRangeExport";
+import {
   Users,
   MessageSquare,
   CalendarDays,
@@ -18,7 +24,6 @@ import {
   TrendingUp,
   Wallet,
   Activity,
-  RefreshCw,
   ChartNoAxesCombined,
   CircleGauge,
 } from "lucide-react";
@@ -646,97 +651,249 @@ function SectionTitle({
 
 function ChartPanel({
   title,
-  subtitle,
   icon,
-  data,
-  dataKey,
-  maxValue,
+  records = [],
+  mode = "bookings",
   barColor,
   formatter,
   replay,
 }) {
+  const todayStr = useMemo(() => toLocalDateKey(new Date()), []);
+  const defaultRange = useMemo(() => getPresetDateRange("6m"), []);
+
+  const [rangeType, setRangeType] = useState("6m");
+  const [customFrom, setCustomFrom] = useState(defaultRange.fromDate);
+  const [customTo, setCustomTo] = useState(defaultRange.toDate);
+  const [appliedCustom, setAppliedCustom] = useState(defaultRange);
+  const [dateError, setDateError] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(null);
 
   useEffect(() => {
     setSelectedIndex(null);
-  }, [replay, dataKey]);
+  }, [replay, rangeType, appliedCustom]);
+
+  const handleApplyCustom = () => {
+    if (!customFrom || !customTo) {
+      setDateError("Select both From Date and To Date.");
+      return;
+    }
+    if (customFrom > customTo) {
+      setDateError("From Date cannot be later than To Date.");
+      return;
+    }
+    if (mode === "revenue" && customTo > todayStr) {
+      setDateError("Future dates are not supported for revenue.");
+      return;
+    }
+    setDateError("");
+    setAppliedCustom({ fromDate: customFrom, toDate: customTo });
+  };
+
+  const chartData = useMemo(() => {
+    const buckets = buildMonthlyBuckets({
+      rangeType,
+      fromDate: appliedCustom.fromDate,
+      toDate: appliedCustom.toDate,
+    }).map((b) => ({ ...b, value: 0 }));
+
+    if (mode === "bookings") {
+      (records || []).forEach((booking) => {
+        const rawDate = bookingDate(booking) || booking.createdAt;
+        const bucket = buckets.find((b) =>
+          isDateInRange(rawDate, b.startDate, b.endDate)
+        );
+        if (bucket) {
+          bucket.value += 1;
+        }
+      });
+    } else {
+      (records || []).forEach((payment) => {
+        const st = String(payment?.status || payment?.paymentStatus || "")
+          .trim()
+          .toLowerCase();
+        if (st === "cancelled" || st === "canceled") return;
+
+        paymentTransactions(payment).forEach((transaction) => {
+          const bucket = buckets.find((b) =>
+            isDateInRange(transaction.date, b.startDate, b.endDate)
+          );
+          if (bucket) {
+            bucket.value += transaction.amount;
+          }
+        });
+      });
+    }
+
+    return buckets;
+  }, [records, mode, rangeType, appliedCustom]);
+
+  const maxValue = Math.max(0, ...chartData.map((item) => item.value));
+  const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
+  const subtitleText =
+    rangeType === "6m"
+      ? "Last 6 months"
+      : rangeType === "12m"
+      ? "Last 12 months"
+      : `${appliedCustom.fromDate} to ${appliedCustom.toDate}`;
 
   return (
     <div className="sr-premium-card relative min-w-0 overflow-hidden rounded-[28px] border border-[#e0e9f4] bg-white p-4 shadow-sm sm:p-6">
-      <SectionTitle
-        title={title}
-        subtitle={subtitle}
-        icon={icon}
-      />
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <SectionTitle title={title} subtitle={subtitleText} icon={icon} />
 
-      {maxValue <= 0 || data.every((item) => !item[dataKey]) ? (
-        <div className="flex h-64 sm:h-72 flex-col items-center justify-center border-b border-[#e3eaf3] pb-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf5ff] text-[#244d8b]">
-            <TrendingUp size={24} />
-          </div>
-          <p className="mt-3 text-sm font-bold text-[#10264d]">No data recorded for this period</p>
-          <p className="mt-1 text-xs text-slate-400">Monthly metrics will display once activities occur.</p>
+        <div className="flex w-fit flex-wrap gap-1 rounded-xl bg-[#f0f5fb] p-1">
+          {[
+            ["6m", "6 Months"],
+            ["12m", "12 Months"],
+            ["custom", "Custom Range"],
+          ].map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => {
+                setRangeType(val);
+                setDateError("");
+              }}
+              className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition sm:text-[11px] ${
+                rangeType === val
+                  ? "bg-[#10264d] text-white shadow-sm"
+                  : "text-slate-500 hover:bg-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      ) : (
-        <div className="relative grid h-64 grid-cols-6 items-end gap-2 border-b border-[#e3eaf3] pb-4 sm:h-72 sm:gap-4">
-          <div className="pointer-events-none absolute inset-x-0 bottom-12 top-0 flex flex-col justify-between">
-            {[0, 1, 2, 3].map((index) => (
-              <div
-                key={index}
-                className="border-t border-dashed border-[#e8eef6]"
+      </div>
+
+      {rangeType === "custom" && (
+        <div className="mt-3 rounded-2xl border border-[#dce7f4] bg-[#f8fbff] p-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[120px] flex-1">
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                From Date
+              </label>
+              <input
+                type="date"
+                value={customFrom}
+                max={mode === "revenue" ? todayStr : undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="w-full rounded-xl border border-[#dce7f4] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#10264d]"
               />
-            ))}
+            </div>
+            <div className="min-w-[120px] flex-1">
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                To Date
+              </label>
+              <input
+                type="date"
+                value={customTo}
+                max={mode === "revenue" ? todayStr : undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="w-full rounded-xl border border-[#dce7f4] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#10264d]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleApplyCustom}
+              className="rounded-xl bg-[#10264d] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#1c4282]"
+            >
+              Apply
+            </button>
           </div>
-
-          {data.map((item, index) => {
-            const value = item[dataKey] || 0;
-
-            const height = value
-              ? Math.max(
-                  7,
-                  (value / Math.max(1, maxValue)) * 80
-                )
-              : 2;
-
-            return (
-              <div
-                key={item.key}
-                className="relative z-10 flex h-full min-w-0 flex-col items-center justify-end gap-3"
-              >
-                <span className="w-full truncate text-center text-[10px] font-black text-[#10264d] sm:text-xs">
-                  {formatter ? formatter(value) : value}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedIndex(index)}
-                  title={`${item.label}: ${value}`}
-                  aria-label={`${item.label}: ${value}`}
-                  className={`sr-premium-bar relative w-full max-w-16 origin-bottom overflow-hidden rounded-t-xl transition-all hover:brightness-110 ${
-                    selectedIndex === index
-                      ? "ring-2 ring-blue-400 ring-offset-2"
-                      : ""
-                  } ${barColor}`}
-                  style={{
-                    height: `${height}%`,
-                    animationDelay: `${index * 130}ms`,
-                  }}
-                >
-                  <span className="sr-bar-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-                </button>
-
-                <span className="text-[10px] font-bold text-[#71829b] sm:text-xs">
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
+          {dateError && (
+            <p className="mt-1.5 text-[11px] font-semibold text-rose-600">
+              {dateError}
+            </p>
+          )}
         </div>
       )}
 
+      <div className="mt-4">
+        {maxValue <= 0 || chartData.every((item) => !item.value) ? (
+          <div className="flex h-64 sm:h-72 flex-col items-center justify-center border-b border-[#e3eaf3] pb-4 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf5ff] text-[#244d8b]">
+              <TrendingUp size={24} />
+            </div>
+            <p className="mt-3 text-sm font-bold text-[#10264d]">
+              No data recorded for this period
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Monthly metrics will display once activities occur.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div
+              className="relative grid h-64 items-end gap-2 border-b border-[#e3eaf3] pb-4 sm:h-72 sm:gap-3"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(
+                  1,
+                  chartData.length
+                )}, minmax(${chartData.length > 8 ? "44px" : "0px"}, 1fr))`,
+              }}
+            >
+              <div className="pointer-events-none absolute inset-x-0 bottom-12 top-0 flex flex-col justify-between">
+                {[0, 1, 2, 3].map((index) => (
+                  <div
+                    key={index}
+                    className="border-t border-dashed border-[#e8eef6]"
+                  />
+                ))}
+              </div>
+
+              {chartData.map((item, index) => {
+                const value = item.value || 0;
+                const height = value
+                  ? Math.max(7, (value / Math.max(1, maxValue)) * 80)
+                  : 2;
+
+                return (
+                  <div
+                    key={item.key}
+                    className="relative z-10 flex h-full min-w-0 flex-col items-center justify-end gap-2.5"
+                  >
+                    <span className="w-full truncate text-center text-[10px] font-black text-[#10264d] sm:text-xs">
+                      {formatter ? formatter(value) : value}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIndex(index)}
+                      title={`${item.label}: ${
+                        mode === "revenue" ? money(value) : value
+                      }`}
+                      aria-label={`${item.label}: ${value}`}
+                      className={`sr-premium-bar relative w-full max-w-14 origin-bottom overflow-hidden rounded-t-xl transition-all hover:brightness-110 ${
+                        selectedIndex === index
+                          ? "ring-2 ring-blue-400 ring-offset-2"
+                          : ""
+                      } ${barColor}`}
+                      style={{
+                        height: `${height}%`,
+                        animationDelay: `${Math.min(index, 8) * 90}ms`,
+                      }}
+                    >
+                      <span className="sr-bar-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                    </button>
+
+                    <span className="truncate text-[10px] font-bold text-[#71829b]">
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="mt-5 flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold text-[#71829b]">
-          Monthly Performance
+        <span className="text-xs font-bold text-[#10264d]">
+          Total:{" "}
+          {mode === "revenue"
+            ? money(totalValue)
+            : `${totalValue} ${totalValue === 1 ? "booking" : "bookings"}`}
         </span>
 
         <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
@@ -756,92 +913,159 @@ function RevenueLineChart({
   payments = [],
   replay = 0,
 }) {
-  const [range, setRange] = useState("30");
+  const todayStr = useMemo(() => dateKey(new Date()), []);
+  const defaultFromStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    return dateKey(d);
+  }, []);
+
+  const [range, setRange] = useState("6m");
+  const [customFrom, setCustomFrom] = useState(defaultFromStr);
+  const [customTo, setCustomTo] = useState(todayStr);
+  const [appliedCustom, setAppliedCustom] = useState({
+    from: defaultFromStr,
+    to: todayStr,
+  });
+  const [dateError, setDateError] = useState("");
+
+  const handleApplyCustomRange = () => {
+    if (!customFrom || !customTo) {
+      setDateError("Please select both From Date and To Date.");
+      return;
+    }
+    if (customFrom > customTo) {
+      setDateError("From Date cannot be later than To Date.");
+      return;
+    }
+    if (customFrom > todayStr || customTo > todayStr) {
+      setDateError("Future dates are not supported for revenue reporting.");
+      return;
+    }
+    setDateError("");
+    setAppliedCustom({ from: customFrom, to: customTo });
+  };
 
   const chartData = useMemo(() => {
-    const days =
-      range === "7"
-        ? 7
-        : range === "30"
-        ? 30
-        : 180;
+    const now = new Date();
+    const validPayments = (payments || []).filter((p) => {
+      const st = String(p?.status || p?.paymentStatus || "").trim().toLowerCase();
+      return st !== "cancelled" && st !== "canceled";
+    });
 
-    const count =
-      range === "7"
-        ? 7
-        : range === "30"
-        ? 15
-        : 12;
+    let buckets = [];
 
-    const current = new Date();
-    current.setHours(0, 0, 0, 0);
-
-    const buckets = Array.from(
-      { length: count },
-      (_, index) => {
-        const startOffset = Math.floor(
-          (index * days) / count
+    if (range === "6m" || range === "12m") {
+      const monthCount = range === "12m" ? 12 : 6;
+      buckets = Array.from({ length: monthCount }, (_, index) => {
+        const monthDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - (monthCount - 1 - index),
+          1
         );
-
-        const endOffset = Math.floor(
-          ((index + 1) * days) / count
-        );
-
-        const start = new Date(current);
-
-        start.setDate(
-          current.getDate() -
-            days +
-            1 +
-            startOffset
-        );
-
-        const end = new Date(current);
-
-        end.setDate(
-          current.getDate() -
-            days +
-            endOffset
-        );
-
-        end.setHours(23, 59, 59, 999);
-
+        const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 0, 0, 0, 0);
+        const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
         return {
-          key: dateKey(start),
-
+          key: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`,
           label: start.toLocaleDateString("en-IN", {
-            day: "numeric",
             month: "short",
+            year: "2-digit",
           }),
-
           start,
           end,
           value: 0,
         };
-      }
-    );
+      });
+    } else {
+      const fromDate = parseDate(appliedCustom.from) || new Date(now.getFullYear(), now.getMonth(), 1);
+      const toDate = parseDate(appliedCustom.to) || new Date(now);
+      fromDate.setHours(0, 0, 0, 0);
+      toDate.setHours(23, 59, 59, 999);
 
-    payments.forEach((payment) => {
-      paymentTransactions(payment).forEach(
-        (transaction) => {
-          const date = parseDate(transaction.date);
-          if (!date) return;
-
-          const bucket = buckets.find(
-            (item) =>
-              date >= item.start &&
-              date <= item.end
-          );
-
-          if (bucket) {
-            bucket.value += transaction.amount;
-          }
-        }
+      const totalDays = Math.max(
+        1,
+        Math.round((toDate.getTime() - fromDate.getTime()) / 86400000) + 1
       );
+
+      if (totalDays <= 31) {
+        buckets = Array.from({ length: totalDays }, (_, index) => {
+          const start = new Date(fromDate);
+          start.setDate(fromDate.getDate() + index);
+          const end = new Date(start);
+          end.setHours(23, 59, 59, 999);
+          return {
+            key: dateKey(start),
+            label: start.toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+            }),
+            start,
+            end,
+            value: 0,
+          };
+        });
+      } else if (totalDays <= 180) {
+        const count = 12;
+        buckets = Array.from({ length: count }, (_, index) => {
+          const startOffset = Math.floor((index * totalDays) / count);
+          const endOffset = Math.max(
+            startOffset,
+            Math.floor(((index + 1) * totalDays) / count) - 1
+          );
+          const start = new Date(fromDate);
+          start.setDate(fromDate.getDate() + startOffset);
+          const end = new Date(fromDate);
+          end.setDate(fromDate.getDate() + endOffset);
+          end.setHours(23, 59, 59, 999);
+          return {
+            key: `${dateKey(start)}-${index}`,
+            label: start.toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+            }),
+            start,
+            end,
+            value: 0,
+          };
+        });
+      } else {
+        const cursor = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+        while (cursor <= toDate) {
+          const start = new Date(Math.max(cursor.getTime(), fromDate.getTime()));
+          const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+          const end = new Date(Math.min(monthEnd.getTime(), toDate.getTime()));
+          buckets.push({
+            key: `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`,
+            label: cursor.toLocaleDateString("en-IN", {
+              month: "short",
+              year: "2-digit",
+            }),
+            start,
+            end,
+            value: 0,
+          });
+          cursor.setMonth(cursor.getMonth() + 1);
+        }
+      }
+    }
+
+    validPayments.forEach((payment) => {
+      paymentTransactions(payment).forEach((transaction) => {
+        const date = parseDate(transaction.date);
+        if (!date) return;
+
+        const bucket = buckets.find(
+          (item) => date >= item.start && date <= item.end
+        );
+
+        if (bucket) {
+          bucket.value += transaction.amount;
+        }
+      });
     });
 
     return buckets;
-  }, [payments, range]);
+  }, [payments, range, appliedCustom]);
 
   const width = 800;
   const height = 340;
@@ -917,17 +1141,20 @@ function RevenueLineChart({
           </div>
         </div>
 
-        <div className="flex w-fit gap-1 rounded-xl bg-[#f0f5fb] p-1">
+        <div className="flex flex-wrap w-fit gap-1 rounded-xl bg-[#f0f5fb] p-1">
           {[
-            ["7", "7 Days"],
-            ["30", "30 Days"],
-            ["180", "6 Months"],
+            ["6m", "6 Months"],
+            ["12m", "12 Months"],
+            ["custom", "Custom Date Range"],
           ].map(([value, label]) => (
             <button
               key={value}
               type="button"
-              onClick={() => setRange(value)}
-              className={`rounded-lg px-2.5 py-2 text-[10px] font-bold sm:px-3 sm:text-[11px] ${
+              onClick={() => {
+                setRange(value);
+                setDateError("");
+              }}
+              className={`rounded-lg px-2.5 py-2 text-[10px] font-bold transition sm:px-3 sm:text-[11px] ${
                 range === value
                   ? "bg-[#10264d] text-white shadow-md"
                   : "text-slate-500 hover:bg-white"
@@ -938,6 +1165,69 @@ function RevenueLineChart({
           ))}
         </div>
       </div>
+
+      {range === "custom" && (
+        <div className="mt-4 rounded-2xl border border-[#dce7f4] bg-[#f8fbff] p-3">
+          <div className="flex flex-wrap items-end gap-2.5">
+            <div className="min-w-[130px] flex-1">
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                From Date
+              </label>
+              <input
+                type="date"
+                value={customFrom}
+                max={todayStr}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="w-full rounded-xl border border-[#dce7f4] bg-white px-3 py-1.5 text-xs font-semibold text-[#10264d]"
+              />
+            </div>
+
+            <div className="min-w-[130px] flex-1">
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                To Date
+              </label>
+              <input
+                type="date"
+                value={customTo}
+                max={todayStr}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="w-full rounded-xl border border-[#dce7f4] bg-white px-3 py-1.5 text-xs font-semibold text-[#10264d]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleApplyCustomRange}
+              className="rounded-xl bg-[#10264d] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#1c4282]"
+            >
+              Apply
+            </button>
+          </div>
+
+          {dateError ? (
+            <p className="mt-2 text-[11px] font-semibold text-rose-600">
+              {dateError}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] font-semibold text-slate-500">
+              Selected Range:{" "}
+              <span className="text-[#10264d]">
+                {parseDate(appliedCustom.from)?.toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}{" "}
+                –{" "}
+                {parseDate(appliedCustom.to)?.toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-6">
         <p className="text-xs font-semibold text-slate-500">
@@ -1487,10 +1777,72 @@ function TimelinePanel({
    MAIN DASHBOARD
 ========================================== */
 
+function getGreetingForHour(hour) {
+  if (hour >= 5 && hour < 12) return "Good Morning, Riyas";
+  if (hour >= 12 && hour < 17) return "Good Afternoon, Riyas";
+  if (hour >= 17 && hour < 21) return "Good Evening, Riyas";
+  return "Good Night, Riyas";
+}
+
+function getMsUntilNextGreetingChange(now = new Date()) {
+  const hour = now.getHours();
+  const next = new Date(now);
+  next.setMinutes(0, 0, 100);
+
+  if (hour < 5) {
+    next.setHours(5);
+  } else if (hour < 12) {
+    next.setHours(12);
+  } else if (hour < 17) {
+    next.setHours(17);
+  } else if (hour < 21) {
+    next.setHours(21);
+  } else {
+    next.setDate(next.getDate() + 1);
+    next.setHours(5);
+  }
+
+  return Math.max(1000, next.getTime() - now.getTime());
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(getAllData);
-  const [replay, setReplay] = useState(0);
+  const replay = 0;
   const [backendStats, setBackendStats] = useState(null);
+  const [greeting, setGreeting] = useState(() =>
+    getGreetingForHour(new Date().getHours())
+  );
+
+  useEffect(() => {
+    let timerId;
+
+    const syncGreetingAndSchedule = () => {
+      const now = new Date();
+      const nextGreeting = getGreetingForHour(now.getHours());
+      setGreeting((prev) => (prev === nextGreeting ? prev : nextGreeting));
+
+      window.clearTimeout(timerId);
+      timerId = window.setTimeout(
+        syncGreetingAndSchedule,
+        getMsUntilNextGreetingChange(now)
+      );
+    };
+
+    syncGreetingAndSchedule();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncGreetingAndSchedule();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
   /* ========================================
      ALL MODULES LIVE DATA REFRESH
@@ -1563,19 +1915,6 @@ export default function Dashboard() {
       window.clearInterval(interval);
     };
   }, []);
-
-  function refresh() {
-    setData(getAllData());
-    api.dashboard
-      .stats()
-      .then((res) => {
-        if (res && typeof res === "object") {
-          setBackendStats(res);
-        }
-      })
-      .catch(() => {});
-    setReplay((previous) => previous + 1);
-  }
 
   /* ========================================
      DASHBOARD STATISTICS
@@ -2177,8 +2516,56 @@ export default function Dashboard() {
           filter: none;
         }
 
-        .sr-refreshing {
-          animation: srRotate .7s ease;
+        @keyframes srWordReveal {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes srGoldSweep {
+          0% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+
+        .sr-greeting-word {
+          display: inline-block;
+          background-image: linear-gradient(
+            110deg,
+            #10264d 0%,
+            #10264d 38%,
+            #c69324 50%,
+            #10264d 62%,
+            #10264d 100%
+          );
+          background-size: 240% 100%;
+          background-position: 0% 50%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent !important;
+          -webkit-text-fill-color: transparent;
+          animation:
+            srWordReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both,
+            srGoldSweep 1.15s ease-out both;
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+          .sr-greeting-word {
+            animation: none !important;
+            background-image: none !important;
+            color: #10264d !important;
+            -webkit-text-fill-color: #10264d;
+            opacity: 1 !important;
+            transform: none !important;
+          }
         }
 
         .sr-dashboard-premium button {
@@ -2221,43 +2608,31 @@ export default function Dashboard() {
 
       `}</style>
 
-      {/* REFRESH BUTTON */}
-
-      <div className="mb-7 flex justify-end">
-        <button
-          type="button"
-          onClick={refresh}
-          className="group flex items-center justify-center gap-2 rounded-2xl border border-[#dce7f4] bg-white px-5 py-3 text-xs font-black text-[#10264d] shadow-sm transition-all hover:shadow-lg sm:text-sm"
-        >
-          <RefreshCw
-            key={replay}
-            size={18}
-            className={
-              replay > 0
-                ? "sr-refreshing"
-                : "transition-transform duration-500 group-hover:rotate-180"
-            }
-          />
-
-          Refresh Dashboard
-        </button>
-      </div>
-
-      {/* PREMIUM HEADER - STAR & BUSINESS OVERVIEW REMOVED */}
+      {/* PREMIUM HEADER - PERSONALIZED TIME-BASED GREETING */}
 
       <ScrollReveal className="mb-7">
         <div className="sr-gradient-animated relative overflow-hidden rounded-[28px] p-5 sm:p-8">
           <div className="relative flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="mt-3 text-xl font-extrabold text-[#4a435e] sm:text-2xl lg:text-3xl">
-                Manage Your Studio Smarter
+            <div className="relative min-w-0 flex-1">
+              <h2
+                aria-label={greeting}
+                className="mt-2 flex flex-wrap items-baseline gap-x-[0.3em] text-xl font-extrabold tracking-tight sm:text-2xl lg:text-3xl"
+              >
+                {greeting.split(" ").map((word, wordIdx) => (
+                  <span
+                    key={`${greeting}-${wordIdx}`}
+                    className="sr-greeting-word"
+                    style={{
+                      animationDelay: `${wordIdx * 0.22}s, ${wordIdx * 0.22}s`,
+                    }}
+                  >
+                    {word}
+                  </span>
+                ))}
               </h2>
 
               <p className="mt-3 max-w-2xl text-xs leading-6 text-[#756d85] sm:text-sm">
-                Track customers, bookings,
-                payments, production and
-                deliveries from one beautifully
-                connected dashboard.
+                Welcome back to your studio workspace. Here&apos;s what&apos;s happening today.
               </p>
             </div>
           </div>
@@ -2329,11 +2704,9 @@ export default function Dashboard() {
         <ScrollReveal>
           <ChartPanel
             title="Booking Overview"
-            subtitle="Last six months"
             icon={TrendingUp}
-            data={monthlyChart}
-            dataKey="bookings"
-            maxValue={maxBookings}
+            records={data.bookings}
+            mode="bookings"
             barColor="bg-gradient-to-t from-[#10264d] via-[#244d8b] to-[#60a5fa]"
             replay={replay}
           />
@@ -2342,11 +2715,9 @@ export default function Dashboard() {
         <ScrollReveal delay={120}>
           <ChartPanel
             title="Revenue Overview"
-            subtitle="Recorded receipts by month"
             icon={IndianRupee}
-            data={monthlyChart}
-            dataKey="revenue"
-            maxValue={maxRevenue}
+            records={data.payments}
+            mode="revenue"
             barColor="bg-gradient-to-t from-[#047857] via-[#10b981] to-[#6ee7b7]"
             formatter={(value) =>
               value >= 1000

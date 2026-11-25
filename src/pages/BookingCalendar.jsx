@@ -3,6 +3,10 @@ import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import { syncEnquiriesToBookings } from "../utils/enquiryBookingSync";
 import {
+  getBookingStatusStyles,
+  normalizeBookingStatus,
+} from "../utils/statusColors";
+import {
   CalendarDays,
   CalendarCheck2,
   Clock3,
@@ -560,19 +564,11 @@ function mergeRemotePayments(local, remote) {
   return [...byId.values()];
 }
 
-const statusTheme = {
-  Confirmed: "border-blue-200 bg-blue-50 text-blue-700",
-  Pending: "border-amber-200 bg-amber-50 text-amber-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
-};
-
 function StatusBadge({ status }) {
+  const style = getBookingStatusStyles(status);
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-bold ${
-        statusTheme[status] || statusTheme.Pending
-      }`}
+      className={`inline-flex rounded-full border px-3 py-1.5 text-[11px] font-bold ${style.badgeClass}`}
     >
       {status || "Pending"}
     </span>
@@ -1977,14 +1973,40 @@ function DateBookingsModal({
   onEdit,
   onNew,
 }) {
+  const statusSummary = ["Confirmed", "Pending", "Completed", "Cancelled"]
+    .map((label) => ({
+      label,
+      count: bookings.filter(
+        (b) => normalizeBookingStatus(b.status) === normalizeBookingStatus(label)
+      ).length,
+      style: getBookingStatusStyles(label),
+    }))
+    .filter((entry) => entry.count > 0);
+
   return (
     <ModalShell
       title="Booked Customer Details"
-      subtitle={`${formatDate(date)} · ${bookings.length} bookings`}
+      subtitle={`${formatDate(date)} · ${bookings.length} ${bookings.length === 1 ? "booking" : "bookings"}`}
       icon={CalendarCheck2}
       onClose={onClose}
     >
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#f8fbff] p-4 sm:p-6">
+        {statusSummary.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#dce8f8] bg-white px-3.5 py-2.5">
+            <span className="text-[11px] font-bold text-[#607699]">
+              Status Summary:
+            </span>
+            {statusSummary.map((entry) => (
+              <span
+                key={entry.label}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${entry.style.badgeClass}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${entry.style.dotClass}`} />
+                {entry.label}: {entry.count}
+              </span>
+            ))}
+          </div>
+        )}
         {bookings.map((b, i) => (
           <div key={b.id} className="rounded-2xl border border-[#dce8f8] bg-white p-4">
             <div className="flex items-center justify-between gap-2">
@@ -2860,13 +2882,19 @@ export default function BookingCalendar() {
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-4 border-b p-4">
-            {statuses.map((s) => (
-              <span key={s} className="text-xs font-semibold text-[#657992]">
-                <span className="mr-2">●</span>
-                {s}
-              </span>
-            ))}
+          <div className="flex flex-wrap items-center gap-4 border-b p-4">
+            {["Pending", "Confirmed", "Completed", "Cancelled"].map((s) => {
+              const st = getBookingStatusStyles(s);
+              return (
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-2 text-xs font-bold text-[#385d89]"
+                >
+                  <span className={`h-2.5 w-2.5 rounded-full ${st.dotClass}`} />
+                  {s}
+                </span>
+              );
+            })}
           </div>
           <div className="bg-[#fcfdff] p-2.5 sm:p-5">
             <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
@@ -2891,58 +2919,102 @@ export default function BookingCalendar() {
                 );
                 const dayBookings = bookingMap.get(date) || [];
                 const isToday = date === dateKey(new Date());
+                const uniqueStatuses = Array.from(
+                  new Set(dayBookings.map((b) => normalizeBookingStatus(b.status)))
+                );
+                const hasBookings = dayBookings.length > 0;
+                const isMixedStatus = uniqueStatuses.length > 1;
+                const singleStatusStyle =
+                  hasBookings && !isMixedStatus
+                    ? getBookingStatusStyles(uniqueStatuses[0])
+                    : null;
+
+                const cellThemeClass = singleStatusStyle
+                  ? singleStatusStyle.cellClass
+                  : isToday
+                  ? "border-[#9fbfea] bg-[#eff6ff] hover:bg-[#e5f0ff]"
+                  : hasBookings
+                  ? "border-[#d4e1f3] bg-white hover:bg-[#f0f7ff]"
+                  : "border-[#e8edf5] bg-white hover:bg-[#f0f7ff]";
+
                 return (
                   <button
                     key={date}
                     type="button"
                     onClick={() =>
-                      dayBookings.length
+                      hasBookings
                         ? setSelectedDate(date)
                         : openNew(date)
                     }
-                    className={`min-h-[78px] min-w-0 rounded-xl border p-1.5 text-left transition hover:bg-[#f0f7ff] sm:min-h-[125px] sm:p-3 ${
-                      isToday
-                        ? "border-[#9fbfea] bg-[#eff6ff]"
-                        : "border-[#e8edf5] bg-white"
+                    className={`min-h-[78px] min-w-0 rounded-xl border p-1.5 text-left transition sm:min-h-[125px] sm:p-3 ${cellThemeClass} ${
+                      isToday && singleStatusStyle ? "ring-2 ring-[#285a99]/35" : ""
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <span
                         className={`rounded-lg px-2 py-1 text-xs font-black ${
                           isToday
                             ? "bg-[#285a99] text-white"
+                            : singleStatusStyle
+                            ? "bg-white/20 text-white"
                             : "bg-[#f0f5fc] text-[#47617f]"
                         }`}
                       >
                         {day}
                       </span>
-                      {dayBookings.length > 0 && (
-                        <span className="rounded-lg bg-[#e9f3ff] px-1 text-[9px] font-black text-[#3c6fae]">
-                          {dayBookings.length}
-                        </span>
+                      {hasBookings && (
+                        <div className="flex items-center gap-1">
+                          {isMixedStatus && (
+                            <span className="hidden items-center gap-0.5 sm:inline-flex">
+                              {uniqueStatuses.map((st) => (
+                                <span
+                                  key={st}
+                                  className={`h-2 w-2 rounded-full ${getBookingStatusStyles(st).dotClass}`}
+                                />
+                              ))}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${
+                              singleStatusStyle
+                                ? "bg-white/20 text-white"
+                                : "bg-[#e9f3ff] text-[#102b53]"
+                            }`}
+                          >
+                            {dayBookings.length}
+                          </span>
+                        </div>
                       )}
                     </div>
                     <div className="mt-2 hidden space-y-1 sm:block">
-                      {dayBookings.slice(0, 2).map((b) => (
-                        <div
-                          key={b.id}
-                          className="truncate rounded-md bg-[#e7f0ff] px-2 py-1 text-[10px] font-bold text-[#245da4]"
-                        >
-                          {b.customer}
-                        </div>
-                      ))}
+                      {dayBookings.slice(0, 2).map((b) => {
+                        const bStyle = getBookingStatusStyles(b.status);
+                        return (
+                          <div
+                            key={b.id}
+                            className={`flex items-center gap-1.5 truncate rounded-md px-2 py-1 text-[10px] font-bold ${bStyle.pillClass}`}
+                          >
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${bStyle.dotClass}`} />
+                            <span className="truncate">{b.customer}</span>
+                          </div>
+                        );
+                      })}
                       {dayBookings.length > 2 && (
-                        <p className="text-[10px]">
+                        <p
+                          className={`text-[10px] font-semibold ${
+                            singleStatusStyle ? "text-white/85" : "text-[#557ba9]"
+                          }`}
+                        >
                           +{dayBookings.length - 2} more
                         </p>
                       )}
                     </div>
-                    {dayBookings.length > 0 && (
-                      <div className="mt-2 flex gap-1 sm:hidden">
+                    {hasBookings && (
+                      <div className="mt-2 flex flex-wrap gap-1 sm:hidden">
                         {dayBookings.slice(0, 4).map((b) => (
                           <span
                             key={b.id}
-                            className="h-1.5 w-1.5 rounded-full bg-blue-500"
+                            className={`h-2 w-2 rounded-full ${getBookingStatusStyles(b.status).dotClass}`}
                           />
                         ))}
                       </div>
@@ -3029,36 +3101,36 @@ export default function BookingCalendar() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((b, i) => {
+                {filtered.map((b) => {
                   const f = financialMap.get(String(b.id));
                   const hasInvoice = Boolean(
                     f?.invoices && f.invoices.length > 0
                   );
                   const isCancelled =
-                    String(b.status || "").toLowerCase() === "cancelled" ||
-                    String(b.status || "").toLowerCase() === "canceled";
+                    normalizeBookingStatus(b.status) === "cancelled";
+                  const rowStyle = getBookingStatusStyles(b.status);
                   return (
                     <tr
                       key={b.id}
-                      className={i % 2 ? "bg-[#edf5ff]" : "bg-[#f8fbff]"}
+                      className={`border-b border-white/15 transition ${rowStyle.rowClass}`}
                     >
                       <td className="px-4 py-4">
-                        <p className="text-xs font-black text-[#173f74]">
+                        <p className="text-xs font-black text-white">
                           {b.customer}
                         </p>
-                        <p className="text-[11px] text-[#8a9fba]">{b.phone}</p>
+                        <p className="text-[11px] text-white/75">{b.phone}</p>
                       </td>
                       <td className="px-4 py-4 text-xs">
-                        <p className="font-extrabold text-[#173f74]">
+                        <p className="font-extrabold text-white">
                           {formatBookingService(b)}
                         </p>
                       </td>
-                      <td className="px-4 py-4 text-xs">
+                      <td className="px-4 py-4 text-xs text-white/95">
                         {formatDate(b.date)}
-                        <p className="text-[#8a9fba]">{formatTime(b.time)}</p>
+                        <p className="text-white/75">{formatTime(b.time)}</p>
                       </td>
-                      <td className="px-4 py-4 text-xs">{b.location || "—"}</td>
-                      <td className="px-4 py-4 text-xs">{b.photographer}</td>
+                      <td className="px-4 py-4 text-xs text-white/90">{b.location || "—"}</td>
+                      <td className="px-4 py-4 text-xs text-white/90">{b.photographer}</td>
                       <td className="px-4 py-4">
                         {hasInvoice ? (
                           <button
@@ -3075,7 +3147,7 @@ export default function BookingCalendar() {
                             }
                             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] font-bold ${
                               isCancelled
-                                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                ? "cursor-not-allowed border-white/20 bg-white/10 text-white/50"
                                 : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
                             }`}
                           >
@@ -3083,19 +3155,22 @@ export default function BookingCalendar() {
                             Download Invoice
                           </button>
                         ) : (
-                          <span className="text-xs font-semibold text-[#8a9fba]">
+                          <span className="text-xs font-semibold text-white/65">
                             —
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-4">
                         <select
+                          aria-label={`Change booking status for ${b.customer}`}
                           value={b.status || "Pending"}
                           onChange={(e) => requestStatusChange(b, e.target.value)}
-                          className="rounded-xl border bg-white px-2 py-2 text-xs"
+                          className={`rounded-full border px-3 py-1.5 text-xs font-bold outline-none cursor-pointer transition ${rowStyle.badgeClass}`}
                         >
                           {statuses.map((s) => (
-                            <option key={s}>{s}</option>
+                            <option key={s} value={s} className="bg-white text-[#102b53] font-semibold">
+                              {s}
+                            </option>
                           ))}
                         </select>
                       </td>
