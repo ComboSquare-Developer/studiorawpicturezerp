@@ -1885,7 +1885,7 @@ export default function Expenses() {
 
               <button
                 type="button"
-                onClick={exportCSV}
+                onClick={() => setShowExportModal(true)}
                 className="flex items-center justify-center gap-2 rounded-2xl border border-[#d6e6f8] bg-white px-4 py-3 text-sm font-semibold text-[#173766] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#eaf4ff]"
               >
                 <Download size={17} />
@@ -2274,6 +2274,12 @@ export default function Expenses() {
           </form>
         </Modal>
       )}
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Expenses"
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

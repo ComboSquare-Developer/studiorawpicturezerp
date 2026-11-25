@@ -18,6 +18,12 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 
 const STAFF_KEY = "studioraw_staff";
 const ATTENDANCE_KEY = "studioraw_attendance";
@@ -609,52 +615,45 @@ export default function StaffAttendance() {
     [staff, attendance, month]
   );
 
-  const exportCSV = () => {
-    const rows = [
-      [
-        "Staff",
-        "Role",
-        "Present",
-        "Absent",
-        "Leave",
-        "Half Day",
-      ],
-      ...monthlySummary.map((item) => [
-        item.person.name,
-        item.person.role || "Staff",
-        item.present,
-        item.absent,
-        item.leave,
-        item.halfDay,
-      ]),
-    ];
+  const [showExportModal, setShowExportModal] = useState(false);
 
-    const csv = rows
-      .map((row) =>
-        row
-          .map(
-            (value) =>
-              `"${String(value ?? "").replace(/"/g, '""')}"`
-          )
-          .join(",")
-      )
-      .join("\r\n");
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const recordsInRange = attendance.filter((record) =>
+      isDateInRange(record.date, fromDate, toDate)
+    );
 
-    const blob = new Blob(["\uFEFF", csv], {
-      type: "text/csv;charset=utf-8;",
+    if (recordsInRange.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
+    const summaryRows = staff.map((person) => {
+      const recs = recordsInRange.filter(
+        (r) => String(r.staffId) === String(person.id)
+      );
+      return [
+        person.name,
+        person.role || "Staff",
+        recs.filter((r) => r.status === "Present").length,
+        recs.filter((r) => r.status === "Absent").length,
+        recs.filter((r) => r.status === "Leave").length,
+        recs.filter((r) => r.status === "Half Day").length,
+      ];
     });
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    downloadCsvFile({
+      headers: ["Staff", "Role", "Present", "Absent", "Leave", "Half Day"],
+      rows: summaryRows,
+      filename: buildExportFilename("StaffAttendance", {
+        rangeType,
+        fromDate,
+        toDate,
+      }),
+    });
 
-    link.href = url;
-    link.download = `attendance-${month}.csv`;
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    URL.revokeObjectURL(url);
+    showToast(
+      `Exported attendance summary (${fromDate} to ${toDate}).`
+    );
+    return { count: recordsInRange.length };
   };
 
   const checkInNow = (person) => {
@@ -900,7 +899,7 @@ export default function StaffAttendance() {
 
               <button
                 type="button"
-                onClick={exportCSV}
+                onClick={() => setShowExportModal(true)}
                 className="flex items-center justify-center gap-2 rounded-xl bg-[#10264d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-900"
               >
                 <Download size={18} />
@@ -941,6 +940,13 @@ export default function StaffAttendance() {
       <p className="mt-5 text-xs leading-5 text-slate-400">
         Attendance is automatically saved in this browser.
       </p>
+
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Staff Attendance"
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

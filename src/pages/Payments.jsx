@@ -25,6 +25,11 @@ import {
   formatBookingService,
   getInvoiceServiceDisplay,
 } from "../services/invoicePdfService";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+} from "../utils/dateRangeExport";
 
 /* =========================================
    STORAGE & CONSTANTS
@@ -685,14 +690,6 @@ function PaymentsInner() {
     date: today(),
     note: "",
   });
-  const [exportRangeType, setExportRangeType] = useState("6m");
-  const [exportFromDate, setExportFromDate] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  });
-  const [exportToDate, setExportToDate] = useState(() => today());
-  const [exportError, setExportError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -1315,38 +1312,10 @@ function PaymentsInner() {
   }, [invoices, search, statusFilter]);
 
   const openExportModal = () => {
-    setExportError("");
-    setExportRangeType("6m");
-    setExportToDate(today());
     setModal("export");
   };
 
-  const handleExportCSV = () => {
-    setExportError("");
-    const now = new Date();
-    const todayStr = today();
-    let fromStr = "";
-    let toStr = todayStr;
-
-    if (exportRangeType === "6m") {
-      const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-      fromStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
-    } else if (exportRangeType === "12m") {
-      const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-      fromStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
-    } else {
-      if (!exportFromDate || !exportToDate) {
-        setExportError("Please select both From Date and To Date.");
-        return;
-      }
-      if (exportFromDate > exportToDate) {
-        setExportError("From Date cannot be later than To Date.");
-        return;
-      }
-      fromStr = exportFromDate;
-      toStr = exportToDate;
-    }
-
+  const handleExportCSV = ({ rangeType, fromDate: fromStr, toDate: toStr }) => {
     const INVALID_TX = new Set(["failed", "cancelled", "canceled", "refunded", "void", "reversed"]);
     const exportRows = [];
 
@@ -1423,12 +1392,11 @@ function PaymentsInner() {
     }
 
     if (exportRows.length === 0) {
-      setExportError("No payment records found in the selected date range.");
-      return;
+      return { error: "No records found for the selected date range." };
     }
 
-    const rows = [
-      [
+    downloadCsvFile({
+      headers: [
         "Invoice Number",
         "Customer Name",
         "Customer Contact",
@@ -1442,30 +1410,18 @@ function PaymentsInner() {
         "Payment Status",
         "Payment History",
       ],
-      ...exportRows,
-    ];
+      rows: exportRows,
+      filename: buildExportFilename("Payments", {
+        rangeType,
+        fromDate: fromStr,
+        toDate: toStr,
+      }),
+    });
 
-    const esc = (v) => {
-      const raw = String(v ?? "");
-      const safe = /^\s*[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
-      return `"${safe.replace(/"/g, '""')}"`;
-    };
-    const blob = new Blob(
-      ["\uFEFF" + rows.map((r) => r.map(esc).join(",")).join("\r\n")],
-      { type: "text/csv;charset=utf-8;" }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `StudioRaw-Payments-${fromStr}-to-${toStr}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setModal("");
     setNotice(
       `Exported ${exportRows.length} payment ${exportRows.length === 1 ? "record" : "records"} (${fromStr} to ${toStr}).`
     );
+    return { count: exportRows.length };
   };
 
   return (
@@ -2304,98 +2260,12 @@ function PaymentsInner() {
       )}
 
       {/* EXPORT CSV DATE RANGE MODAL */}
-      {modal === "export" && (
-        <Modal
-          title="Export Payment Records (CSV)"
-          subtitle="Choose a date range for exporting actual payment records"
-          icon={Download}
-          onClose={close}
-          width="max-w-lg"
-        >
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-              {[
-                { id: "6m", label: "Last 6 Months" },
-                { id: "12m", label: "Last 12 Months" },
-                { id: "custom", label: "Custom Date Range" },
-              ].map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    setExportRangeType(opt.id);
-                    setExportError("");
-                  }}
-                  className={`rounded-xl border px-3 py-3 text-xs font-bold transition ${
-                    exportRangeType === opt.id
-                      ? "border-[#10264d] bg-[#10264d] text-white shadow-sm"
-                      : "border-[#d5e4f4] bg-white text-[#10264d] hover:bg-[#f3f8fe]"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {exportRangeType === "custom" && (
-              <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#dce8f6] bg-[#f8fbff] p-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-[#355d8d]">
-                    From Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={exportFromDate}
-                    onChange={(e) => {
-                      setExportFromDate(e.target.value);
-                      setExportError("");
-                    }}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-[#355d8d]">
-                    To Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={exportToDate}
-                    onChange={(e) => {
-                      setExportToDate(e.target.value);
-                      setExportError("");
-                    }}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-            )}
-
-            {exportError && (
-              <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
-                {exportError}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-xl border border-[#d5e4f4] bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className={primaryButtonClass}
-              >
-                <Download size={16} />
-                Export CSV
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <DateRangeExportModal
+        isOpen={modal === "export"}
+        moduleLabel="Payments"
+        onClose={close}
+        onExport={handleExportCSV}
+      />
 
       {/* DELETE INVOICE MODAL */}
       {modal === "delete" && selected && (

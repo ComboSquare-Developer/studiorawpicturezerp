@@ -24,6 +24,12 @@ import {
 } from "lucide-react";
 import { api } from "../api/client";
 import { demoAuthService } from "../services/demo/demoAuthService";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 
 const EQUIPMENT_KEY = "studioraw_equipment";
 const HANDOVER_KEY = "studioraw_equipment_handovers";
@@ -307,6 +313,7 @@ export default function Equipment() {
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showExportModal, setShowExportModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
 
@@ -1018,59 +1025,51 @@ export default function Equipment() {
     setNotice(`Equipment "${eq.equipmentName}" deleted.`);
   };
 
-  const exportCSV = () => {
-    const columns = [
-      "Equipment ID",
-      "Equipment Name",
-      "Category",
-      "Serial Number",
-      "Total Quantity",
-      "Available Quantity",
-      "Assigned Quantity",
-      "Status",
-      "Event Assignment",
-      "Handed Over To",
-      "Handover Date",
-      "Expected Return Date",
-    ];
-    const escape = (v) => {
-      const s = String(v ?? "");
-      const safe = /^\s*[=+\-@\t\r]/.test(s) ? `'${s}` : s;
-      return `"${safe.replace(/"/g, '""')}"`;
-    };
-    const rows = [
-      columns.map(escape).join(","),
-      ...filteredEquipment.map((eq) =>
-        [
-          eq.equipmentCode,
-          eq.equipmentName,
-          eq.category,
-          eq.serialNumber || "",
-          eq.totalQuantity,
-          eq.availableQuantity,
-          eq.assignedQuantity,
-          eq.computedStatus,
-          eq.displayEvent,
-          eq.displayStaff,
-          eq.displayHandoverDate || "",
-          eq.displayExpectedReturn || "",
-        ]
-          .map(escape)
-          .join(",")
-      ),
-    ].join("\r\n");
-
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF", rows], { type: "text/csv;charset=utf-8;" })
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const records = filteredEquipment.filter((eq) =>
+      isDateInRange(eq.displayHandoverDate || eq.createdAt, fromDate, toDate)
     );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `StudioRaw-Equipment-${todayKey()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setNotice(`Exported ${filteredEquipment.length} equipment records.`);
+
+    if (records.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
+    downloadCsvFile({
+      headers: [
+        "Equipment ID",
+        "Equipment Name",
+        "Category",
+        "Serial Number",
+        "Total Quantity",
+        "Available Quantity",
+        "Assigned Quantity",
+        "Status",
+        "Event Assignment",
+        "Handed Over To",
+        "Handover Date",
+        "Expected Return Date",
+      ],
+      rows: records.map((eq) => [
+        eq.equipmentCode,
+        eq.equipmentName,
+        eq.category,
+        eq.serialNumber || "",
+        eq.totalQuantity,
+        eq.availableQuantity,
+        eq.assignedQuantity,
+        eq.computedStatus,
+        eq.displayEvent,
+        eq.displayStaff,
+        eq.displayHandoverDate || "",
+        eq.displayExpectedReturn || "",
+      ]),
+      filename: buildExportFilename("Equipment", { rangeType, fromDate, toDate }),
+    });
+
+    setNotice(
+      `Exported ${records.length} equipment ${records.length === 1 ? "record" : "records"} (${fromDate} to ${toDate}).`
+    );
+    return { count: records.length };
   };
 
   return (
@@ -1089,7 +1088,7 @@ export default function Equipment() {
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
-            onClick={exportCSV}
+            onClick={() => setShowExportModal(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-[#d6e7fa] bg-white px-4 py-2.5 text-xs font-bold text-[#10264d] shadow-xs transition hover:bg-[#f2f7ff] sm:text-sm"
           >
             <Download size={16} />
@@ -2251,6 +2250,13 @@ export default function Equipment() {
           </div>
         </Modal>
       )}
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Equipment Management"
+        allowFutureDates
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

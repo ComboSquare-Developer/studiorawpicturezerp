@@ -11,6 +11,12 @@ import {
   calculateMonthlyExpenseTotal,
   syncStaffSalaryExpenses,
 } from "../services/financialService";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 
 import {
   BarChart3,
@@ -1376,23 +1382,95 @@ export default function Reports() {
       );
   }, [customerFilterScope, monthly.customers, allCustomers, matchesSearch]);
 
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportNotice, setExportNotice] = useState("");
+
   /* CSV EXPORT */
 
-  const exportCSV = () => {
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const bookingsInRange = (allBookings || []).filter((b) =>
+      isDateInRange(b._normalizedDate || getBookingDate(b), fromDate, toDate)
+    );
+    const enquiriesInRange = (allEnquiries || []).filter((e) =>
+      isDateInRange(e._normalizedDate || getDate(e), fromDate, toDate)
+    );
+    const customersInRange = (allCustomers || []).filter((c) =>
+      isDateInRange(c.createdAt, fromDate, toDate)
+    );
+    const expensesInRange = (allExpenses || []).filter((ex) =>
+      isDateInRange(ex.date || ex.expense_date || ex.createdAt, fromDate, toDate)
+    );
+
+    const periodExpenseTotal = round(
+      expensesInRange.reduce((sum, ex) => sum + Number(ex.amount || 0), 0)
+    );
+
+    let periodRevenue = 0;
+    let periodPending = 0;
+    const methodTotals = {};
+
+    (allPayments || []).forEach((inv) => {
+      const status = String(inv.status || inv.paymentStatus || "").toLowerCase();
+      if (status === "cancelled" || status === "canceled") return;
+
+      const txs = Array.isArray(inv.transactions) ? inv.transactions : [];
+      if (txs.length > 0) {
+        txs.forEach((tx) => {
+          const st = String(tx.status || "").toLowerCase();
+          if (["failed", "cancelled", "canceled", "refunded", "void", "reversed"].includes(st)) {
+            return;
+          }
+          const txDate = tx.date || tx.paymentDate || tx.createdAt || inv.date;
+          if (isDateInRange(txDate, fromDate, toDate)) {
+            const amt = Number(tx.amount ?? tx.paidAmount ?? 0);
+            periodRevenue += amt;
+            const m = String(tx.method || tx.paymentMode || inv.method || "Cash").trim() || "Cash";
+            methodTotals[m] = (methodTotals[m] || 0) + amt;
+          }
+        });
+      } else if (isDateInRange(inv.date || inv.paymentDate || inv.createdAt, fromDate, toDate)) {
+        const rec = Number(inv.paidAmount ?? inv.amountReceived ?? inv.advance ?? 0);
+        periodRevenue += rec;
+        if (rec > 0) {
+          const m = String(inv.method || inv.paymentMode || "Cash").trim() || "Cash";
+          methodTotals[m] = (methodTotals[m] || 0) + rec;
+        }
+      }
+
+      if (isDateInRange(inv.date || inv.paymentDate || inv.createdAt, fromDate, toDate)) {
+        const tot = Number(inv.total ?? inv.totalAmount ?? inv.amount ?? 0);
+        const rec = Number(inv.paidAmount ?? inv.amountReceived ?? inv.advance ?? 0);
+        periodPending += Math.max(0, tot - rec);
+      }
+    });
+
+    periodRevenue = round(periodRevenue);
+    periodPending = round(periodPending);
+
+    if (
+      bookingsInRange.length === 0 &&
+      enquiriesInRange.length === 0 &&
+      customersInRange.length === 0 &&
+      expensesInRange.length === 0 &&
+      periodRevenue === 0
+    ) {
+      return { error: "No records found for the selected date range." };
+    }
+
     const rows = [
       ["STUDIO RAW PICTUREZ – REPORTS & ANALYTICS"],
-      ["Period", `${monthLabel(selectedMonth)} (${selectedMonth})`],
+      ["Report Date Range", `${fromDate} to ${toDate}`],
       ["Generated At", new Date().toLocaleString("en-IN")],
       [],
       ["FINANCIAL SUMMARY"],
       ["Metric", "Amount"],
-      ["Total Revenue (Received)", paymentSummary.revenue],
-      ["Total Expenses", expenseTotal],
-      ["Pending Balance (Invoices)", paymentSummary.pending],
+      ["Total Revenue (Received)", periodRevenue],
+      ["Total Expenses", periodExpenseTotal],
+      ["Pending Balance (Invoices)", periodPending],
       [],
       ["PAYMENT METHODS BREAKDOWN"],
       ["Payment Method", "Collected Amount"],
-      ...Object.entries(paymentSummary.methods || {}).map(([m, val]) => [m, val]),
+      ...Object.entries(methodTotals).map(([m, val]) => [m, round(val)]),
       [],
       ["BOOKING REPORT"],
       [
@@ -1408,7 +1486,7 @@ export default function Reports() {
         "Payment Status",
         "Booking Status",
       ],
-      ...displayBookings.map((b) => {
+      ...bookingsInRange.map((b) => {
         const fin = bookingFinancials.get(String(b.id)) || {
           billed: 0,
           received: 0,
@@ -1443,7 +1521,7 @@ export default function Reports() {
         "Estimated Budget",
         "Enquiry Status",
       ],
-      ...displayEnquiries.map((e) => {
+      ...enquiriesInRange.map((e) => {
         const se = getEnquiryServiceAndEvent(e);
         return [
           e._normalizedName || getName(e),
@@ -1467,7 +1545,7 @@ export default function Reports() {
         "Location / Address",
         "Registered Date",
       ],
-      ...displayCustomers.map((c) => [
+      ...customersInRange.map((c) => [
         c.id,
         c.name,
         c.phone,
@@ -1477,22 +1555,15 @@ export default function Reports() {
       ]),
     ];
 
-    const escapeCSV = (value) => {
-      const raw = String(value ?? "");
-      const safe = /^\s*[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
-      return `"${safe.replace(/"/g, '""')}"`;
-    };
+    downloadCsvFile({
+      rows,
+      filename: buildExportFilename("Reports", { rangeType, fromDate, toDate }),
+    });
 
-    const csv = rows.map((row) => row.map(escapeCSV).join(",")).join("\r\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `StudioRaw-Reports-${selectedMonth}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setExportNotice(
+      `Reports exported for ${fromDate} to ${toDate}.`
+    );
+    return { count: bookingsInRange.length + enquiriesInRange.length + customersInRange.length + expensesInRange.length };
   };
 
   /* ==========================================
@@ -1522,6 +1593,15 @@ export default function Reports() {
           </div>
         </div>
 
+        {exportNotice && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+            <span>{exportNotice}</span>
+            <button type="button" onClick={() => setExportNotice("")}>
+              ×
+            </button>
+          </div>
+        )}
+
         {/* 2. CENTRALIZED MONTH FILTER, SEARCH, REFRESH & EXPORT CSV */}
         <div className="flex flex-col gap-3 rounded-2xl border border-[#dce7f5] bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
@@ -1549,7 +1629,7 @@ export default function Reports() {
 
             <button
               type="button"
-              onClick={exportCSV}
+              onClick={() => setShowExportModal(true)}
               className="flex items-center gap-1.5 rounded-xl bg-[#244d8b] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#183968]"
             >
               <Download size={14} />
@@ -1933,6 +2013,12 @@ export default function Reports() {
           ]}
         />
       </div>
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Reports & Analytics"
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

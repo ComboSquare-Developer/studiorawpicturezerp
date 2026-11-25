@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 import {
   Plus,
   Search,
@@ -824,6 +830,8 @@ export default function Delivery() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportNotice, setExportNotice] = useState("");
 
   const refresh = () => {
     setCustomers(readRecords(CUSTOMER_KEY, "studioraw_customers"));
@@ -1259,7 +1267,15 @@ export default function Delivery() {
       ? videoSelections.find((s) => s.id === viewId)
       : null;
 
-  const exportCSV = () => {
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const records = filtered.filter((s) =>
+      isDateInRange(s.givenDate || s.returnedDate, fromDate, toDate)
+    );
+
+    if (records.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
     const columns = isPhotoTab
       ? [
           "id",
@@ -1297,35 +1313,25 @@ export default function Delivery() {
           "status",
         ];
 
-    const records = filtered.map((s) => ({
-      ...s,
-      status: normalizeSelectionStatus(s),
-    }));
+    downloadCsvFile({
+      headers: columns,
+      rows: records.map((s) => {
+        const normalized = { ...s, status: normalizeSelectionStatus(s) };
+        return columns.map((c) => normalized[c] ?? "");
+      }),
+      filename: buildExportFilename(
+        isPhotoTab ? "PhotoSelections" : "VideoSelections",
+        { rangeType, fromDate, toDate }
+      ),
+    });
 
-    const escape = (v) => {
-      const str = String(v ?? "");
-      const safe = /^\s*[=+\-@\t\r]/.test(str) ? `'${str}` : str;
-      return `"${safe.replace(/"/g, '""')}"`;
-    };
-
-    const csv = [
-      columns.map(escape).join(","),
-      ...records.map((r) => columns.map((c) => escape(r[c])).join(",")),
-    ].join("\r\n");
-
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" })
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = isPhotoTab
-      ? "studioraw_photo_selections.csv"
-      : "studioraw_video_selections.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
     sound("success");
+    setExportNotice(
+      `Exported ${records.length} ${isPhotoTab ? "photo" : "video"} selection ${
+        records.length === 1 ? "record" : "records"
+      } (${fromDate} to ${toDate}).`
+    );
+    return { count: records.length };
   };
 
   const switchTab = (tab) => {
@@ -1355,7 +1361,7 @@ export default function Delivery() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={exportCSV}
+            onClick={() => setShowExportModal(true)}
             className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#d6e7fa] bg-white px-4 py-2.5 text-xs font-bold sm:flex-none sm:text-sm"
           >
             <Download size={17} />
@@ -1371,6 +1377,16 @@ export default function Delivery() {
           </button>
         </div>
       </div>
+
+      {/* EXPORT NOTICE */}
+      {exportNotice && (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+          <span>{exportNotice}</span>
+          <button type="button" onClick={() => setExportNotice("")}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* TABS */}
       <div className="mb-6 flex flex-wrap gap-2 rounded-[20px] border border-[#d6e7fa] bg-white p-2 shadow-sm">
@@ -2023,6 +2039,13 @@ export default function Delivery() {
           </div>
         </Modal>
       )}
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel={isPhotoTab ? "Photo Selection" : "Video Selection"}
+        allowFutureDates
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

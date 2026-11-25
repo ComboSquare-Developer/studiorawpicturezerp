@@ -24,6 +24,12 @@ import {
   Database,
   CheckCircle2,
 } from "lucide-react";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 
 const STORAGE_KEY = "studioraw_audit_logs";
 
@@ -585,9 +591,19 @@ export default function AuditLogs() {
     }
   };
 
-  const exportCSV = () => {
-    const rows = [
-      [
+  const [showExportModal, setShowExportModal] = useState(false);
+
+  const handleExportCSV = ({ rangeType, fromDate, toDate }) => {
+    const records = filteredLogs.filter((log) =>
+      isDateInRange(log.timestamp, fromDate, toDate)
+    );
+
+    if (records.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
+    downloadCsvFile({
+      headers: [
         "Timestamp",
         "User",
         "Module",
@@ -596,7 +612,7 @@ export default function AuditLogs() {
         "Record ID",
         "Source",
       ],
-      ...filteredLogs.map((log) => [
+      rows: records.map((log) => [
         formatDateTime(log.timestamp),
         log.user,
         log.module,
@@ -605,27 +621,11 @@ export default function AuditLogs() {
         log.recordId,
         log.source,
       ]),
-    ];
-
-    const csv = rows
-      .map((row) => row.map(csvCell).join(","))
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF", csv], {
-      type: "text/csv;charset=utf-8;",
+      filename: buildExportFilename("AuditLogs", { rangeType, fromDate, toDate }),
     });
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = "studioraw-audit-logs.csv";
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice(`Exported ${records.length} audit log ${records.length === 1 ? "record" : "records"}.`);
+    return { count: records.length };
   };
 
   const today = localDate();
@@ -733,7 +733,7 @@ export default function AuditLogs() {
 
             <button
               type="button"
-              onClick={exportCSV}
+              onClick={() => setShowExportModal(true)}
               className={`${secondaryButton} w-full sm:w-auto`}
             >
               <Download size={17} />
@@ -1089,6 +1089,13 @@ export default function AuditLogs() {
           </div>
         </Modal>
       )}
+
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Audit Logs"
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCSV}
+      />
     </div>
   );
 }

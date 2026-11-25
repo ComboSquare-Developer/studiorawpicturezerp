@@ -19,6 +19,12 @@ import {
 } from "lucide-react";
 import { api } from "../api/client";
 import { syncStaffSalaryExpenses, removeLinkedSalaryExpenses } from "../services/financialService";
+import DateRangeExportModal from "../components/DateRangeExportModal";
+import {
+  buildExportFilename,
+  downloadCsvFile,
+  isDateInRange,
+} from "../utils/dateRangeExport";
 
 const STAFF_KEY = "studioraw_staff";
 const UPDATE_EVENT = "studioraw:data-updated";
@@ -425,49 +431,45 @@ export default function Staff() {
     setDeleteStaff(null);
   };
 
-  const exportCsv = () => {
-    if (!staffList.length) return;
+  const [showExportModal, setShowExportModal] = useState(false);
 
-    const headers = [
-      "ID",
-      "Employee ID",
-      "Staff Name",
-      "Phone",
-      "Email",
-      "Joining Date",
-      "Monthly Salary",
-      "Salary Date",
-      "Status",
-    ];
-
-    const rows = staffList.map((staff) => [
-      staff.id || "",
-      staff.employee_id || "",
-      `"${(staff.staff_name || "").replace(/"/g, '""')}"`,
-      staff.phone || "",
-      staff.email || "",
-      staff.joining_date || "",
-      staff.salary ?? "",
-      staff.salary_date || "",
-      staff.status || "",
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `studio_raw_staff_${new Date().toISOString().slice(0, 10)}.csv`
+  const handleExportCsv = ({ rangeType, fromDate, toDate }) => {
+    const records = staffList.filter((staff) =>
+      isDateInRange(staff.joining_date || staff.createdAt, fromDate, toDate)
     );
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (records.length === 0) {
+      return { error: "No records found for the selected date range." };
+    }
+
+    downloadCsvFile({
+      headers: [
+        "ID",
+        "Employee ID",
+        "Staff Name",
+        "Phone",
+        "Email",
+        "Joining Date",
+        "Monthly Salary",
+        "Salary Date",
+        "Status",
+      ],
+      rows: records.map((staff) => [
+        staff.id || "",
+        staff.employee_id || "",
+        staff.staff_name || "",
+        staff.phone || "",
+        staff.email || "",
+        staff.joining_date || "",
+        staff.salary ?? "",
+        staff.salary_date || "",
+        staff.status || "",
+      ]),
+      filename: buildExportFilename("Staff", { rangeType, fromDate, toDate }),
+    });
+
+    showToast(`Exported ${records.length} staff ${records.length === 1 ? "record" : "records"}.`);
+    return { count: records.length };
   };
 
   return (
@@ -507,7 +509,7 @@ export default function Staff() {
 
           <button
             type="button"
-            onClick={exportCsv}
+            onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 rounded-xl border border-[#d6e5f7] bg-white px-3.5 py-2.5 text-xs font-bold text-[#10264d] shadow-sm transition hover:bg-[#edf5ff]"
           >
             Export CSV
@@ -1116,6 +1118,13 @@ export default function Staff() {
           {toast}
         </div>
       )}
+
+      <DateRangeExportModal
+        isOpen={showExportModal}
+        moduleLabel="Staff Directory"
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportCsv}
+      />
     </div>
   );
 }
